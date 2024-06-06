@@ -6,13 +6,21 @@ class WebStorePaymentAPIClient(WebStoreAPIBaseClient):
         super().__init__()
 
         self.payment_api_base_url = f"{self.api_base_url}/payment/"
+        self.headers = {
+            "api-key": self.api_key,
+            "namespace": self.api_namespace,
+        }
 
     def get_payment(self, order_id: str) -> dict:
         return self._make_request(
             f"{self.payment_api_base_url}admin/{order_id}",
             "get",
-            headers={
-                "api-key": self.api_key,
-                "namespace": self.api_namespace,
-            },
+            headers=self.headers,
+        )
+
+    def get_refund_payment(self, order_id: str) -> dict:
+        return self._make_request(
+            f"{self.payment_api_base_url}admin/refund-payment/{order_id}",
+            "get",
+            headers=self.headers,
         )

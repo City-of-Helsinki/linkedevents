@@ -49,6 +49,7 @@ from registrations.models import (
     SignUp,
     SignUpGroup,
     SignUpPayment,
+    SignUpPaymentRefund,
     SignUpPriceGroup,
 )
 from registrations.notifications import SignUpNotificationType
@@ -71,14 +72,21 @@ from registrations.serializers import (
     SignUpSerializer,
     WebStoreOrderWebhookSerializer,
     WebStorePaymentWebhookSerializer,
+    WebStoreRefundWebhookSerializer,
 )
 from registrations.utils import (
     get_access_code_for_contact_person,
     get_web_store_order_status,
     get_web_store_payment_status,
+    get_web_store_refund_payment_status,
     send_mass_html_mail,
 )
-from web_store.order.enums import WebStoreOrderStatus, WebStoreOrderWebhookEventType
+from web_store.order.enums import (
+    WebStoreOrderRefundStatus,
+    WebStoreOrderStatus,
+    WebStoreOrderWebhookEventType,
+    WebStoreRefundWebhookEventType,
+)
 from web_store.payment.enums import (
     WebStorePaymentStatus,
     WebStorePaymentWebhookEventType,
@@ -555,11 +563,13 @@ if settings.WEB_STORE_INTEGRATION_ENABLED:
     register_view(PriceGroupViewSet, "price_group")
 
 
-class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
+class WebStoreWebhookBaseViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
     serializer_class = None
     http_method_names = ["post"]
     permission_classes = []
 
+
+class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
     @staticmethod
     def _get_payment(order_id: str) -> Optional[SignUpPayment]:
         payment = (
@@ -611,13 +621,17 @@ class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
         if isinstance(signup_or_signup_group, SignUp):
             signup_or_signup_group._individually_deleted = True
 
-        signup_or_signup_group.delete(bypass_web_store_api_calls=True)
+        signup_or_signup_group.delete(
+            bypass_web_store_api_calls=True, payment_cancelled=True
+        )
 
     @action(detail=False, methods=["post"])
     @transaction.atomic
     def order(self, request, pk=None, version=None):
         serializer = WebStoreOrderWebhookSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            logger.error(f"/webhook/order/: {serializer.errors}")
+            raise ValidationError(serializer.errors)
 
         payment = self._get_payment(order_id=str(serializer.validated_data["order_id"]))
 
@@ -648,7 +662,9 @@ class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
     @transaction.atomic
     def payment(self, request, pk=None, version=None):
         serializer = WebStorePaymentWebhookSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            logger.error(f"/webhook/payment/: {serializer.errors}")
+            raise ValidationError(serializer.errors)
 
         payment = self._get_payment(order_id=str(serializer.validated_data["order_id"]))
 
@@ -672,29 +688,104 @@ class WebStoreWebhookViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
             payment.save(update_fields=["status", "last_modified_time"])
 
             self._confirm_signup(payment.signup_or_signup_group)
-        elif (
-            serializer.validated_data["event_type"]
-            == WebStorePaymentWebhookEventType.PAYMENT_CANCELLED.value
-        ):
-            payment_status = self._get_payment_status_from_web_store_api(
-                payment.external_order_id
-            )
-            if payment_status != WebStorePaymentStatus.CANCELLED.value:
-                return Response(
-                    _(
-                        "Payment marked as cancelled in webhook payload, but not in Talpa API."
-                    ),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Payment cancelled => cancel signup
-            # (email notification is sent automatically as a result of that).
-            self._cancel_signup(payment.signup_or_signup_group)
 
         self._add_audit_logged_object_ids(payment)
 
         return Response(status=status.HTTP_200_OK)
 
 
+class WebStoreRefundWebhookViewSet(WebStoreWebhookBaseViewSet):
+    @staticmethod
+    def _get_refund(order_id: str, refund_id: str) -> Optional[SignUpPaymentRefund]:
+        refund = SignUpPaymentRefund.objects.filter(
+            payment__external_order_id=order_id,
+            external_refund_id=refund_id,
+        ).first()
+
+        if not refund:
+            raise NotFound(
+                _(
+                    "Refund not found with order ID %(order_id)s and refund ID %(refund_id)s."
+                )
+                % {"order_id": order_id, "refund_id": refund_id}
+            )
+
+        return refund
+
+    @staticmethod
+    def _get_refund_status_from_web_store_api(order_id: str) -> Optional[str]:
+        try:
+            return get_web_store_refund_payment_status(order_id=order_id)
+        except WebStoreAPIError:
+            raise ConflictException(_("Could not check refund status from Talpa API."))
+
+    @staticmethod
+    def _cancel_signup_for_refund(refund: SignUpPaymentRefund) -> None:
+        signup_or_signup_group = refund.signup_or_signup_group
+        payment = refund.payment
+
+        delete_kwargs = {
+            "bypass_web_store_api_calls": True,
+            "payment_refunded": refund.amount >= payment.amount,
+        }
+
+        if isinstance(signup_or_signup_group, SignUp):
+            signup_or_signup_group._individually_deleted = True
+            delete_kwargs["payment_partially_refunded"] = refund.amount < payment.amount
+
+        signup_or_signup_group.delete(**delete_kwargs)
+
+    @action(detail=False, methods=["post"])
+    @transaction.atomic
+    def refund(self, request, pk=None, version=None):
+        serializer = WebStoreRefundWebhookSerializer(data=request.data)
+        if not serializer.is_valid():
+            logger.error(f"/webhook/refund/: {serializer.errors}")
+            raise ValidationError(serializer.errors)
+
+        order_id = str(serializer.validated_data["order_id"])
+        refund_id = str(serializer.validated_data["refund_id"])
+
+        refund = self._get_refund(order_id, refund_id)
+
+        if (
+            serializer.validated_data["event_type"]
+            == WebStoreRefundWebhookEventType.REFUND_PAID.value
+        ):
+            refund_status = self._get_refund_status_from_web_store_api(order_id)
+            if refund_status != WebStoreOrderRefundStatus.PAID_ONLINE.value:
+                return Response(
+                    _(
+                        "Refund marked as paid in webhook payload, but not in Talpa API."
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            self._add_audit_logged_object_ids(refund)
+            self._cancel_signup_for_refund(refund)
+        elif (
+            serializer.validated_data["event_type"]
+            == WebStoreRefundWebhookEventType.REFUND_FAILED.value
+        ):
+            refund_status = self._get_refund_status_from_web_store_api(order_id)
+            if refund_status != WebStoreOrderRefundStatus.CANCELLED.value:
+                return Response(
+                    _(
+                        "Refund marked as failed in webhook payload, but not in Talpa API."
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            self._add_audit_logged_object_ids(refund)
+            refund.delete()
+        else:
+            self._add_audit_logged_object_ids(refund)
+
+        return Response(status=status.HTTP_200_OK)
+
+
 if settings.WEB_STORE_INTEGRATION_ENABLED:
-    register_view(WebStoreWebhookViewSet, "webhook", base_name="webhook")
+    register_view(
+        WebStorePaymentWebhookViewSet, "webhook", base_name="payment_webhooks"
+    )
+    register_view(WebStoreRefundWebhookViewSet, "webhook", base_name="refund_webhooks")

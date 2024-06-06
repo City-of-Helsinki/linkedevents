@@ -72,7 +72,7 @@ def assert_signup_group_fields_exist(data):
         "has_contact_person_access",
     )
     if settings.WEB_STORE_INTEGRATION_ENABLED:
-        fields += ("payment",)
+        fields += ("payment", "payment_cancellation", "payment_refund")
 
     assert_fields_exist(data, fields)
     assert_contact_person_fields_exist(data["contact_person"])

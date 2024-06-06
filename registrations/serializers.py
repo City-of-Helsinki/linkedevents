@@ -34,6 +34,8 @@ from registrations.models import (
     SignUpGroupProtectedData,
     SignUpNotificationType,
     SignUpPayment,
+    SignUpPaymentCancellation,
+    SignUpPaymentRefund,
     SignUpPriceGroup,
     SignUpProtectedData,
     VAT_PERCENTAGES,
@@ -46,7 +48,10 @@ from registrations.utils import (
     get_signup_create_url,
     has_allowed_substitute_user_email_domain,
 )
-from web_store.order.enums import WebStoreOrderWebhookEventType
+from web_store.order.enums import (
+    WebStoreOrderWebhookEventType,
+    WebStoreRefundWebhookEventType,
+)
 from web_store.payment.enums import WebStorePaymentWebhookEventType
 
 
@@ -340,7 +345,44 @@ class WebStorePaymentBaseSerializer(serializers.Serializer):
             fields = ()
 
 
-class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
+class SignUpPaymentRefundSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SignUpPaymentRefund
+        fields = (
+            "id",
+            "amount",
+            "payment",
+            "external_refund_id",
+            "created_time",
+        )
+
+
+class SignUpPaymentCancellationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SignUpPaymentCancellation
+        fields = (
+            "id",
+            "payment",
+            "created_time",
+        )
+
+
+class RefundOrCancellationRelationBaseSerializer(serializers.Serializer):
+    payment_refund = SignUpPaymentRefundSerializer(read_only=True)
+    payment_cancellation = SignUpPaymentCancellationSerializer(read_only=True)
+
+    class Meta:
+        if settings.WEB_STORE_INTEGRATION_ENABLED:
+            fields = ("payment_refund", "payment_cancellation")
+        else:
+            fields = ()
+
+
+class SignUpSerializer(
+    SignUpBaseSerializer,
+    WebStorePaymentBaseSerializer,
+    RefundOrCancellationRelationBaseSerializer,
+):
     view_name = "signup"
     id = serializers.IntegerField(required=False)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
@@ -582,7 +624,11 @@ class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
 
         return validated_data
 
-    class Meta(SignUpBaseSerializer.Meta, WebStorePaymentBaseSerializer.Meta):
+    class Meta(
+        SignUpBaseSerializer.Meta,
+        WebStorePaymentBaseSerializer.Meta,
+        RefundOrCancellationRelationBaseSerializer.Meta,
+    ):
         fields = (
             "id",
             "anonymization_time",
@@ -603,6 +649,7 @@ class SignUpSerializer(SignUpBaseSerializer, WebStorePaymentBaseSerializer):
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             fields += ("price_group",)
             fields += WebStorePaymentBaseSerializer.Meta.fields
+            fields += RefundOrCancellationRelationBaseSerializer.Meta.fields
 
         model = SignUp
 
@@ -1229,7 +1276,9 @@ class SignUpGroupCreateSerializer(
         model = SignUpGroup
 
 
-class SignUpGroupSerializer(SignUpBaseSerializer):
+class SignUpGroupSerializer(
+    SignUpBaseSerializer, RefundOrCancellationRelationBaseSerializer
+):
     view_name = "signupgroup-detail"
 
     @staticmethod
@@ -1318,7 +1367,9 @@ class SignUpGroupSerializer(SignUpBaseSerializer):
 
         return instance
 
-    class Meta(SignUpBaseSerializer.Meta):
+    class Meta(
+        SignUpBaseSerializer.Meta, RefundOrCancellationRelationBaseSerializer.Meta
+    ):
         fields = (
             "id",
             "registration",
@@ -1328,6 +1379,7 @@ class SignUpGroupSerializer(SignUpBaseSerializer):
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             fields += ("payment",)
+            fields += RefundOrCancellationRelationBaseSerializer.Meta.fields
 
         model = SignUpGroup
 
@@ -1567,6 +1619,14 @@ class WebStoreOrderWebhookSerializer(WebStoreWebhookBaseSerializer):
 class WebStorePaymentWebhookSerializer(WebStoreWebhookBaseSerializer):
     event_type = serializers.ChoiceField(
         choices=[event_type.value for event_type in WebStorePaymentWebhookEventType],
+        write_only=True,
+    )
+
+
+class WebStoreRefundWebhookSerializer(WebStoreWebhookBaseSerializer):
+    refund_id = serializers.UUIDField(write_only=True)
+    event_type = serializers.ChoiceField(
+        choices=[event_type.value for event_type in WebStoreRefundWebhookEventType],
         write_only=True,
     )
 

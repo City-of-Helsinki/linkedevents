@@ -49,7 +49,9 @@ class Command(BaseCommand):
         if isinstance(payment.signup_or_signup_group, SignUp):
             payment.signup_or_signup_group._individually_deleted = True
 
-        payment.signup_or_signup_group.delete(bypass_web_store_api_calls=True)
+        payment.signup_or_signup_group.delete(
+            bypass_web_store_api_calls=True, payment_cancelled=True
+        )
 
     @staticmethod
     def _handle_payment_expired(payment, order_api_client):

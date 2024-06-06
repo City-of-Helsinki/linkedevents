@@ -20,6 +20,7 @@ from registrations.models import (
     SignUpGroup,
     SignUpGroupProtectedData,
     SignUpPayment,
+    SignUpPaymentCancellation,
     SignUpPaymentRefund,
     SignUpPriceGroup,
     SignUpProtectedData,
@@ -172,6 +173,13 @@ class SignUpPaymentRefundFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = SignUpPaymentRefund
+
+
+class SignUpPaymentCancellationFactory(factory.django.DjangoModelFactory):
+    payment = factory.SubFactory(SignUpPaymentFactory)
+
+    class Meta:
+        model = SignUpPaymentCancellation
 
 
 class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
