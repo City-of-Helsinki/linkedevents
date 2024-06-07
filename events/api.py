@@ -18,6 +18,7 @@ import django_filters
 import pytz
 import regex
 from django.conf import settings
+from django.contrib.gis.gdal import GDALException
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, SearchRank, TrigramSimilarity
@@ -59,6 +60,7 @@ from rest_framework import (
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, ErrorDetail, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
+from rest_framework.exceptions import ValidationError
 from rest_framework.fields import DateTimeField
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.response import Response
@@ -340,7 +342,11 @@ class JSONAPIViewMixin(object):
     def initial(self, request, *args, **kwargs):
         ret = super().initial(request, *args, **kwargs)
         # if srid is not specified, this will yield munigeo default 4326
-        self.srs = srid_to_srs(self.request.query_params.get("srid", None))
+        try:
+            self.srs = srid_to_srs(self.request.query_params.get("srid", None))
+        except GDALException:
+            raise ValidationError("Invalid SRID provided.", code=400)
+
         # check for NUL strings that crash psycopg2
         for _key, param in self.request.query_params.items():
             if "\x00" in param:

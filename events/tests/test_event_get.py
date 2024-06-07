@@ -275,6 +275,18 @@ def test_get_event_list_verify_dwithin_filter(event, event2):
     )
 
 
+@pytest.mark.django_db
+def test_get_event_list_returns_400_when_invalid_srid(event):
+    origin = Point(24, 24)
+
+    query_string = f"srid=777&dwithin_origin={origin.x},{origin.y}"
+    url = reverse("event-list") + "?%s" % query_string
+
+    response = api_client.get(url, format="json")
+
+    assert response.status_code == 400
+
+
 @pytest.mark.parametrize(
     "query_string,expected_message",
     [
