@@ -1136,15 +1136,9 @@ class SignUpGroup(
 
         if settings.WEB_STORE_INTEGRATION_ENABLED and not bypass_web_store_api_calls:
             payment = getattr(self, "payment", None)
-
-            try:
-                payment_refunded, payment_cancelled = (
-                    self.refund_or_cancel_web_store_payment(payment)
-                )
-            except (WebStoreAPIError, WebStoreRefundValidationError) as exc:
-                self._raise_web_store_refund_or_cancellation_exception(
-                    exc, is_event_cancellation=is_event_cancellation
-                )
+            payment_refunded, payment_cancelled = (
+                self.refund_or_cancel_web_store_payment(payment)
+            )
 
         if (payment_refunded or payment_cancelled) and not bypass_web_store_api_calls:
             # Signup group will be deleted after the refund or cancellation webhook arrives.
@@ -1554,22 +1548,13 @@ class SignUp(
         if settings.WEB_STORE_INTEGRATION_ENABLED and not bypass_web_store_api_calls:
             payment = getattr(self, "payment", None)
 
-            try:
-                if not payment and (
-                    signup_group := getattr(self, "signup_group", None)
-                ):
-                    payment_partially_refunded = (
-                        self.partially_refund_signup_group_web_store_payment(
-                            signup_group
-                        )
-                    )
-                else:
-                    payment_refunded, payment_cancelled = (
-                        self.refund_or_cancel_web_store_payment(payment)
-                    )
-            except (WebStoreAPIError, WebStoreRefundValidationError) as exc:
-                self._raise_web_store_refund_or_cancellation_exception(
-                    exc, is_event_cancellation=is_event_cancellation
+            if not payment and (signup_group := getattr(self, "signup_group", None)):
+                payment_partially_refunded = (
+                    self.partially_refund_signup_group_web_store_payment(signup_group)
+                )
+            else:
+                payment_refunded, payment_cancelled = (
+                    self.refund_or_cancel_web_store_payment(payment)
                 )
 
         if not bypass_web_store_api_calls and (

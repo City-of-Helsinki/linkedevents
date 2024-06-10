@@ -1,4 +1,3 @@
-from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Optional
 from unittest.mock import patch
@@ -10,7 +9,6 @@ from django.conf import settings
 from django.core import mail
 from django.utils import translation
 from django.utils.timezone import localtime
-from mailer.models import Message
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -35,13 +33,8 @@ from registrations.tests.factories import (
     SignUpPaymentFactory,
 )
 from web_store.tests.order.test_web_store_order_api_client import (
-    DEFAULT_CANCEL_ORDER_DATA,
     DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
-    DEFAULT_GET_ORDER_DATA,
     DEFAULT_ORDER_ID,
-)
-from web_store.tests.payment.test_web_store_payment_api_client import (
-    DEFAULT_GET_PAYMENT_DATA,
 )
 
 
@@ -285,58 +278,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
 
         self.assertCancellationEmailsSent(contact_person_count)
 
-    def test_event_put_signups_cancelled_and_payments_refunded(self):
-        self._create_signup_payments()
-
-        contact_person_count = SignUpContactPerson.objects.count()
-        self.assertEqual(contact_person_count, 3)
-        self.assertEqual(SignUpGroup.objects.count(), 1)
-        self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 2)
-
-        self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
-
-        complex_event_dict = self.make_complex_event_dict(
-            self.event.data_source,
-            self.event.publisher,
-            self.location_id,
-            self.languages,
-        )
-        complex_event_dict["event_status"] = "EventCancelled"
-
-        with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
-            )
-
-            response = self.client.put(
-                self.event_detail_url,
-                complex_event_dict,
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-            self.assertEqual(req_mock.call_count, 4)
-
-        self.event.refresh_from_db()
-        self.assertEqual(self.event.event_status, Event.Status.CANCELLED)
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 0)
-        self.assertEqual(SignUpGroup.objects.count(), 0)
-        self.assertEqual(SignUp.objects.count(), 0)
-        self.assertEqual(SignUpPayment.objects.count(), 0)
-
-        self.assertCancellationEmailsSent(contact_person_count)
-
-    def test_event_put_signups_cancelled_and_payments_cancelled(self):
-        # Create two payments with the status "CREATED". These will be cancelled instead of
-        # refunded as they are not paid yet.
+    def test_cannot_cancel_event_with_paid_signups(self):
         signup_group = SignUpGroup.objects.first()
         self._create_signup_payments(
             [
@@ -355,8 +297,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
             ]
         )
 
-        contact_person_count = SignUpContactPerson.objects.count()
-        self.assertEqual(contact_person_count, 3)
+        self.assertEqual(SignUpContactPerson.objects.count(), 3)
         self.assertEqual(SignUpGroup.objects.count(), 1)
         self.assertEqual(SignUp.objects.count(), 4)
         self.assertEqual(SignUpPayment.objects.count(), 2)
@@ -371,40 +312,31 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         )
         complex_event_dict["event_status"] = "EventCancelled"
 
-        with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}order/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_ORDER_DATA,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/{DEFAULT_ORDER_ID}/cancel",
-                json=DEFAULT_CANCEL_ORDER_DATA,
-            )
-
-            response = self.client.put(
-                self.event_detail_url,
-                complex_event_dict,
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-            self.assertEqual(req_mock.call_count, 6)
+        response = self.client.put(
+            self.event_detail_url,
+            complex_event_dict,
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            (
+                "Trying to cancel an event with paid signups. "
+                "Please cancel the signups first before cancelling the event."
+            ),
+        )
 
         self.event.refresh_from_db()
-        self.assertEqual(self.event.event_status, Event.Status.CANCELLED)
+        self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
 
-        self.assertEqual(SignUpContactPerson.objects.count(), 0)
-        self.assertEqual(SignUpGroup.objects.count(), 0)
-        self.assertEqual(SignUp.objects.count(), 0)
-        self.assertEqual(SignUpPayment.objects.count(), 0)
+        self.assertEqual(SignUpContactPerson.objects.count(), 3)
+        self.assertEqual(SignUpGroup.objects.count(), 1)
+        self.assertEqual(SignUp.objects.count(), 4)
+        self.assertEqual(SignUpPayment.objects.count(), 2)
 
-        self.assertCancellationEmailsSent(contact_person_count)
+        self.assertEqual(len(mail.outbox), 0)
 
-    def test_event_bulk_update_signups_cancelled_and_payments_refunded(self):
+    def test_event_bulk_update_cannot_refund_paid_signups(self):
         registration2 = RegistrationFactory(event__publisher=self.event.publisher)
         event2 = registration2.event
 
@@ -469,292 +401,24 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         complex_event_dict2["id"] = event2.pk
         complex_event_dict2["event_status"] = "EventCancelled"
 
-        default_get_payment_data2 = deepcopy(DEFAULT_GET_PAYMENT_DATA)
-        default_get_payment_data2["orderId"] = external_order_id2
-
-        default_get_refund_data2 = deepcopy(DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE)
-        default_get_refund_data2["refunds"][0]["orderId"] = external_order_id2
-
-        with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
-            )
-
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{external_order_id2}",
-                json=default_get_payment_data2,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-                json=default_get_refund_data2,
-            )
-
-            response = self.client.put(
-                reverse("event-list"),
-                [complex_event_dict, complex_event_dict2],
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-            self.assertEqual(req_mock.call_count, 8)
+        response = self.client.put(
+            reverse("event-list"),
+            [complex_event_dict, complex_event_dict2],
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            (
+                "Trying to cancel an event with paid signups. "
+                "Please cancel the signups first before cancelling the event."
+            ),
+        )
 
         self.event.refresh_from_db()
-        self.assertEqual(self.event.event_status, Event.Status.CANCELLED)
-
         event2.refresh_from_db()
-        self.assertEqual(event2.event_status, Event.Status.CANCELLED)
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 0)
-        self.assertEqual(SignUpGroup.objects.count(), 0)
-        self.assertEqual(SignUp.objects.count(), 0)
-        self.assertEqual(SignUpPayment.objects.count(), 0)
-
-        self.assertCancellationEmailsSent(contact_person_count)
-
-    def test_event_bulk_update_signups_cancelled_and_payments_cancelled(self):
-        registration2 = RegistrationFactory(event__publisher=self.event.publisher)
-        event2 = registration2.event
-
-        signup_group = SignUpGroup.objects.first()
-
-        signup_group2 = SignUpGroupFactory(registration=registration2)
-        SignUpFactory(signup_group=signup_group2, registration=registration2)
-        SignUpContactPersonFactory(
-            signup_group=signup_group2,
-            email="test-group2@test.com",
-            service_language=self.languages[2],
-        )
-
-        signup6 = SignUpFactory(registration=registration2)
-        SignUpContactPersonFactory(
-            signup=signup6,
-            email="test-signup6@test.com",
-            service_language=self.languages[2],
-        )
-
-        external_order_id2 = str(uuid4())
-
-        self._create_signup_payments(
-            [
-                {
-                    "signup": None,
-                    "signup_group": signup_group,
-                    "external_order_id": DEFAULT_ORDER_ID,
-                },
-                {
-                    "signup": SignUp.objects.filter(
-                        registration_id=signup_group.registration_id,
-                        signup_group_id__isnull=True,
-                    ).first(),
-                    "external_order_id": DEFAULT_ORDER_ID,
-                },
-                {
-                    "signup": None,
-                    "signup_group": signup_group2,
-                    "external_order_id": external_order_id2,
-                },
-                {
-                    "signup": signup6,
-                    "external_order_id": external_order_id2,
-                },
-            ]
-        )
-
-        contact_person_count = SignUpContactPerson.objects.count()
-        self.assertEqual(contact_person_count, 5)
-        self.assertEqual(SignUpGroup.objects.count(), 2)
-        self.assertEqual(SignUp.objects.count(), 6)
-        self.assertEqual(SignUpPayment.objects.count(), 4)
 
         self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
-        self.assertNotEqual(event2.event_status, Event.Status.CANCELLED)
-
-        complex_event_dict = self.make_complex_event_dict(
-            self.event.data_source,
-            self.event.publisher,
-            self.location_id,
-            self.languages,
-        )
-        complex_event_dict["id"] = self.event.pk
-        complex_event_dict["event_status"] = "EventCancelled"
-
-        complex_event_dict2 = self.make_complex_event_dict(
-            event2.data_source,
-            event2.publisher,
-            self.location_id,
-            self.languages,
-        )
-        complex_event_dict2["id"] = event2.pk
-        complex_event_dict2["event_status"] = "EventCancelled"
-
-        get_order_data2 = deepcopy(DEFAULT_GET_ORDER_DATA)
-        get_order_data2["orderId"] = external_order_id2
-
-        cancel_order_data2 = deepcopy(DEFAULT_CANCEL_ORDER_DATA)
-        cancel_order_data2["orderId"] = external_order_id2
-
-        with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}order/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_ORDER_DATA,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/{DEFAULT_ORDER_ID}/cancel",
-                json=DEFAULT_CANCEL_ORDER_DATA,
-            )
-
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{external_order_id2}",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}order/admin/{external_order_id2}",
-                json=get_order_data2,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/{external_order_id2}/cancel",
-                json=cancel_order_data2,
-            )
-
-            response = self.client.put(
-                reverse("event-list"),
-                [complex_event_dict, complex_event_dict2],
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-            self.assertEqual(req_mock.call_count, 12)
-
-        self.event.refresh_from_db()
-        self.assertEqual(self.event.event_status, Event.Status.CANCELLED)
-
-        event2.refresh_from_db()
-        self.assertEqual(event2.event_status, Event.Status.CANCELLED)
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 0)
-        self.assertEqual(SignUpGroup.objects.count(), 0)
-        self.assertEqual(SignUp.objects.count(), 0)
-        self.assertEqual(SignUpPayment.objects.count(), 0)
-
-        self.assertCancellationEmailsSent(contact_person_count)
-
-    def test_event_bulk_update_web_store_api_exception(self):
-        registration2 = RegistrationFactory(event__publisher=self.event.publisher)
-        event2 = registration2.event
-
-        signup_group2 = SignUpGroupFactory(registration=registration2)
-        SignUpFactory(signup_group=signup_group2, registration=registration2)
-        SignUpContactPersonFactory(
-            signup_group=signup_group2,
-            email="test-group2@test.com",
-            service_language=self.languages[2],
-        )
-
-        signup6 = SignUpFactory(registration=registration2)
-        SignUpContactPersonFactory(
-            signup=signup6,
-            email="test-signup6@test.com",
-            service_language=self.languages[2],
-        )
-
-        external_order_id2 = str(uuid4())
-
-        self._create_signup_payments()
-        self._create_signup_payments(
-            [
-                {
-                    "signup": None,
-                    "signup_group": signup_group2,
-                    "external_order_id": external_order_id2,
-                    "status": SignUpPayment.PaymentStatus.PAID,
-                },
-                {
-                    "signup": signup6,
-                    "external_order_id": external_order_id2,
-                    "status": SignUpPayment.PaymentStatus.PAID,
-                },
-            ]
-        )
-
-        contact_person_count = SignUpContactPerson.objects.count()
-        self.assertEqual(contact_person_count, 5)
-        self.assertEqual(SignUpGroup.objects.count(), 2)
-        self.assertEqual(SignUp.objects.count(), 6)
-        self.assertEqual(SignUpPayment.objects.count(), 4)
-
-        self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
-        self.assertNotEqual(event2.event_status, Event.Status.CANCELLED)
-
-        complex_event_dict = self.make_complex_event_dict(
-            self.event.data_source,
-            self.event.publisher,
-            self.location_id,
-            self.languages,
-        )
-        complex_event_dict["id"] = self.event.pk
-        complex_event_dict["event_status"] = "EventCancelled"
-
-        complex_event_dict2 = self.make_complex_event_dict(
-            event2.data_source,
-            event2.publisher,
-            self.location_id,
-            self.languages,
-        )
-        complex_event_dict2["id"] = event2.pk
-        complex_event_dict2["event_status"] = "EventCancelled"
-
-        self.assertEqual(Message.objects.count(), 0)
-
-        instant_refund_url = f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant"
-
-        def order2_matcher(request):
-            return request.json()[0]["orderId"] == external_order_id2
-
-        with (
-            self.settings(EMAIL_BACKEND="mailer.backend.DbBackend"),
-            requests_mock.Mocker() as req_mock,
-        ):
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-            req_mock.post(
-                instant_refund_url,
-                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
-            )
-
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{external_order_id2}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-            req_mock.post(
-                instant_refund_url,
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                additional_matcher=order2_matcher,
-            )
-
-            response = self.client.put(
-                reverse("event-list"),
-                [complex_event_dict, complex_event_dict2],
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-            self.assertEqual(req_mock.call_count, 6)
-
-        self.event.refresh_from_db()
-        self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
-
-        event2.refresh_from_db()
         self.assertNotEqual(event2.event_status, Event.Status.CANCELLED)
 
         self.assertEqual(SignUpContactPerson.objects.count(), 5)
@@ -763,89 +427,64 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         self.assertEqual(SignUpPayment.objects.count(), 4)
 
         self.assertEqual(len(mail.outbox), 0)
-        self.assertEqual(Message.objects.count(), 0)
 
-    def test_event_put_web_store_api_exception(self):
-        self._create_signup_payments()
+    def test_event_bulk_update_cannot_cancel_paid_signups(self):
+        registration2 = RegistrationFactory(event__publisher=self.event.publisher)
+        event2 = registration2.event
 
-        contact_person_count = SignUpContactPerson.objects.count()
-        self.assertEqual(contact_person_count, 3)
-        self.assertEqual(SignUpGroup.objects.count(), 1)
-        self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 2)
-
-        self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
-
-        complex_event_dict = self.make_complex_event_dict(
-            self.event.data_source,
-            self.event.publisher,
-            self.location_id,
-            self.languages,
-        )
-        complex_event_dict["event_status"] = "EventCancelled"
-
-        with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-            response = self.client.put(
-                self.event_detail_url,
-                complex_event_dict,
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(
-                response.data[0],
-                "Payment refund or cancellation failed for SignUpGroup with ID "
-                f"{SignUpGroup.objects.first().pk}.",
-            )
-
-            self.assertEqual(req_mock.call_count, 2)
-
-        self.event.refresh_from_db()
-        self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 3)
-        self.assertEqual(SignUpGroup.objects.count(), 1)
-        self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 2)
-
-        self.assertEqual(len(mail.outbox), 0)
-
-    def test_event_put_signup_web_store_api_exception(self):
         signup_group = SignUpGroup.objects.first()
-        signup = SignUp.objects.first()
+
+        signup_group2 = SignUpGroupFactory(registration=registration2)
+        SignUpFactory(signup_group=signup_group2, registration=registration2)
+        SignUpContactPersonFactory(
+            signup_group=signup_group2,
+            email="test-group2@test.com",
+            service_language=self.languages[2],
+        )
+
+        signup6 = SignUpFactory(registration=registration2)
+        SignUpContactPersonFactory(
+            signup=signup6,
+            email="test-signup6@test.com",
+            service_language=self.languages[2],
+        )
+
+        external_order_id2 = str(uuid4())
+
         self._create_signup_payments(
             [
-                {
-                    "signup": signup,
-                    "external_order_id": DEFAULT_ORDER_ID,
-                    "status": SignUpPayment.PaymentStatus.PAID,
-                },
                 {
                     "signup": None,
                     "signup_group": signup_group,
                     "external_order_id": DEFAULT_ORDER_ID,
-                    "status": SignUpPayment.PaymentStatus.PAID,
+                },
+                {
+                    "signup": SignUp.objects.filter(
+                        registration_id=signup_group.registration_id,
+                        signup_group_id__isnull=True,
+                    ).first(),
+                    "external_order_id": DEFAULT_ORDER_ID,
+                },
+                {
+                    "signup": None,
+                    "signup_group": signup_group2,
+                    "external_order_id": external_order_id2,
+                },
+                {
+                    "signup": signup6,
+                    "external_order_id": external_order_id2,
                 },
             ]
         )
 
         contact_person_count = SignUpContactPerson.objects.count()
-        self.assertEqual(contact_person_count, 3)
-        self.assertEqual(SignUpGroup.objects.count(), 1)
-        self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 2)
+        self.assertEqual(contact_person_count, 5)
+        self.assertEqual(SignUpGroup.objects.count(), 2)
+        self.assertEqual(SignUp.objects.count(), 6)
+        self.assertEqual(SignUpPayment.objects.count(), 4)
 
         self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
-
-        self.assertEqual(Message.objects.count(), 0)
+        self.assertNotEqual(event2.event_status, Event.Status.CANCELLED)
 
         complex_event_dict = self.make_complex_event_dict(
             self.event.data_source,
@@ -853,44 +492,44 @@ class EventCancellationNotificationAPITestCase(APITestCase):
             self.location_id,
             self.languages,
         )
+        complex_event_dict["id"] = self.event.pk
         complex_event_dict["event_status"] = "EventCancelled"
 
-        with (
-            self.settings(EMAIL_BACKEND="mailer.backend.DbBackend"),
-            requests_mock.Mocker() as req_mock,
-        ):
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        complex_event_dict2 = self.make_complex_event_dict(
+            event2.data_source,
+            event2.publisher,
+            self.location_id,
+            self.languages,
+        )
+        complex_event_dict2["id"] = event2.pk
+        complex_event_dict2["event_status"] = "EventCancelled"
 
-            response = self.client.put(
-                self.event_detail_url,
-                complex_event_dict,
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(
-                response.data[0],
-                f"Payment refund or cancellation failed for SignUpGroup with ID {signup_group.pk}.",
-            )
-
-            self.assertEqual(req_mock.call_count, 2)
+        response = self.client.put(
+            reverse("event-list"),
+            [complex_event_dict, complex_event_dict2],
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            (
+                "Trying to cancel an event with paid signups. "
+                "Please cancel the signups first before cancelling the event."
+            ),
+        )
 
         self.event.refresh_from_db()
-        self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
+        event2.refresh_from_db()
 
-        self.assertEqual(SignUpContactPerson.objects.count(), 3)
-        self.assertEqual(SignUpGroup.objects.count(), 1)
-        self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 2)
+        self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
+        self.assertNotEqual(event2.event_status, Event.Status.CANCELLED)
+
+        self.assertEqual(SignUpContactPerson.objects.count(), 5)
+        self.assertEqual(SignUpGroup.objects.count(), 2)
+        self.assertEqual(SignUp.objects.count(), 6)
+        self.assertEqual(SignUpPayment.objects.count(), 4)
 
         self.assertEqual(len(mail.outbox), 0)
-        self.assertEqual(Message.objects.count(), 0)
 
     def test_event_put_signups_cancelled_and_cancellation_emails_sent_for_recurring_event(
         self,
@@ -934,14 +573,13 @@ class EventCancellationNotificationAPITestCase(APITestCase):
 
         self.assertCancellationEmailsSentForRecurringEvent(contact_person_count)
 
-    def test_event_put_cancellation_emails_sent_and_payments_refunded_for_recurring_event(
+    def test_cannot_cancel_recurring_event_with_paid_signups(
         self,
     ):
         self._create_signup_payments()
         self._make_super_event(self.event)
 
-        contact_person_count = SignUpContactPerson.objects.count()
-        self.assertEqual(contact_person_count, 3)
+        self.assertEqual(SignUpContactPerson.objects.count(), 3)
         self.assertEqual(SignUpGroup.objects.count(), 1)
         self.assertEqual(SignUp.objects.count(), 4)
         self.assertEqual(SignUpPayment.objects.count(), 2)
@@ -962,34 +600,29 @@ class EventCancellationNotificationAPITestCase(APITestCase):
             }
         )
 
-        with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
-            )
-
-            response = self.client.put(
-                self.event_detail_url,
-                complex_event_dict,
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-            self.assertEqual(req_mock.call_count, 4)
+        response = self.client.put(
+            self.event_detail_url,
+            complex_event_dict,
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            (
+                "Trying to cancel an event with paid signups. "
+                "Please cancel the signups first before cancelling the event."
+            ),
+        )
 
         self.event.refresh_from_db()
-        self.assertEqual(self.event.event_status, Event.Status.CANCELLED)
+        self.assertNotEqual(self.event.event_status, Event.Status.CANCELLED)
 
-        self.assertEqual(SignUpContactPerson.objects.count(), 0)
-        self.assertEqual(SignUpGroup.objects.count(), 0)
-        self.assertEqual(SignUp.objects.count(), 0)
-        self.assertEqual(SignUpPayment.objects.count(), 0)
+        self.assertEqual(SignUpContactPerson.objects.count(), 3)
+        self.assertEqual(SignUpGroup.objects.count(), 1)
+        self.assertEqual(SignUp.objects.count(), 4)
+        self.assertEqual(SignUpPayment.objects.count(), 2)
 
-        self.assertCancellationEmailsSentForRecurringEvent(contact_person_count)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_recurring_sub_event_put_cancellation_emails_sent_signups_not_cancelled_for_super_event(
         self,
@@ -1295,43 +928,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         # => 3 people * 2 notifications = 6 notifications.
         self.assertEqual(len(mail.outbox), 6)
 
-    def test_event_delete_cancellation_emails_sent_and_payments_refunded(self):
-        self._create_signup_payments()
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 3)
-        self.assertEqual(SignUpGroup.objects.count(), 1)
-        self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 2)
-
-        with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-                json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
-            )
-
-            response = self.client.delete(
-                self.event_detail_url,
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-            self.assertEqual(req_mock.call_count, 4)
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 0)
-        self.assertEqual(SignUpGroup.objects.count(), 0)
-        self.assertEqual(SignUp.objects.count(), 0)
-        self.assertEqual(SignUpPayment.objects.count(), 0)
-
-        self.assertEqual(len(mail.outbox), 6)
-
-    def test_event_delete_cancellation_emails_sent_and_payments_cancelled(self):
-        # Create two payments with the status "CREATED". These will be cancelled instead of
-        # refunded as they are not paid yet.
+    def test_cannot_delete_event_with_paid_signups(self):
         signup_group = SignUpGroup.objects.first()
         self._create_signup_payments(
             [
@@ -1355,121 +952,22 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         self.assertEqual(SignUp.objects.count(), 4)
         self.assertEqual(SignUpPayment.objects.count(), 2)
 
-        with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}order/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_ORDER_DATA,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/{DEFAULT_ORDER_ID}/cancel",
-                json=DEFAULT_CANCEL_ORDER_DATA,
-            )
-
-            response = self.client.delete(
-                self.event_detail_url,
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-            self.assertEqual(req_mock.call_count, 6)
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 0)
-        self.assertEqual(SignUpGroup.objects.count(), 0)
-        self.assertEqual(SignUp.objects.count(), 0)
-        self.assertEqual(SignUpPayment.objects.count(), 0)
-
-        self.assertEqual(len(mail.outbox), 6)
-
-    def test_event_delete_web_store_api_exception(self):
-        self._create_signup_payments()
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 3)
-        self.assertEqual(SignUpGroup.objects.count(), 1)
-        self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 2)
-
-        with requests_mock.Mocker() as req_mock:
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-            response = self.client.delete(
-                self.event_detail_url,
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(
-                response.data[0],
-                "Payment refund or cancellation failed for SignUpGroup with ID "
-                f"{SignUpGroup.objects.first().pk}.",
-            )
-
-            self.assertEqual(req_mock.call_count, 2)
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 3)
-        self.assertEqual(SignUpGroup.objects.count(), 1)
-        self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 2)
-
-        self.assertEqual(len(mail.outbox), 0)
-
-    def test_event_delete_signup_web_store_api_exception(self):
-        signup = SignUp.objects.first()
-        self._create_signup_payments(
-            [
-                {
-                    "signup": signup,
-                    "external_order_id": DEFAULT_ORDER_ID,
-                    "status": SignUpPayment.PaymentStatus.PAID,
-                },
-            ]
+        response = self.client.delete(
+            self.event_detail_url,
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data[0],
+            (
+                "Trying to cancel an event with paid signups. "
+                "Please cancel the signups first before cancelling the event."
+            ),
         )
 
         self.assertEqual(SignUpContactPerson.objects.count(), 3)
         self.assertEqual(SignUpGroup.objects.count(), 1)
         self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 1)
-
-        self.assertEqual(Message.objects.count(), 0)
-
-        with (
-            self.settings(EMAIL_BACKEND="mailer.backend.DbBackend"),
-            requests_mock.Mocker() as req_mock,
-        ):
-            req_mock.get(
-                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
-                json=DEFAULT_GET_PAYMENT_DATA,
-            )
-            req_mock.post(
-                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-            response = self.client.delete(
-                self.event_detail_url,
-                format="json",
-            )
-            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-            self.assertEqual(
-                response.data[0],
-                f"Payment refund or cancellation failed for SignUp with ID {signup.pk}.",
-            )
-
-            self.assertEqual(req_mock.call_count, 2)
-
-        self.assertEqual(SignUpContactPerson.objects.count(), 3)
-        self.assertEqual(SignUpGroup.objects.count(), 1)
-        self.assertEqual(SignUp.objects.count(), 4)
-        self.assertEqual(SignUpPayment.objects.count(), 1)
+        self.assertEqual(SignUpPayment.objects.count(), 2)
 
         self.assertEqual(len(mail.outbox), 0)
-        self.assertEqual(Message.objects.count(), 0)
