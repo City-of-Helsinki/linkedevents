@@ -1114,6 +1114,7 @@ class Event(
     class MPTTMeta:
         parent_attr = "super_event"
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if self._has_circular_replacement():
             raise ValidationError(
@@ -1171,65 +1172,61 @@ class Event(
         event_deleted = old_deleted is False and self.deleted is True
 
         registration_to_cancel = None
-        registration_cancelled = False
         if (
             (event_deleted or event_cancelled)
             and (registration_to_cancel := getattr(self, "registration", None))
             and registration_to_cancel.has_payments
         ):
-            # Registration signups needs to be cancelled or notified if related event is
-            # cancelled or deleted. If there are Talpa payments, handle the signups
-            # individually outside of the event transaction due to API calls to the Talpa API.
-            registration_to_cancel.cancel_signups(is_event_cancellation=True)
-            registration_cancelled = True
-
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-
-            # needed to cache location event numbers
-            if not old_location and self.location:
-                Place.objects.filter(id=self.location.id).update(n_events_changed=True)
-            if old_location and not self.location:
-                # drafts (or imported events) may not always have location set
-                Place.objects.filter(id=old_location.id).update(n_events_changed=True)
-            if old_location and self.location and old_location != self.location:
-                Place.objects.filter(id__in=(old_location.id, self.location.id)).update(
-                    n_events_changed=True
+            raise ValidationError(
+                _(
+                    "Trying to cancel an event with paid signups. "
+                    "Please cancel the signups first before cancelling the event."
                 )
+            )
 
-            # send notifications
-            if (
-                old_publication_status == PublicationStatus.DRAFT
-                and self.publication_status == PublicationStatus.PUBLIC
-            ):
-                self.send_published_notification()
-            if self.publication_status == PublicationStatus.DRAFT and event_deleted:
-                self.send_deleted_notification()
-            if (
-                created
-                and self.publication_status == PublicationStatus.DRAFT
-                and not self.is_created_with_apikey
-                # Only send super event notification to avoid spamming from
-                # child events when recurring event.
-                and not (
-                    self.super_event
-                    and self.super_event.super_event_type
-                    == Event.SuperEventType.RECURRING
-                )
-                # Do not send draft emails from events created by admins.
-                and not self.publisher.admin_users.filter(
-                    id=self.created_by_id
-                ).exists()
-            ):
-                self.send_draft_posted_notification()
+        super().save(*args, **kwargs)
 
-            if (event_deleted or event_cancelled) and not registration_cancelled:
-                # If there weren't any Talpa payments, cancel the registration or notify the
-                # contact persons in the event transaction so that all changes can be reverted
-                # in case of an exception.
-                self.cancel_registration_signups_or_notify_contact_person(
-                    registration_to_cancel
-                )
+        # needed to cache location event numbers
+        if not old_location and self.location:
+            Place.objects.filter(id=self.location.id).update(n_events_changed=True)
+        if old_location and not self.location:
+            # drafts (or imported events) may not always have location set
+            Place.objects.filter(id=old_location.id).update(n_events_changed=True)
+        if old_location and self.location and old_location != self.location:
+            Place.objects.filter(id__in=(old_location.id, self.location.id)).update(
+                n_events_changed=True
+            )
+
+        # send notifications
+        if (
+            old_publication_status == PublicationStatus.DRAFT
+            and self.publication_status == PublicationStatus.PUBLIC
+        ):
+            self.send_published_notification()
+        if self.publication_status == PublicationStatus.DRAFT and event_deleted:
+            self.send_deleted_notification()
+        if (
+            created
+            and self.publication_status == PublicationStatus.DRAFT
+            and not self.is_created_with_apikey
+            # Only send super event notification to avoid spamming from
+            # child events when recurring event.
+            and not (
+                self.super_event
+                and self.super_event.super_event_type == Event.SuperEventType.RECURRING
+            )
+            # Do not send draft emails from events created by admins.
+            and not self.publisher.admin_users.filter(id=self.created_by_id).exists()
+        ):
+            self.send_draft_posted_notification()
+
+        if event_deleted or event_cancelled:
+            # If there weren't any Talpa payments, cancel the registration or notify the
+            # contact persons in the event transaction so that all changes can be reverted
+            # in case of an exception.
+            self.cancel_registration_signups_or_notify_contact_person(
+                registration_to_cancel
+            )
 
     def cancel_registration_signups_or_notify_contact_person(self, registration=None):
         if registration:
