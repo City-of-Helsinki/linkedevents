@@ -930,13 +930,14 @@ class SignUpMixin:
 
         if checkout_url := api_response.get("checkoutUrl"):
             kwargs["checkout_url"] = get_checkout_url_with_lang_param(
-                checkout_url, getattr(contact_person, "service_language_id", "fi")
+                checkout_url,
+                getattr(contact_person, "service_language_id", None) or "fi",
             )
 
         if logged_in_checkout_url := api_response.get("loggedInCheckoutUrl"):
             kwargs["logged_in_checkout_url"] = get_checkout_url_with_lang_param(
                 logged_in_checkout_url,
-                getattr(contact_person, "service_language_id", "fi"),
+                getattr(contact_person, "service_language_id", None) or "fi",
             )
 
         kwargs["created_by"] = self.created_by
