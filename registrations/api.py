@@ -116,6 +116,15 @@ class SignUpAccessCodeMixin:
 class SignUpPaymentRefundMixin:
     @transaction.atomic
     def perform_destroy(self, instance):
+        if getattr(instance, "payment_refund", None) or getattr(
+            instance, "payment_cancellation", None
+        ):
+            raise ConflictException(
+                _(
+                    "Refund or cancellation already exists. Please wait for the process to complete."
+                )
+            )
+
         try:
             super().perform_destroy(instance)
         except (WebStoreAPIError, WebStoreRefundValidationError) as exc:
