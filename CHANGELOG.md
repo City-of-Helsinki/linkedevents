@@ -1,5 +1,36 @@
 # Changelog
 
+## [3.6.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.5.0...linkedevents-v3.6.0) (2024-06-11)
+
+
+### Features
+
+* Action endpoints for getting merchants and accounts ([4722c52](https://github.com/City-of-Helsinki/linkedevents/commit/4722c5206ec33f4c17d472a43c3a040e7d44bf2c))
+* Add lang parameter to checkout URLs ([dd4da32](https://github.com/City-of-Helsinki/linkedevents/commit/dd4da325623f2a6f556b68b0294913996f73a5dc))
+* Add name and address_locality fields to analytics API ([507287b](https://github.com/City-of-Helsinki/linkedevents/commit/507287bf65cfd26d2afc28e863c70a62009d1850))
+* Allow multiple accounts per organization ([90e13e2](https://github.com/City-of-Helsinki/linkedevents/commit/90e13e2bc23be6d9710568eb4a701a3198a5ec91))
+* Allow multiple merchants per organization ([99bbece](https://github.com/City-of-Helsinki/linkedevents/commit/99bbece707740e490182c7cfa7c67ba0b30562fd))
+* Always use the partial refund Talpa endpoint ([42835c6](https://github.com/City-of-Helsinki/linkedevents/commit/42835c69d6082372c950f73daf51598172369afb))
+* Check order and payment before refunds ([3da4bcb](https://github.com/City-of-Helsinki/linkedevents/commit/3da4bcb31045c177abbf78c64058dd61d7ca8ff3))
+* Command for removing expired admin permissions ([244db58](https://github.com/City-of-Helsinki/linkedevents/commit/244db5837fa44762a0e91d0283eed0c776c10f88))
+* Don't allow cancelling event with payments ([afa6b2b](https://github.com/City-of-Helsinki/linkedevents/commit/afa6b2bd8fa0a0ba58602645b73c496274295ab9))
+* **events-api:** Match audience in keyword_* filters ([0b42f0b](https://github.com/City-of-Helsinki/linkedevents/commit/0b42f0b5e671202379b28b092181188a6a981be6))
+* Filtering by modified time to data analytics api ([4c2fd93](https://github.com/City-of-Helsinki/linkedevents/commit/4c2fd935efe6d68351a1735ead206c46565b299d))
+* **gdpr-api:** Add translations to gdpr data ([95120f9](https://github.com/City-of-Helsinki/linkedevents/commit/95120f984b8a1a8f48a9274f7f355dbe592cb277))
+* Merchant and account selections for registration ([5bfd796](https://github.com/City-of-Helsinki/linkedevents/commit/5bfd796824cc68df175c5b50aa2b270808275bd8))
+* Prevent deleting signup with refund or cancellation ([2c17cb3](https://github.com/City-of-Helsinki/linkedevents/commit/2c17cb385b2d7ccf4cdd39c4c9e28e85fcabf453))
+* Refund and cancel payment through webhooks ([8ab3d92](https://github.com/City-of-Helsinki/linkedevents/commit/8ab3d920c8c25e7411a75f448bb874d6c9c38790))
+* Remove webhook attendee_status update ([34420ed](https://github.com/City-of-Helsinki/linkedevents/commit/34420edd1856d9092049b162583f72fb74b557ff))
+* Rest api for data analytics ([6559870](https://github.com/City-of-Helsinki/linkedevents/commit/655987048d2fd75529759fa8507d934f4cb16b55))
+* Use new enkora api translations endpoint ([55c8c6f](https://github.com/City-of-Helsinki/linkedevents/commit/55c8c6f3c6db7573fc99ccd1c74fd577e21492f3))
+* Vat code mapping for vat percentage ([16b67bb](https://github.com/City-of-Helsinki/linkedevents/commit/16b67bb759be5b52db4add44c21beffdaa4009d0))
+
+
+### Bug Fixes
+
+* Catch GDALException when receiving a bad srid in query params ([66a19eb](https://github.com/City-of-Helsinki/linkedevents/commit/66a19eb782ee9ca756d1ea73aaacd0b5c2b425ea))
+* Don't always include all translated fields ([79051b7](https://github.com/City-of-Helsinki/linkedevents/commit/79051b716b26f07432931d815a22db06dd64f062))
+
 ## [3.5.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.4.1...linkedevents-v3.5.0) (2024-05-28)
 
 
