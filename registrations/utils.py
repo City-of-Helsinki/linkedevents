@@ -218,7 +218,7 @@ def create_web_store_api_order(
         signup_or_group.created_by.uuid if signup_or_group.created_by_id else None
     )
 
-    service_lang = getattr(contact_person, "service_language_id", "fi")
+    service_lang = getattr(contact_person, "service_language_id", None) or "fi"
     with translation.override(service_lang):
         order_data = signup_or_group.to_web_store_order_json(
             user_uuid, contact_person=contact_person
