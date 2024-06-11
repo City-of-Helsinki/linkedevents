@@ -452,10 +452,10 @@ class Registration(CreatedModifiedBaseModel):
         verbose_name=_("Instructions"), blank=True, null=True
     )
 
-    maximum_attendee_capacity = models.PositiveSmallIntegerField(
+    maximum_attendee_capacity = models.PositiveIntegerField(
         verbose_name=_("Maximum attendee capacity"), null=True, blank=True
     )
-    minimum_attendee_capacity = models.PositiveSmallIntegerField(
+    minimum_attendee_capacity = models.PositiveIntegerField(
         verbose_name=_("Minimum attendee capacity"), null=True, blank=True
     )
     waiting_list_capacity = models.PositiveSmallIntegerField(

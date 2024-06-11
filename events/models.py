@@ -1085,13 +1085,13 @@ class Event(
         blank=True,
     )
 
-    maximum_attendee_capacity = models.PositiveSmallIntegerField(
+    maximum_attendee_capacity = models.PositiveIntegerField(
         verbose_name=_("maximum attendee capacity"), null=True, blank=True
     )
 
     # TODO: make into agreement with schema.org
     # Custom fields not from schema.org
-    minimum_attendee_capacity = models.PositiveSmallIntegerField(
+    minimum_attendee_capacity = models.PositiveIntegerField(
         verbose_name=_("minimum attendee capacity"), null=True, blank=True
     )
     enrolment_start_time = models.DateTimeField(

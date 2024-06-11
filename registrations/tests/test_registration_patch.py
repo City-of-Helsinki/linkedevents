@@ -20,6 +20,7 @@ from registrations.models import (
 )
 from registrations.tests.factories import (
     PriceGroupFactory,
+    RegistrationFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
     RegistrationWebStoreAccountFactory,
@@ -434,3 +435,64 @@ def test_cannot_patch_product_mapping_with_price_groups_missing(
 
     assert Registration.objects.count() == 1
     assert RegistrationWebStoreProductMapping.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "maximum_attendee_capacity, expected_maximum_attendee_capacity, expected_status_code",
+    [
+        ("", None, status.HTTP_400_BAD_REQUEST),
+        (None, None, status.HTTP_400_BAD_REQUEST),
+        (0, 0, status.HTTP_200_OK),
+        (1, 1, status.HTTP_200_OK),
+        (1000000, 1000000, status.HTTP_200_OK),
+    ],
+)
+@pytest.mark.django_db
+def test_patch_registration_maximum_attendee_capacity(
+    api_client,
+    maximum_attendee_capacity,
+    expected_maximum_attendee_capacity,
+    expected_status_code,
+):
+    registration = RegistrationFactory(maximum_attendee_capacity=None)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration_data = {
+        "maximum_attendee_capacity": maximum_attendee_capacity,
+    }
+
+    response = patch_registration(api_client, registration.pk, registration_data)
+    assert response.status_code == expected_status_code
+
+    registration.refresh_from_db()
+    assert registration.maximum_attendee_capacity == expected_maximum_attendee_capacity
+
+
+@pytest.mark.parametrize(
+    "minimum_attendee_capacity, expected_minimum_attendee_capacity",
+    [
+        (None, None),
+        (0, 0),
+        (1, 1),
+        (1000000, 1000000),
+    ],
+)
+@pytest.mark.django_db
+def test_patch_registration_minimum_attendee_capacity(
+    api_client, minimum_attendee_capacity, expected_minimum_attendee_capacity
+):
+    registration = RegistrationFactory(minimum_attendee_capacity=None)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration_data = {
+        "minimum_attendee_capacity": minimum_attendee_capacity,
+    }
+
+    assert_patch_registration(api_client, registration.pk, registration_data)
+
+    registration.refresh_from_db()
+    assert registration.minimum_attendee_capacity == expected_minimum_attendee_capacity

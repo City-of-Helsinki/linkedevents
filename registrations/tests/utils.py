@@ -13,6 +13,7 @@ from requests import RequestException
 from rest_framework import status
 
 from events.models import Event
+from events.tests.utils import versioned_reverse as reverse
 from helevents.models import User
 from helevents.tests.factories import UserFactory
 from registrations.models import (
@@ -329,4 +330,15 @@ def get_registration_merchant_and_account_data(
     return {
         **get_registration_merchant_data(merchant, update_data=merchant_update_data),
         **get_registration_account_data(account, update_data=account_update_data),
+    }
+
+
+def get_event_url(detail_pk):
+    return reverse("event-detail", kwargs={"pk": detail_pk})
+
+
+def get_minimal_required_registration_data(event_id):
+    return {
+        "event": {"@id": get_event_url(event_id)},
+        "maximum_attendee_capacity": 1000000,
     }

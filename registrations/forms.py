@@ -111,6 +111,15 @@ class RegistrationAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.fields["maximum_attendee_capacity"].required = True
+        self.fields["maximum_attendee_capacity"].help_text = _(
+            "If the attendee capacity for the event is not restricted, please give a "
+            "rough estimate of at least the maximum attendee capacity. The information will be "
+            "used for statistical purposes. Maximum attendee capacity is a measure in the city "
+            "strategy that monitors the volumes of events held in the city. The estimate may be "
+            "changed later if it is uncertain at the moment."
+        )
+
         if not settings.WEB_STORE_INTEGRATION_ENABLED:
             if "vat_percentage" in self.fields:
                 del self.fields["vat_percentage"]

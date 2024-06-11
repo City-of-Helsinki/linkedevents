@@ -677,6 +677,7 @@ def test__an_admin_can_update_an_event_from_another_data_source(
         keyword
     )  # keyword is needed in testing POST and PUT with event data
     event2.offers.add(offer)  # ditto for offer
+    event2.maximum_attendee_capacity = 1000000
     event2.save()
     api_client.force_authenticate(user)
 
@@ -1304,3 +1305,24 @@ def test_cannot_update_event_offer_with_duplicate_price_groups(
     )
 
     assert OfferPriceGroup.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_update_event_with_large_minimum_and_maximum_attendee_capacity(
+    user_api_client,
+    event,
+    minimal_event_dict,
+):
+    minimal_event_dict["minimum_attendee_capacity"] = 500000
+    minimal_event_dict["maximum_attendee_capacity"] = 1000000
+
+    response = user_api_client.put(
+        reverse("event-detail", kwargs={"pk": event.id}),
+        minimal_event_dict,
+        format="json",
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    event.refresh_from_db()
+    assert event.minimum_attendee_capacity == 500000
+    assert event.maximum_attendee_capacity == 1000000

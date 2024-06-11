@@ -43,10 +43,12 @@ from registrations.tests.factories import (
     WebStoreAccountFactory,
     WebStoreMerchantFactory,
 )
-from registrations.tests.test_registration_post import email, get_event_url, hel_email
+from registrations.tests.test_registration_post import email, hel_email
 from registrations.tests.utils import (
     assert_invitation_email_is_sent,
     create_user_by_role,
+    get_event_url,
+    get_minimal_required_registration_data,
     get_registration_account_data,
     get_registration_merchant_and_account_data,
     get_registration_merchant_data,
@@ -118,10 +120,7 @@ def test_can_update_registration(api_client, registration, user_role):
 
     api_client.force_authenticate(user)
 
-    registration_data = {
-        "event": {"@id": get_event_url(registration.event_id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     assert_update_registration(api_client, registration.id, registration_data)
 
 
@@ -150,10 +149,7 @@ def test_signup_url_is_not_linked_to_event_offer_on_registration_update(
         info_url_en=info_url_en,
     )
 
-    registration_data = {
-        "event": {"@id": get_event_url(registration.event_id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     assert_update_registration(api_client, registration.pk, registration_data)
 
     blank_values = (None, "")
@@ -169,10 +165,7 @@ def test_financial_admin_cannot_update_registration(api_client, event, registrat
     user.financial_admin_organizations.add(registration.publisher)
     api_client.force_authenticate(user)
 
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     response = update_registration(api_client, registration.id, registration_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -182,10 +175,7 @@ def test_non_admin_cannot_update_registration(api_client, event, registration, u
     event.publisher.admin_users.remove(user)
     api_client.force_authenticate(user)
 
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     response = update_registration(api_client, registration.id, registration_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -202,24 +192,18 @@ def test_admin_can_update_registration_from_another_data_source(
     event2.publisher = organization
     event2.save()
 
-    registration_data = {
-        "event": {"@id": get_event_url(event2.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(event2.id)
     assert_update_registration(api_client, registration2.id, registration_data)
 
 
 @pytest.mark.django_db
 def test_correct_api_key_can_update_registration(
-    api_client, event, data_source, organization, registration
+    api_client, data_source, organization, registration
 ):
     data_source.owner = organization
     data_source.save()
 
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     assert_update_registration(
         api_client, registration.id, registration_data, data_source
     )
@@ -227,15 +211,12 @@ def test_correct_api_key_can_update_registration(
 
 @pytest.mark.django_db
 def test_api_key_from_wrong_data_source_cannot_update_registration(
-    api_client, event, organization, other_data_source, registration
+    api_client, organization, other_data_source, registration
 ):
     other_data_source.owner = organization
     other_data_source.save()
 
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     response = update_registration(
         api_client, registration.id, registration_data, other_data_source
     )
@@ -244,12 +225,9 @@ def test_api_key_from_wrong_data_source_cannot_update_registration(
 
 @pytest.mark.django_db
 def test_api_key_without_organization_cannot_update_registration(
-    api_client, data_source, event, registration
+    api_client, data_source, registration
 ):
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     response = update_registration(
         api_client, registration.id, registration_data, data_source
     )
@@ -257,13 +235,10 @@ def test_api_key_without_organization_cannot_update_registration(
 
 
 @pytest.mark.django_db
-def test_unknown_api_key_cannot_update_registration(api_client, event, registration):
+def test_unknown_api_key_cannot_update_registration(api_client, registration):
     api_client.credentials(apikey="unknown")
 
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     response = update_registration(api_client, registration.id, registration_data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -273,7 +248,6 @@ def test_unknown_api_key_cannot_update_registration(api_client, event, registrat
 def test_admin_can_update_registration_regardless_of_non_user_editable_resources(
     user_api_client,
     data_source,
-    event,
     organization,
     registration,
     user_editable_resources,
@@ -282,10 +256,7 @@ def test_admin_can_update_registration_regardless_of_non_user_editable_resources
     data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     assert_update_registration(user_api_client, registration.id, registration_data)
 
 
@@ -294,7 +265,6 @@ def test_admin_can_update_registration_regardless_of_non_user_editable_resources
 def test_registration_admin_can_update_registration_regardless_of_non_user_editable_resources(
     user_api_client,
     data_source,
-    event,
     organization,
     registration,
     user,
@@ -306,26 +276,20 @@ def test_registration_admin_can_update_registration_regardless_of_non_user_edita
     data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     assert_update_registration(user_api_client, registration.id, registration_data)
 
 
 @pytest.mark.django_db
 def test_user_editable_resources_can_update_registration(
-    api_client, data_source, event, organization, registration, user
+    api_client, data_source, organization, registration, user
 ):
     data_source.owner = organization
     data_source.user_editable_resources = True
     data_source.save()
     api_client.force_authenticate(user)
 
-    registration_data = {
-        "event": {"@id": get_event_url(event.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     assert_update_registration(api_client, registration.id, registration_data)
 
 
@@ -336,13 +300,11 @@ def test_admin_cannot_update_registrations_event(
     """Event field is read-only field and cannot be edited"""
     api_client.force_authenticate(user)
 
-    registration_data = {
-        "event": {"@id": get_event_url(event2.id)},
-        "audience_max_age": 10,
-    }
+    registration_data = get_minimal_required_registration_data(event2.id)
     assert_update_registration(api_client, registration.id, registration_data)
+
     registration.refresh_from_db()
-    assert registration.event == event
+    assert registration.event_id == event.pk
 
 
 @pytest.mark.parametrize("is_substitute_user", [False, True])
@@ -358,7 +320,7 @@ def test_send_email_to_new_registration_user_access(
     mail.outbox.clear()
 
     registration_data = {
-        "event": {"@id": get_event_url(registration.event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_user_accesses": [
             {"email": user_email, "is_substitute_user": is_substitute_user}
         ],
@@ -400,7 +362,7 @@ def test_email_is_not_sent_if_registration_user_access_email_is_not_updated(
     mail.outbox.clear()
 
     registration_data = {
-        "event": {"@id": get_event_url(registration.event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_user_accesses": [
             {"id": registration_user_access.id, "email": user_email}
         ],
@@ -437,7 +399,7 @@ def test_email_is_sent_if_registration_user_access_email_is_updated(
         registration.event.save()
 
         registration_data = {
-            "event": {"@id": get_event_url(registration.event.id)},
+            **get_minimal_required_registration_data(registration.event_id),
             "registration_user_accesses": [
                 {
                     "id": registration_user_access.id,
@@ -475,7 +437,7 @@ def test_email_is_sent_if_is_substitute_value_of_registration_user_access_is_upd
         registration.event.save()
 
         registration_data = {
-            "event": {"@id": get_event_url(registration.event.id)},
+            **get_minimal_required_registration_data(registration.event_id),
             "registration_user_accesses": [
                 {
                     "id": registration_user_access.id,
@@ -513,7 +475,7 @@ def test_cannot_update_registration_user_access_with_invalid_id(
     RegistrationUserAccessFactory(registration=registration, email=user_email)
 
     registration_data = {
-        "event": {"@id": get_event_url(registration.event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_user_accesses": [
             {
                 "id": user_id,
@@ -539,7 +501,7 @@ def test_cannot_update_substitute_user_access_without_helsinki_email(
     user_access = RegistrationUserAccessFactory(registration=registration, email=email)
 
     registration_data = {
-        "event": {"@id": get_event_url(registration.event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_user_accesses": [
             {
                 "id": user_access.pk,
@@ -569,7 +531,7 @@ def test_cannot_update_registration_user_access_with_another_registrations_user_
     )
 
     registration_data = {
-        "event": {"@id": get_event_url(registration.event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_user_accesses": [
             {
                 "id": another_registrations_user_access.pk,
@@ -603,7 +565,7 @@ def test_cannot_update_registration_user_access_with_duplicate_email(
     )
 
     registration_data = {
-        "event": {"@id": get_event_url(registration.event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_user_accesses": [
             {
                 "id": registration_user_access1.id,
@@ -639,7 +601,7 @@ def test_registration_text_fields_are_sanitized(event, registration, user_api_cl
     cleaned_instructions = "Instructions: Not allowed tag"
 
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "confirmation_message": {
             "fi": allowed_confirmation_message,
             "sv": "Confirmation message: <h6>Not allowed tag</h6>",
@@ -665,7 +627,7 @@ def test_registration_text_fields_are_sanitized(event, registration, user_api_cl
 
 @pytest.mark.django_db
 def test_registration_id_is_audit_logged_on_put(registration, user_api_client):
-    registration_data = {"event": {"@id": get_event_url(registration.event_id)}}
+    registration_data = get_minimal_required_registration_data(registration.event_id)
     assert_update_registration(user_api_client, registration.id, registration_data)
 
     audit_log_entry = AuditLogEntry.objects.first()
@@ -695,7 +657,7 @@ def test_update_price_groups_with_product_mapping_for_registration(
     assert RegistrationWebStoreAccount.objects.count() == 0
 
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": default_price_group.pk,
@@ -812,7 +774,7 @@ def test_update_existing_registration_price_group(api_client, event, user):
     assert RegistrationPriceGroup.objects.count() == 1
 
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "id": registration_price_group.pk,
@@ -882,7 +844,7 @@ def test_update_registration_price_groups_excluded_is_deleted(api_client, event,
     assert RegistrationPriceGroup.objects.count() == 1
 
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": custom_price_group.pk,
@@ -936,7 +898,7 @@ def test_cannot_update_price_groups_to_registration_with_different_vat_percentag
     assert RegistrationPriceGroup.objects.count() == 0
 
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": default_price_group.pk,
@@ -978,7 +940,7 @@ def test_cannot_update_registration_with_duplicate_price_groups(
     assert RegistrationPriceGroup.objects.count() == 1
 
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "id": registration_price_group.pk,
@@ -1036,7 +998,7 @@ def test_update_registration_with_with_optional_product_mapping_accounting_field
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": default_price_group.pk,
@@ -1100,7 +1062,7 @@ def test_update_registration_product_mapping_merchant_changed(
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": default_price_group.pk,
@@ -1160,7 +1122,7 @@ def test_update_registration_product_mapping_account_changed(
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": default_price_group.pk,
@@ -1216,7 +1178,7 @@ def test_update_registration_product_mapping_vat_code_changed(
     )
 
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "id": registration_price_group.pk,
@@ -1262,7 +1224,7 @@ def test_update_registration_with_product_mapping_merchant_missing(
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": default_price_group.pk,
@@ -1293,7 +1255,7 @@ def test_update_registration_with_product_mapping_account_missing(
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": default_price_group.pk,
@@ -1325,7 +1287,7 @@ def test_cannot_update_product_mapping_with_price_groups_missing(
     account = WebStoreAccountFactory(organization=event.publisher)
 
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         **get_registration_merchant_and_account_data(merchant, account),
     }
 
@@ -1353,7 +1315,7 @@ def test_update_registration_with_product_mapping_api_exception(
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": default_price_group.pk,
@@ -1394,7 +1356,7 @@ def test_update_registration_with_product_accounting_api_exception(
 
     default_price_group = PriceGroup.objects.first()
     registration_data = {
-        "event": {"@id": get_event_url(event.id)},
+        **get_minimal_required_registration_data(registration.event_id),
         "registration_price_groups": [
             {
                 "price_group": default_price_group.pk,
@@ -1674,3 +1636,66 @@ def test_increase_attendee_capacity_move_signups_to_attending_with_payments_api_
 
     registration.refresh_from_db()
     assert registration.remaining_attendee_capacity == 1
+
+
+@pytest.mark.parametrize(
+    "maximum_attendee_capacity, expected_maximum_attendee_capacity, expected_status_code",
+    [
+        ("", None, status.HTTP_400_BAD_REQUEST),
+        (None, None, status.HTTP_400_BAD_REQUEST),
+        (0, 0, status.HTTP_200_OK),
+        (1, 1, status.HTTP_200_OK),
+        (1000000, 1000000, status.HTTP_200_OK),
+    ],
+)
+@pytest.mark.django_db
+def test_update_registration_maximum_attendee_capacity(
+    api_client,
+    maximum_attendee_capacity,
+    expected_maximum_attendee_capacity,
+    expected_status_code,
+):
+    registration = RegistrationFactory(maximum_attendee_capacity=None)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration_data = {
+        "event": {"@id": get_event_url(registration.event_id)},
+        "maximum_attendee_capacity": maximum_attendee_capacity,
+    }
+
+    response = update_registration(api_client, registration.pk, registration_data)
+    assert response.status_code == expected_status_code
+
+    registration.refresh_from_db()
+    assert registration.maximum_attendee_capacity == expected_maximum_attendee_capacity
+
+
+@pytest.mark.parametrize(
+    "minimum_attendee_capacity, expected_minimum_attendee_capacity",
+    [
+        (None, None),
+        (0, 0),
+        (1, 1),
+        (1000000, 1000000),
+    ],
+)
+@pytest.mark.django_db
+def test_update_registration_minimum_attendee_capacity(
+    api_client, minimum_attendee_capacity, expected_minimum_attendee_capacity
+):
+    registration = RegistrationFactory(minimum_attendee_capacity=None)
+
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    registration_data = {
+        **get_minimal_required_registration_data(registration.event_id),
+        "minimum_attendee_capacity": minimum_attendee_capacity,
+    }
+
+    assert_update_registration(api_client, registration.pk, registration_data)
+
+    registration.refresh_from_db()
+    assert registration.minimum_attendee_capacity == expected_minimum_attendee_capacity
