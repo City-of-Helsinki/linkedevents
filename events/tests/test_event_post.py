@@ -1090,3 +1090,25 @@ def test_cannot_create_event_with_duplicate_offer_price_groups(
     )
 
     assert OfferPriceGroup.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_create_event_with_large_minimum_and_maximum_attendee_capacity(
+    user_api_client,
+    minimal_event_dict,
+):
+    minimal_event_dict["minimum_attendee_capacity"] = 500000
+    minimal_event_dict["maximum_attendee_capacity"] = 1000000
+
+    assert Event.objects.count() == 0
+
+    response = user_api_client.post(
+        reverse("event-list"), minimal_event_dict, format="json"
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert Event.objects.count() == 1
+
+    event = Event.objects.first()
+    assert event.minimum_attendee_capacity == 500000
+    assert event.maximum_attendee_capacity == 1000000

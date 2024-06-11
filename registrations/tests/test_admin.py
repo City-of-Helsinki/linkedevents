@@ -1,13 +1,11 @@
 from decimal import Decimal
 
-import pytest
 import requests_mock
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.db import transaction
 from django.test import RequestFactory, TestCase
 from django.utils import translation
 from requests import RequestException
@@ -16,10 +14,7 @@ from rest_framework import status
 from events.tests.factories import EventFactory, OfferFactory, OrganizationFactory
 from registrations.admin import RegistrationAdmin
 from registrations.enums import VatPercentage
-from registrations.exceptions import (
-    WebStoreAPIError,
-    WebStoreProductMappingValidationError,
-)
+from registrations.exceptions import WebStoreAPIError
 from registrations.models import (
     Event,
     PriceGroup,
@@ -81,6 +76,8 @@ class RegistrationAdminTestCaseMixin:
         data = {
             "registration_user_accesses-TOTAL_FORMS": 1,
             "registration_user_accesses-INITIAL_FORMS": 0,
+            "maximum_attendee_capacity": 10000000,
+            "minimum_attendee_capacity": 500000,
         }
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
@@ -354,6 +351,48 @@ class TestRegistrationAdmin(RegistrationAdminTestCaseMixin, TestCase):
             assert_invitation_email_is_sent(
                 EDITED_EMAIL, EVENT_NAME, registration_user_access
             )
+
+    def test_cannot_create_registration_without_maximum_attendee_capacity(self):
+        data_source = self.registration.event.data_source
+        publisher = self.registration.event.publisher
+        event2 = EventFactory(
+            id="event-2", data_source=data_source, publisher=publisher
+        )
+
+        self.assertEqual(Registration.objects.count(), 1)
+
+        data = self._get_request_data(update_data={"event": event2.id})
+        data.pop("maximum_attendee_capacity")
+
+        with translation.override("en"):
+            response = self.client.post(self.registration_add_url, data)
+        self.assertContains(response, "This field is required.", status_code=200)
+
+        self.assertEqual(Registration.objects.count(), 1)
+
+    def test_cannot_update_registration_without_maximum_attendee_capacity(self):
+        self.assertEqual(Registration.objects.count(), 1)
+        self.assertIsNone(self.registration.minimum_attendee_capacity)
+        self.assertIsNone(self.registration.maximum_attendee_capacity)
+
+        data = self._get_request_data(
+            update_data={
+                "id": self.registration.id,
+                "event": self.registration.event_id,
+                "vat_percentage": VatPercentage.VAT_24.value,
+            }
+        )
+        data.pop("maximum_attendee_capacity")
+
+        with translation.override("en"):
+            response = self.client.post(self.registration_change_url, data)
+        self.assertContains(response, "This field is required.", status_code=200)
+
+        self.assertEqual(Registration.objects.count(), 1)
+
+        self.registration.refresh_from_db()
+        self.assertIsNone(self.registration.minimum_attendee_capacity)
+        self.assertIsNone(self.registration.maximum_attendee_capacity)
 
 
 class RegistrationPriceGroupTestCase(RegistrationAdminTestCaseMixin, TestCase):

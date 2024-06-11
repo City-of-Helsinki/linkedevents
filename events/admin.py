@@ -74,6 +74,8 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
         "location_extra_info",
         "start_time",
         "end_time",
+        "minimum_attendee_capacity",
+        "maximum_attendee_capacity",
         "keywords",
         "audience",
         "publisher",
@@ -106,6 +108,19 @@ class EventAdmin(AutoIdBaseAdmin, TranslationAdmin, VersionAdmin):
             return ["id", "data_source", "origin_id"]
         else:
             return ["id", "data_source"]
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+
+        form.base_fields["maximum_attendee_capacity"].help_text = _(
+            "If the attendee capacity for the event is not restricted, please give a "
+            "rough estimate of at least the maximum attendee capacity. The information will be "
+            "used for statistical purposes. Maximum attendee capacity is a measure in the city "
+            "strategy that monitors the volumes of events held in the city. The estimate may be "
+            "changed later if it is uncertain at the moment."
+        )
+
+        return form
 
     class Media:
         pass

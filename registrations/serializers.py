@@ -943,6 +943,8 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
         return {lang: get_signup_create_url(obj, lang) for lang in ["en", "fi", "sv"]}
 
     class Meta(CreatedModifiedBaseSerializer.Meta):
+        model = Registration
+
         fields = (
             "id",
             "signups",
@@ -979,7 +981,9 @@ class RegistrationBaseSerializer(CreatedModifiedBaseSerializer):
                 "registration_account",
             )
 
-        model = Registration
+        extra_kwargs = {
+            "maximum_attendee_capacity": {"required": True, "allow_null": False},
+        }
 
 
 class CreateSignUpsSerializer(serializers.Serializer):
