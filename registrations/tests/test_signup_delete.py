@@ -36,7 +36,9 @@ from registrations.tests.factories import (
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
+    SignUpPaymentCancellationFactory,
     SignUpPaymentFactory,
+    SignUpPaymentRefundFactory,
     SignUpPriceGroupFactory,
 )
 from registrations.tests.test_registration_post import hel_email
@@ -2028,6 +2030,66 @@ def test_web_store_refund_refund_id_not_found_exception(api_client, price_group)
     assert SignUpPayment.objects.count() == 1
     assert SignUpPriceGroup.objects.count() == 1
     assert SignUpPaymentRefund.objects.count() == 0
+
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_web_store_refund_already_exists(api_client, price_group):
+    signup = price_group.signup
+    payment = SignUpPaymentFactory(
+        signup=signup,
+        external_order_id=DEFAULT_ORDER_ID,
+        status=SignUpPayment.PaymentStatus.PAID,
+    )
+    SignUpPaymentRefundFactory(payment=payment, signup=signup)
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 1
+
+    response = delete_signup(api_client, signup.pk)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["detail"] == (
+        "Refund or cancellation already exists. Please wait for the process to complete."
+    )
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentRefund.objects.count() == 1
+
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_web_store_cancellation_already_exists(api_client, price_group):
+    signup = price_group.signup
+    payment = SignUpPaymentFactory(
+        signup=signup,
+        external_order_id=DEFAULT_ORDER_ID,
+        status=SignUpPayment.PaymentStatus.PAID,
+    )
+    SignUpPaymentCancellationFactory(payment=payment, signup=signup)
+
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentCancellation.objects.count() == 1
+
+    response = delete_signup(api_client, signup.pk)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["detail"] == (
+        "Refund or cancellation already exists. Please wait for the process to complete."
+    )
+
+    assert SignUpPayment.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 1
+    assert SignUpPaymentCancellation.objects.count() == 1
 
     assert len(mail.outbox) == 0
 
