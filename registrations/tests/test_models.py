@@ -10,9 +10,10 @@ from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from events.models import Language
+from events.models import Event, Language, PublicationStatus
 from events.tests.factories import (
     DataSourceFactory,
+    EventFactory,
     LanguageFactory,
     OrganizationFactory,
 )
@@ -218,6 +219,57 @@ class TestRegistration(TestCase):
 
                 RegistrationWebStoreProductMapping.objects.all().delete()
                 RegistrationPriceGroup.objects.all().delete()
+
+    def test_get_calendar_events(self):
+        events = self.registration.get_calendar_events()
+        self.assertListEqual(events, [self.registration.event])
+
+    def test_get_calendar_events_with_recurring_event(self):
+        self.registration.event.super_event_type = Event.SuperEventType.RECURRING
+        self.registration.event.save(update_fields=["super_event_type"])
+
+        # Published and scheduled sub-events that should be included.
+        sub_event1 = EventFactory(
+            super_event=self.registration.event,
+            name_fi="Event 1",
+        )
+        sub_event2 = EventFactory(
+            super_event=self.registration.event,
+            name_fi="Event 2",
+        )
+
+        # Published and re-scheduled sub-event that should be included.
+        sub_event3 = EventFactory(
+            super_event=self.registration.event,
+            name_fi="Event 3",
+            event_status=Event.Status.RESCHEDULED,
+        )
+
+        # A draft sub-event that should not be included.
+        EventFactory(
+            super_event=self.registration.event,
+            name_fi="Event 3",
+            publication_status=PublicationStatus.DRAFT,
+        )
+
+        # A cancelled sub-event that should not be included.
+        EventFactory(
+            super_event=self.registration.event,
+            name_fi="Event 4",
+            event_status=Event.Status.CANCELLED,
+        )
+
+        # A postponed sub-event that should not be included.
+        EventFactory(
+            super_event=self.registration.event,
+            name_fi="Event 5",
+            event_status=Event.Status.POSTPONED,
+        )
+
+        events = self.registration.get_calendar_events()
+        self.assertEqual(
+            Counter(list(events)), Counter([sub_event1, sub_event2, sub_event3])
+        )
 
 
 class TestRegistrationUserAccess(TestCase):

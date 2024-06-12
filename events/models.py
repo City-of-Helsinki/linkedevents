@@ -1217,10 +1217,7 @@ class Event(
             and not self.is_created_with_apikey
             # Only send super event notification to avoid spamming from
             # child events when recurring event.
-            and not (
-                self.super_event
-                and self.super_event.super_event_type == Event.SuperEventType.RECURRING
-            )
+            and not (self.super_event and self.super_event.is_recurring_super_event)
             # Do not send draft emails from events created by admins.
             and not self.publisher.admin_users.filter(id=self.created_by_id).exists()
         ):
@@ -1239,7 +1236,7 @@ class Event(
             registration.cancel_signups(is_event_cancellation=True)
         elif (
             self.super_event_id is not None
-            and self.super_event.super_event_type == Event.SuperEventType.RECURRING
+            and self.super_event.is_recurring_super_event
             and (registration := getattr(self.super_event, "registration", None))
         ):
             registration.send_event_cancellation_notifications(
@@ -1367,6 +1364,10 @@ class Event(
         except ApiKeyUser.DoesNotExist:
             pass
         return False
+
+    @property
+    def is_recurring_super_event(self) -> bool:
+        return self.super_event_type == Event.SuperEventType.RECURRING
 
     def get_start_and_end_time_display(self, lang="fi", date_only=False) -> str:
         if date_only:

@@ -30,7 +30,7 @@ from encrypted_fields import fields
 from helsinki_gdpr.models import SerializableMixin
 from rest_framework import status
 
-from events.models import Event, Language, Offer
+from events.models import Event, Language, Offer, PublicationStatus
 from registrations.enums import VatPercentage
 from registrations.exceptions import (
     PriceGroupValidationError,
@@ -52,7 +52,7 @@ from registrations.notifications import (
 from registrations.utils import (
     cancel_web_store_order,
     code_validity_duration,
-    create_event_ics_file_content,
+    create_events_ics_file_content,
     create_or_update_web_store_merchant,
     create_web_store_api_order,
     create_web_store_product_accounting,
@@ -659,6 +659,18 @@ class Registration(CreatedModifiedBaseModel):
                 SignUpNotificationType.EVENT_CANCELLATION,
                 is_sub_event_cancellation=is_sub_event_cancellation,
             )
+
+    def get_calendar_events(self):
+        if self.event.is_recurring_super_event:
+            events = self.event.sub_events.filter(
+                deleted=False,
+                event_status__in=[Event.Status.SCHEDULED, Event.Status.RESCHEDULED],
+                publication_status=PublicationStatus.PUBLIC,
+            )
+        else:
+            events = [self.event]
+
+        return events
 
     def can_be_edited_by(self, user):
         """Check if current registration can be edited by the given user"""
@@ -1933,12 +1945,16 @@ class SignUpContactPerson(
         if notification_type in [
             SignUpNotificationType.CONFIRMATION,
             SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
-        ]:
+        ] and (events := self.registration.get_calendar_events()):
             try:
-                ics_attachment = create_event_ics_file_content(
-                    self.registration.event, self.get_service_language_pk()
+                ics_content = create_events_ics_file_content(
+                    events, self.get_service_language_pk()
                 )
-                email.attach(*ics_attachment, "text/calendar")
+                email.attach(
+                    f"event_{self.registration.event.id}.ics",
+                    ics_content,
+                    "text/calendar",
+                )
             except ValueError as error:
                 logger.error(error)
 
