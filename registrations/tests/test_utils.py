@@ -12,6 +12,7 @@ from django.utils import translation
 from django.utils.timezone import localtime
 from rest_framework import status
 
+from events.models import Event, PublicationStatus
 from events.tests.factories import EventFactory, LanguageFactory, PlaceFactory
 from helevents.tests.factories import UserFactory
 from registrations.exceptions import WebStoreAPIError
@@ -22,7 +23,7 @@ from registrations.tests.factories import (
     SignUpPriceGroupFactory,
 )
 from registrations.utils import (
-    create_event_ics_file_content,
+    create_events_ics_file_content,
     create_web_store_api_order,
     get_access_code_for_contact_person,
     get_checkout_url_with_lang_param,
@@ -63,25 +64,74 @@ def _get_checkout_url_and_language_code_test_params():
     return test_params
 
 
-@pytest.mark.django_db
-def test_ics_file_cannot_be_created_without_start_time():
-    event = EventFactory(start_time=None)
+def assert_ics_file_cannot_be_created_without_start_time(event):
     with pytest.raises(
         ValueError,
         match="Event doesn't have start_time or name. Ics file cannot be created.",
     ):
-        create_event_ics_file_content(event)
+        create_events_ics_file_content([event])
+
+
+def assert_ics_file_cannot_be_created_without_name(event):
+    with pytest.raises(
+        ValueError,
+        match="Event doesn't have start_time or name. Ics file cannot be created.",
+    ):
+        create_events_ics_file_content([event])
+
+
+@pytest.mark.django_db
+def test_ics_file_cannot_be_created_without_start_time():
+    event = EventFactory(start_time=None)
+    assert_ics_file_cannot_be_created_without_start_time(event)
+
+
+@pytest.mark.django_db
+def test_recurring_event_ics_file_cannot_be_created_without_start_time():
+    recurring_event = EventFactory(super_event_type=Event.SuperEventType.RECURRING)
+
+    now = localtime()
+    EventFactory(
+        super_event=recurring_event,
+        start_time=now,
+    )
+    EventFactory(
+        super_event=recurring_event,
+        start_time=None,
+    )
+    EventFactory(
+        super_event=recurring_event,
+        start_time=now,
+    )
+
+    assert_ics_file_cannot_be_created_without_start_time(recurring_event)
 
 
 @pytest.mark.freeze_time("2024-01-01")
 @pytest.mark.django_db
 def test_ics_file_cannot_be_created_without_name():
     event = EventFactory(start_time=localtime(), name_fi=None)
-    with pytest.raises(
-        ValueError,
-        match="Event doesn't have start_time or name. Ics file cannot be created.",
-    ):
-        create_event_ics_file_content(event)
+    assert_ics_file_cannot_be_created_without_name(event)
+
+
+@pytest.mark.django_db
+def test_recurring_event_ics_file_cannot_be_created_without_name():
+    recurring_event = EventFactory(super_event_type=Event.SuperEventType.RECURRING)
+
+    now = localtime()
+    EventFactory(
+        super_event=recurring_event,
+        start_time=now,
+        name_fi="Sub-event 1",
+    )
+    EventFactory(super_event=recurring_event, start_time=now, name_fi=None)
+    EventFactory(
+        super_event=recurring_event,
+        start_time=now,
+        name_fi="Sub-event 3",
+    )
+
+    assert_ics_file_cannot_be_created_without_name(recurring_event)
 
 
 @pytest.mark.freeze_time("2024-01-01")
@@ -99,9 +149,8 @@ def test_create_ics_file_content():
         start_time=localtime(),
         end_time=localtime() + timedelta(days=10),
     )
-    filename, ics = create_event_ics_file_content(event)
 
-    assert filename == "event_helsinki:123.ics"
+    ics = create_events_ics_file_content([event])
     assert (
         ics
         == b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//linkedevents.hel.fi//NONSGML "
@@ -110,6 +159,87 @@ def test_create_ics_file_content():
         b":20240111T020000\r\nDESCRIPTION:Event description\r\nLOCATION:Place name\\, "
         b"Streen address\\, Helsinki\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
     )
+
+
+@pytest.mark.freeze_time("2024-06-01")
+@pytest.mark.django_db
+def test_create_recurring_event_ics_file_content():
+    recurring_event = EventFactory(
+        id="helsinki:023", super_event_type=Event.SuperEventType.RECURRING
+    )
+
+    now = localtime()
+
+    # 1st June 2024
+    EventFactory(
+        super_event=recurring_event,
+        id="helsinki:123",
+        name_fi="Event 1",
+        short_description_fi="Event description 1",
+        location=PlaceFactory(
+            name_fi="Place name 1",
+            street_address_fi="Street address 1",
+            address_locality_fi="Helsinki",
+        ),
+        start_time=now,
+        end_time=now + timedelta(days=1),
+    )
+
+    # 9th June 2024
+    EventFactory(
+        super_event=recurring_event,
+        id="helsinki:223",
+        name_fi="Event 2",
+        short_description_fi="Event description 2",
+        location=PlaceFactory(
+            name_fi="Place name 2",
+            street_address_fi="Street address 2",
+            address_locality_fi="Vantaa",
+        ),
+        start_time=now + timedelta(days=8),
+        end_time=now + timedelta(days=9),
+    )
+
+    # 16th June 2024
+    EventFactory(
+        super_event=recurring_event,
+        id="helsinki:323",
+        name_fi="Event 3",
+        short_description_fi="Event description 3",
+        location=PlaceFactory(
+            name_fi="Place name 3",
+            street_address_fi="Street address 3",
+            address_locality_fi="Espoo",
+        ),
+        start_time=now + timedelta(days=15),
+        end_time=now + timedelta(days=16),
+    )
+
+    sub_events = recurring_event.sub_events.filter(
+        deleted=False,
+        event_status=Event.Status.SCHEDULED,
+        publication_status=PublicationStatus.PUBLIC,
+    )
+
+    ics = create_events_ics_file_content(sub_events)
+    assert (
+        b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//linkedevents.hel.fi//NONSGML "
+        b"API//EN\r\nBEGIN:VEVENT\r\nSUMMARY:Event 1\r\n"
+        b"DTSTART;TZID=Europe/Helsinki:20240601T030000\r\nDTEND;TZID=Europe/Helsinki"
+        b":20240602T030000\r\nDESCRIPTION:Event description 1\r\n"
+        b"LOCATION:Place name 1\\, Street address 1\\, "
+        b"Helsinki\r\nEND:VEVENT\r\n"
+        b"BEGIN:VEVENT\r\nSUMMARY:Event 2\r\n"
+        b"DTSTART;TZID=Europe/Helsinki:20240609T030000\r\nDTEND;TZID=Europe/Helsinki"
+        b":20240610T030000\r\nDESCRIPTION:Event description 2\r\n"
+        b"LOCATION:Place name 2\\, Street address 2\\, "
+        b"Vantaa\r\nEND:VEVENT\r\n"
+        b"BEGIN:VEVENT\r\nSUMMARY:Event 3\r\n"
+        b"DTSTART;TZID=Europe/Helsinki:20240616T030000\r\nDTEND;TZID=Europe/Helsinki"
+        b":20240617T030000\r\nDESCRIPTION:Event description 3\r\n"
+        b"LOCATION:Place name 3\\, Street address 3\\, "
+        b"Espoo\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    ) == ics
 
 
 @pytest.mark.freeze_time("2024-01-01")
@@ -127,9 +257,8 @@ def test_create_ics_file_content_with_start_time_as_end_time():
         start_time=localtime(),
         end_time=None,
     )
-    filename, ics = create_event_ics_file_content(event)
 
-    assert filename == "event_helsinki:123.ics"
+    ics = create_events_ics_file_content([event])
     assert (
         ics
         == b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//linkedevents.hel.fi//NONSGML "
@@ -172,9 +301,7 @@ def test_create_ics_file_using_fallback_languages(
     assert getattr(event, f"name_{language}") is None
     assert getattr(event, f"name_{expected_fallback_language}") == name_value
 
-    filename, ics = create_event_ics_file_content(event, language=language)
-
-    assert filename == "event_helsinki:123.ics"
+    ics = create_events_ics_file_content([event], language=language)
     assert f"SUMMARY:{name_value}" in str(ics)
 
 
@@ -213,7 +340,7 @@ def test_create_ics_file_correct_fallback_language_used_if_event_name_is_none(
         ),
         patch("django.utils.translation.override") as mocked_translation_override,
     ):
-        create_event_ics_file_content(event, language=language)
+        create_events_ics_file_content([event], language=language)
 
         mocked_translation_override.assert_called_with(expected_fallback_language)
 

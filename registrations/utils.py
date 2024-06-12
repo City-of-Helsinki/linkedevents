@@ -108,41 +108,48 @@ def has_allowed_substitute_user_email_domain(email_address):
     )
 
 
-def create_event_ics_file_content(event, language="fi"):
+def _create_calendar_event_from_event(event, time_zone):
+    calendar_event = CalendarEvent()
+
+    if (start_time := event.start_time) and (name := event.name):
+        calendar_event.add("dtstart", start_time.astimezone(time_zone))
+        calendar_event.add("summary", name)
+    else:
+        raise ValueError(
+            "Event doesn't have start_time or name. Ics file cannot be created."
+        )
+
+    end_time = event.end_time if event.end_time else start_time
+    calendar_event.add("dtend", end_time.astimezone(time_zone))
+
+    if description := event.short_description:
+        calendar_event.add("description", description)
+    if location := event.location:
+        location_parts = [
+            location.name,
+            location.street_address,
+            location.address_locality,
+        ]
+        location_text = ", ".join([i for i in location_parts if i])
+        calendar_event["location"] = vText(location_text)
+
+    return calendar_event
+
+
+def create_events_ics_file_content(events, language="fi"):
     cal = Calendar()
+
     # Some properties are required to be compliant
     cal.add("prodid", "-//linkedevents.hel.fi//NONSGML API//EN")
     cal.add("version", "2.0")
 
+    local_tz = pytz.timezone(settings.TIME_ZONE)
     with translation.override(language):
-        calendar_event = CalendarEvent()
+        for event in events:
+            calendar_event = _create_calendar_event_from_event(event, local_tz)
+            cal.add_component(calendar_event)
 
-        if (start_time := event.start_time) and (name := event.name):
-            calendar_event.add("dtstart", start_time)
-            calendar_event.add("summary", name)
-        else:
-            raise ValueError(
-                "Event doesn't have start_time or name. Ics file cannot be created."
-            )
-
-        calendar_event.add("dtend", event.end_time if event.end_time else start_time)
-
-        if description := event.short_description:
-            calendar_event.add("description", description)
-        if location := event.location:
-            location_parts = [
-                location.name,
-                location.street_address,
-                location.address_locality,
-            ]
-            location_text = ", ".join([i for i in location_parts if i])
-            calendar_event["location"] = vText(location_text)
-
-        cal.add_component(calendar_event)
-
-    filename = f"event_{event.id}.ics"
-
-    return filename, cal.to_ical()
+    return cal.to_ical()
 
 
 def strip_trailing_zeroes_from_decimal(value: Decimal):

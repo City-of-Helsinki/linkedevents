@@ -934,10 +934,7 @@ def get_signup_notification_texts(
         confirmation_message = registration.confirmation_message
         event_name = registration.event.name
 
-    if (
-        not is_sub_event_cancellation
-        and registration.event.super_event_type == Event.SuperEventType.RECURRING
-    ):
+    if not is_sub_event_cancellation and registration.event.is_recurring_super_event:
         # Signup or cancellation for a recurring super event.
         text_options = recurring_event_signup_email_texts[notification_type]
         event_period = registration.event.get_start_and_end_time_display(
@@ -1015,7 +1012,7 @@ def get_signup_notification_subject(
     with translation.override(linked_registrations_ui_locale):
         if (
             not is_sub_event_cancellation
-            and registration.event.super_event_type == Event.SuperEventType.RECURRING
+            and registration.event.is_recurring_super_event
         ):
             # Signup or cancellation for a recurring super event.
             subject_format_kwargs["event_period"] = (
