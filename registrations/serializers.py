@@ -14,6 +14,7 @@ from events.models import Language
 from events.utils import clean_text_fields
 from helevents.models import User
 from linkedevents.serializers import TranslatedModelSerializer
+from linkedevents.utils import get_fixed_lang_codes
 from registrations.exceptions import (
     ConflictException,
     WebStoreAPIError,
@@ -1555,9 +1556,11 @@ class RegistrationSignupsExportSerializer(serializers.Serializer):
 
 
 class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSerializer):
-    def _description_is_valid(self, data, validated_data):
+    def _any_required_description_translation_exists(self, data, validated_data):
         """
-        Validates the translated description fields for Finnish, English and Swedish languages.
+        Validates the translated description fields for Finnish, English and Swedish by checking
+        that there is a description for at least one of the languages. This is due to the web store
+        integration that supports the three languages.
 
         Description is considered valid if
         1. request is PATCH without any description fields given in data, OR
@@ -1576,6 +1579,17 @@ class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSeriali
             self.partial and not any_description_field_in_data()
         ) or any_description_field_has_valid_value()
 
+    def _description_exceeds_max_length(self, validated_data):
+        for lang_code in get_fixed_lang_codes():
+            field = f"description_{lang_code}"
+            if (
+                validated_data.get(field)
+                and len(validated_data[field]) > PriceGroup.description.field.max_length
+            ):
+                return True
+
+        return False
+
     def validate(self, data):
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
@@ -1584,8 +1598,12 @@ class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSeriali
 
         errors = {}
 
-        if not self._description_is_valid(data, validated_data):
+        if not self._any_required_description_translation_exists(data, validated_data):
             errors["description"] = _("This field is required.")
+        elif self._description_exceeds_max_length(validated_data):
+            errors["description"] = _(
+                "Description can be at most %(max_length)s characters long."
+            ) % {"max_length": PriceGroup.description.field.max_length}
 
         if errors:
             raise serializers.ValidationError(errors)

@@ -10,6 +10,7 @@ from audit_log.models import AuditLogEntry
 from events.tests.factories import ApiKeyUserFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.models import User
+from linkedevents.utils import get_fixed_lang_codes
 from registrations.models import PriceGroup
 from registrations.tests.factories import (
     PriceGroupFactory,
@@ -381,3 +382,32 @@ def test_price_group_id_is_audit_logged_on_put(api_client, organization):
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         price_group.pk
     ]
+
+
+@pytest.mark.parametrize(
+    "description_lang_code", [lang_code for lang_code in get_fixed_lang_codes()]
+)
+@pytest.mark.django_db
+def test_cannot_put_signup_group_with_a_description_that_exceeds_max_length(
+    api_client, organization, description_lang_code
+):
+    user = create_user_by_role("superuser", organization)
+    api_client.force_authenticate(user)
+
+    price_group = PriceGroupFactory(publisher=organization)
+
+    data = {
+        "publisher": organization.pk,
+        "description": {
+            description_lang_code: "a" * 256,
+        },
+    }
+    if description_lang_code not in ("fi", "sv", "en"):
+        data["description"]["fi"] = "This is required"
+
+    response = update_price_group(api_client, price_group.pk, data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["description"][0]
+        == "Description can be at most 255 characters long."
+    )
