@@ -6,6 +6,7 @@ app_name = "data_analytics"
 
 router = SimpleRouter()
 router.register(r"administrative_division", api.AdministrativeDivisionViewSet)
+router.register(r"data_source", api.DataSourceViewSet)
 router.register(r"event", api.EventViewSet)
 router.register(r"keyword", api.KeywordViewSet)
 router.register(r"language", api.LanguageViewSet)
