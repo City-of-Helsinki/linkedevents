@@ -3,7 +3,15 @@ from munigeo.api import GeoModelSerializer
 from rest_framework import serializers
 
 from events.api import DivisionSerializer, EnumChoiceField
-from events.models import Event, Keyword, Language, Offer, Place, PUBLICATION_STATUSES
+from events.models import (
+    DataSource,
+    Event,
+    Keyword,
+    Language,
+    Offer,
+    Place,
+    PUBLICATION_STATUSES,
+)
 from linkedevents.serializers import TranslatedModelSerializer
 from registrations.models import Registration, SignUp
 
@@ -25,6 +33,23 @@ class DataAnalyticsAdministrativeDivisionSerializer(DivisionSerializer):
             "ocd_id",
             "municipality",
             "translations",
+        )
+
+
+class DataAnalyticsDataSourceSerializer(serializers.ModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(read_only=True)
+    has_api_key = serializers.SerializerMethodField()
+
+    def get_has_api_key(self, obj):
+        return bool(obj.api_key)
+
+    class Meta:
+        model = DataSource
+        fields = (
+            "id",
+            "name",
+            "has_api_key",
+            "owner",
         )
 
 
