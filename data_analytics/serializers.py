@@ -1,4 +1,5 @@
 from django_orghierarchy.models import Organization
+from munigeo.api import GeoModelSerializer
 from rest_framework import serializers
 
 from events.api import DivisionSerializer, EnumChoiceField
@@ -47,7 +48,9 @@ class DataAnalyticsKeywordSerializer(
 
 
 class DataAnalyticsPlaceSerializer(
-    DataAnalyticsCreatedModifiedBaseSerializer, TranslatedModelSerializer
+    DataAnalyticsCreatedModifiedBaseSerializer,
+    TranslatedModelSerializer,
+    GeoModelSerializer,
 ):
     parent = serializers.PrimaryKeyRelatedField(read_only=True)
     replaced_by = serializers.PrimaryKeyRelatedField(read_only=True)
