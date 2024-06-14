@@ -4,12 +4,14 @@ from typing import Optional
 import freezegun
 import pytest
 import requests_mock
+from django.contrib.gis.geos import Point
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.timezone import localtime
 from helusers.settings import api_token_auth_settings
 from knox import crypto
 from knox.settings import CONSTANTS, knox_settings
+from munigeo.api import DEFAULT_SRID
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -88,10 +90,49 @@ def test_get_place_detail(user_api_client, place):
 
 
 @pytest.mark.django_db
+def test_get_place_detail_position(user_api_client, place):
+    place.position = Point(24.929867, 60.170251, srid=DEFAULT_SRID)
+    place.save(update_fields=["position"])
+
+    response = get_detail_and_assert_object_in_response(
+        user_api_client, get_detail, place.pk
+    )
+    assert response.data["position"] == {
+        "type": "Point",
+        "coordinates": [24.929867, 60.170251],
+    }
+
+
+@pytest.mark.django_db
 def test_get_place_list(user_api_client, place, place2):
     get_list_and_assert_objects_in_response(
         user_api_client, get_list, [place.pk, place2.pk]
     )
+
+
+@pytest.mark.django_db
+def test_get_place_list_position(user_api_client, place, place2):
+    place.position = Point(24.929867, 60.170251, srid=DEFAULT_SRID)
+    place.save(update_fields=["position"])
+
+    place2.position = Point(25.929867, 65.170251, srid=DEFAULT_SRID)
+    place2.save(update_fields=["position"])
+
+    response = get_list_and_assert_objects_in_response(
+        user_api_client, get_list, [place.pk, place2.pk]
+    )
+
+    for place_data in response.data["data"]:
+        if place_data["id"] == place.pk:
+            assert place_data["position"] == {
+                "type": "Point",
+                "coordinates": [24.929867, 60.170251],
+            }
+        else:
+            assert place_data["position"] == {
+                "type": "Point",
+                "coordinates": [25.929867, 65.170251],
+            }
 
 
 @pytest.mark.parametrize("url_type", ["detail", "list"])
