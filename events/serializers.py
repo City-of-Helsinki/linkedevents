@@ -4,8 +4,8 @@ import time
 import urllib
 from copy import deepcopy
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 
-import pytz
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.core.exceptions import PermissionDenied
@@ -71,7 +71,7 @@ from registrations.serializers import (
     WebStoreMerchantSerializer,
 )
 
-LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
+LOCAL_TZ = ZoneInfo(settings.TIME_ZONE)
 EVENT_SERIALIZER_REF = "events.serializers.EventSerializer"
 
 
@@ -204,10 +204,10 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
         queryset=License.objects.all(), required=False
     )
     created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
     last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
     created_by = serializers.StringRelatedField(required=False, allow_null=True)
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
@@ -242,10 +242,10 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
         slug_field="name", read_only=True, many=True
     )
     created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
     last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
 
     def validate_id(self, value):
@@ -294,10 +294,10 @@ class KeywordSetSerializer(LinkedEventsSerializer):
     )
     usage = EnumChoiceField(KeywordSet.USAGES)
     created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
     last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
 
     def to_internal_value(self, data):
@@ -434,10 +434,10 @@ class OrganizationListSerializer(OrganizationBaseSerializer):
     is_affiliated = serializers.SerializerMethodField()
     has_regular_users = serializers.SerializerMethodField()
     created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
     last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
 
     class Meta:
@@ -486,10 +486,10 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
     view_name = "place-detail"
     divisions = DivisionSerializer(many=True, read_only=True)
     created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
     last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
 
     def _handle_position(self):
@@ -878,18 +878,20 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
     )
 
     created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
     last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
     date_published = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
     start_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
-    end_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    end_time = DateTimeField(
+        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+    )
     created_by = serializers.StringRelatedField(required=False, allow_null=True)
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
 
