@@ -16,6 +16,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django_jinja.builtins import DEFAULT_EXTENSIONS
 from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa: N813
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 from sentry_sdk.serializer import add_global_repr_processor
 
 from linkedevents import __version__
@@ -278,12 +279,32 @@ if DJANGO_EXTENSIONS_AVAILABLE:
     INSTALLED_APPS.extend(["django_extensions"])
 
 COMMIT_HASH = get_release_string()
+SENTRY_DENYLIST = DEFAULT_DENYLIST + [
+    "access_code",
+    "user_name",
+    "user_email",
+    "user_phone_number",
+    "first_name",
+    "last_name",
+    "phone_number",
+    "email",
+    "city",
+    "street_address",
+    "zipcode",
+    "postal_code",
+    "date_of_birth",
+    "membership_number",
+    "native_language",
+    "service_language",
+    "extra_info",
+]
 if env("SENTRY_DSN"):
     sentry_sdk.init(
         dsn=env("SENTRY_DSN"),
         environment=env("SENTRY_ENVIRONMENT"),
         release=COMMIT_HASH,
         integrations=[DjangoIntegration()],
+        event_scrubber=EventScrubber(denylist=SENTRY_DENYLIST),
     )
 
 MIDDLEWARE = [
