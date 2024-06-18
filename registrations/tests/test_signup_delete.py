@@ -48,7 +48,6 @@ from registrations.tests.utils import (
     create_price_group,
     create_signup_group_with_payment,
     create_user_by_role,
-    get_web_store_order_response,
     update_price_group_price,
 )
 from web_store.tests.order.test_web_store_order_api_client import (
@@ -61,7 +60,6 @@ from web_store.tests.payment.test_web_store_payment_api_client import (
     DEFAULT_GET_PAYMENT_DATA,
     DEFAULT_REFUND_ID,
 )
-from web_store.tests.utils import get_mock_response
 
 _PARTIAL_REFUND_AMOUNT = Decimal("5")
 
@@ -1225,18 +1223,20 @@ def test_send_email_with_payment_link_when_moving_participant_from_waitlist(
 
     assert SignUpPayment.objects.count() == 0
 
-    mocked_create_payment_response = get_mock_response(
-        json_return_value=get_web_store_order_response()
-    )
     with (
         translation.override(service_language),
-        patch("requests.post") as mocked_create_payment_request,
+        requests_mock.Mocker() as req_mock,
     ):
-        mocked_create_payment_request.return_value = mocked_create_payment_response
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
 
         assert_delete_signup(
             api_client, signup.id, signup_count=2, contact_person_count=2
         )
+
+        assert req_mock.call_count == 1
 
     assert SignUpPayment.objects.count() == 1
 
@@ -1333,18 +1333,20 @@ def test_send_email_with_payment_link_when_moving_participant_from_waitlist_for_
 
     assert SignUpPayment.objects.count() == 0
 
-    mocked_create_payment_response = get_mock_response(
-        json_return_value=get_web_store_order_response()
-    )
     with (
         translation.override(service_language),
-        patch("requests.post") as mocked_create_payment_request,
+        requests_mock.Mocker() as req_mock,
     ):
-        mocked_create_payment_request.return_value = mocked_create_payment_response
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
 
         assert_delete_signup(
             api_client, signup.id, signup_count=2, contact_person_count=2
         )
+
+        assert req_mock.call_count == 1
 
     assert SignUpPayment.objects.count() == 1
 
@@ -1413,13 +1415,15 @@ def test_email_with_payment_link_not_sent_when_moving_participant_if_price_missi
 
     with (
         translation.override(language.pk),
-        patch("requests.post") as mocked_create_payment_request,
+        requests_mock.Mocker() as req_mock,
     ):
+        req_mock.post(f"{settings.WEB_STORE_API_BASE_URL}order/")
+
         assert_delete_signup(
             api_client, signup.id, signup_count=2, contact_person_count=2
         )
 
-        assert mocked_create_payment_request.called is False
+        assert req_mock.call_count == 0
 
     assert SignUpPayment.objects.count() == 0
 
@@ -1489,14 +1493,11 @@ def test_email_with_payment_link_not_sent_when_moving_participant_if_contact_per
 
     assert SignUpPayment.objects.count() == 0
 
-    mocked_create_payment_response = get_mock_response(
-        status_code=status.HTTP_400_BAD_REQUEST
-    )
     with (
         translation.override(language.pk),
-        patch("requests.post") as mocked_create_payment_request,
+        requests_mock.Mocker() as req_mock,
     ):
-        mocked_create_payment_request.return_value = mocked_create_payment_response
+        req_mock.post(f"{settings.WEB_STORE_API_BASE_URL}order/")
 
         assert_delete_signup(
             api_client,
@@ -1504,6 +1505,8 @@ def test_email_with_payment_link_not_sent_when_moving_participant_if_contact_per
             signup_count=2,
             contact_person_count=2 if field else 1,
         )
+
+        assert req_mock.call_count == 0
 
     assert SignUpPayment.objects.count() == 0
 

@@ -48,14 +48,12 @@ from registrations.tests.utils import (
     assert_signup_payment_data_is_correct,
     create_user_by_role,
     DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
-    get_web_store_failed_order_response,
-    get_web_store_order_response,
 )
+from web_store.tests.order.test_web_store_order_api_client import DEFAULT_GET_ORDER_DATA
 from web_store.tests.product.test_web_store_product_api_client import (
     DEFAULT_GET_PRODUCT_MAPPING_DATA,
     DEFAULT_PRODUCT_ID,
 )
-from web_store.tests.test_web_store_api_base_client import get_mock_response
 
 test_access_code = "803aabab-8fa5-4c26-a372-7792a8b8456f"
 test_email1 = "test@test.com"
@@ -299,11 +297,9 @@ def test_authenticated_user_can_create_signup_group_with_payment(api_client, use
         == 0
     )
 
-    total_payment_amount = (
+    mocked_web_store_json = deepcopy(DEFAULT_GET_ORDER_DATA)
+    mocked_web_store_json["priceTotal"] = str(
         registration_price_group.price + registration_price_group2.price
-    )
-    mocked_web_store_json = get_web_store_order_response(
-        payment_amount=total_payment_amount
     )
     mocked_web_store_json["items"] = [
         {
@@ -430,9 +426,9 @@ def test_signup_group_update_web_store_product_mapping_if_merchant_id_has_change
     assert SignUpPayment.objects.count() == 0
 
     total_payment_amount = registration_price_group.price * 2
-    mocked_web_store_json = get_web_store_order_response(
-        payment_amount=total_payment_amount
-    )
+    mocked_web_store_json = deepcopy(DEFAULT_GET_ORDER_DATA)
+    mocked_web_store_json["priceTotal"] = str(total_payment_amount)
+
     with requests_mock.Mocker() as req_mock:
         product_base_url = f"{settings.WEB_STORE_API_BASE_URL}product/"
         req_mock.post(product_base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
@@ -533,15 +529,18 @@ def test_create_signup_group_payment_without_pricetotal_in_response(api_client):
 
     assert SignUpPayment.objects.count() == 0
 
-    mocked_web_store_api_json = get_web_store_order_response()
+    mocked_web_store_api_json = deepcopy(DEFAULT_GET_ORDER_DATA)
     del mocked_web_store_api_json["priceTotal"]
 
-    mocked_web_store_api_response = get_mock_response(
-        json_return_value=mocked_web_store_api_json
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            json=mocked_web_store_api_json,
+        )
+
         response = assert_create_signup_group(api_client, signup_group_data)
+
+        assert req_mock.call_count == 1
 
     assert SignUpPayment.objects.count() == 1
 
@@ -602,16 +601,19 @@ def test_create_signup_group_payment_web_store_api_field_error(
     )
 
     web_store_api_status_code = status.HTTP_400_BAD_REQUEST
-    mock_api_response = get_web_store_failed_order_response(
-        web_store_api_status_code=web_store_api_status_code,
-        has_web_store_api_errors=True,
-    )
 
     assert SignUpPayment.objects.count() == 0
 
-    with patch("requests.post") as mocked_api_request:
-        mocked_api_request.return_value = mock_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            status_code=web_store_api_status_code,
+            json=DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
+        )
         response = create_signup_group(api_client, signup_group_data)
+
+        assert req_mock.call_count == 1
+
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     assert SignUpPayment.objects.count() == 0
@@ -661,16 +663,19 @@ def test_create_signup_group_payment_web_store_api_non_field_error(
     )
 
     web_store_api_status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    mock_api_response = get_web_store_failed_order_response(
-        web_store_api_status_code=web_store_api_status_code,
-        has_web_store_api_errors=False,
-    )
 
     assert SignUpPayment.objects.count() == 0
 
-    with patch("requests.post") as mocked_api_request:
-        mocked_api_request.return_value = mock_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            status_code=web_store_api_status_code,
+        )
+
         response = create_signup_group(api_client, signup_group_data)
+
+        assert req_mock.call_count == 1
+
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     assert SignUpPayment.objects.count() == 0
@@ -842,13 +847,14 @@ def test_create_signup_group_payment_signup_is_waitlisted(
 
     assert SignUpPayment.objects.count() == 0
 
-    mocked_web_store_api_response = get_mock_response(
-        json_return_value=get_web_store_order_response(
-            payment_amount=registration_price_group.price
+    mocked_web_store_api_response = deepcopy(DEFAULT_GET_ORDER_DATA)
+    mocked_web_store_api_response["priceTotal"] = str(registration_price_group.price)
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            json=mocked_web_store_api_response,
         )
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
 
         assert_create_signup_group(api_client, signup_group_data)
 

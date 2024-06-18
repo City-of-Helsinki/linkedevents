@@ -1,6 +1,5 @@
 from decimal import Decimal
 from unittest.mock import patch, PropertyMock
-from uuid import UUID
 
 import pytest
 from freezegun import freeze_time
@@ -11,7 +10,6 @@ from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.models import (
-    RegistrationPriceGroup,
     SignUp,
     SignUpContactPerson,
     SignUpGroup,

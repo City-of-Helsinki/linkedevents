@@ -1,6 +1,5 @@
 import re
 from copy import deepcopy
-from unittest.mock import patch
 
 import requests_mock
 from django.conf import settings
@@ -20,8 +19,8 @@ from registrations.tests.factories import (
 )
 from web_store.tests.merchant.test_web_store_merchant_api_client import (
     DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+    DEFAULT_MERCHANT_ID,
 )
-from web_store.tests.utils import get_mock_response
 
 
 class LocalOrganizationAdminTestCaseMixin:
@@ -383,21 +382,19 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         )
         data = self._get_request_data(merchant_data)
 
-        json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
-        json_return_value["merchantId"] = "1234"
-        mocked_create_merchant_response = get_mock_response(
-            json_return_value=json_return_value,
-        )
-        with patch("requests.post") as mocked_create_merchant_request:
-            mocked_create_merchant_request.return_value = (
-                mocked_create_merchant_response
+        with requests_mock.Mocker() as req_mock:
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}merchant/create/"
+                f"merchant/{settings.WEB_STORE_API_NAMESPACE}",
+                json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
             )
 
             self.client.post(
                 f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
                 data,
             )
-            self.assertTrue(mocked_create_merchant_request.called)
+
+            self.assertEqual(req_mock.call_count, 1)
 
         self.assertEqual(Organization.objects.count(), 1)
         self.assertEqual(WebStoreMerchant.objects.count(), 1)
@@ -407,7 +404,7 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
             Organization.objects.first().web_store_merchants.first().pk,
             merchant.pk,
         )
-        self.assertEqual(merchant.merchant_id, json_return_value["merchantId"])
+        self.assertEqual(merchant.merchant_id, DEFAULT_MERCHANT_ID)
         self.assertEqual(merchant.created_by_id, self.admin_user.pk)
         self.assertEqual(merchant.last_modified_by_id, self.admin_user.pk)
         self.assertIsNotNone(merchant.created_time)
@@ -419,7 +416,11 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
     def test_can_edit_web_store_merchant(self):
         with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             # Don't do the full save() with the Talpa API call yet.
-            merchant = WebStoreMerchantFactory(organization=self.organization)
+            merchant = WebStoreMerchantFactory(
+                organization=self.organization,
+                merchant_id=DEFAULT_MERCHANT_ID,
+                paytrail_merchant_id="1234567",
+            )
 
         self.assertIsNotNone(merchant.created_time)
         self.assertIsNotNone(merchant.last_modified_time)
@@ -438,28 +439,29 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         )
         data = self._get_request_data(merchant_data)
 
-        merchant_attrs_to_skip = ("id", "organization", "active")
+        merchant_attrs_to_skip = (
+            "id",
+            "organization",
+            "active",
+            "paytrail_merchant_id",
+        )
 
         self.assertMerchantValuesNotEqual(
             merchant, data, attrs_to_skip=merchant_attrs_to_skip
         )
 
-        json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
-        json_return_value["merchantId"] = merchant.merchant_id
-        mocked_update_merchant_response = get_mock_response(
-            status_code=status.HTTP_200_OK,
-            json_return_value=json_return_value,
-        )
-        with patch("requests.post") as mocked_update_merchant_request:
-            mocked_update_merchant_request.return_value = (
-                mocked_update_merchant_response
+        with requests_mock.Mocker() as req_mock:
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}merchant/update/"
+                f"merchant/{settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+                json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
             )
 
             self.client.post(
                 f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
                 data,
             )
-            self.assertTrue(mocked_update_merchant_request.called)
+            self.assertEqual(req_mock.call_count, 1)
 
         self.assertEqual(Organization.objects.count(), 1)
         self.assertEqual(WebStoreMerchant.objects.count(), 1)
@@ -494,8 +496,13 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         ]:
             with (
                 self.subTest(),
-                patch("requests.post") as mocked_update_merchant_request,
+                requests_mock.Mocker() as req_mock,
             ):
+                req_mock.post(
+                    f"{settings.WEB_STORE_API_BASE_URL}merchant/create/"
+                    f"merchant/{settings.WEB_STORE_API_NAMESPACE}",
+                )
+
                 data = self._get_request_data(
                     {
                         "name": "New Org",
@@ -506,7 +513,8 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
                 del data[field]
 
                 self.client.post("/admin/django_orghierarchy/organization/add/", data)
-                self.assertFalse(mocked_update_merchant_request.called)
+
+                self.assertEqual(req_mock.call_count, 0)
 
                 self.assertEqual(Organization.objects.count(), 1)
                 self.assertEqual(WebStoreMerchant.objects.count(), 0)
@@ -537,12 +545,22 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
             }
         )
         data = self._get_request_data(merchant_data)
-        with patch("requests.post") as mocked_update_merchant_request:
+        with requests_mock.Mocker() as req_mock:
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}create/merchant/"
+                f"merchant/{settings.WEB_STORE_API_NAMESPACE}",
+            )
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}update/merchant/"
+                f"merchant/{settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+            )
+
             self.client.post(
                 f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
                 data,
             )
-            self.assertFalse(mocked_update_merchant_request.called)
+
+            self.assertEqual(req_mock.call_count, 0)
 
         self.assertEqual(Organization.objects.count(), 1)
         self.assertEqual(WebStoreMerchant.objects.count(), 1)
@@ -559,22 +577,22 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
             }
         )
 
-        mocked_create_merchant_response = get_mock_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
         with (
-            patch("requests.post") as mocked_create_merchant_request,
+            requests_mock.Mocker() as req_mock,
             self.assertRaises(WebStoreAPIError),
         ):
-            mocked_create_merchant_request.return_value = (
-                mocked_create_merchant_response
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}merchant/create/"
+                f"merchant/{settings.WEB_STORE_API_NAMESPACE}",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
             self.client.post(
                 "/admin/django_orghierarchy/organization/add/",
                 data,
             )
-            self.assertTrue(mocked_create_merchant_request.called)
+
+            self.assertEqual(req_mock.call_count, 1)
 
         self.assertEqual(Organization.objects.count(), 1)
         self.assertEqual(WebStoreMerchant.objects.count(), 0)
@@ -582,7 +600,11 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
     def test_edit_web_store_merchant_api_exception(self):
         with self.settings(WEB_STORE_INTEGRATION_ENABLED=False):
             # Don't do the full save() with the Talpa API call yet.
-            merchant = WebStoreMerchantFactory(organization=self.organization)
+            merchant = WebStoreMerchantFactory(
+                organization=self.organization,
+                merchant_id=DEFAULT_MERCHANT_ID,
+                paytrail_merchant_id="1234567",
+            )
         merchant_last_modified_time = merchant.last_modified_time
 
         self.assertEqual(Organization.objects.count(), 1)
@@ -598,28 +620,33 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         )
         data = self._get_request_data(merchant_data)
 
-        merchant_attrs_to_skip = ("id", "organization", "active")
+        merchant_attrs_to_skip = (
+            "id",
+            "organization",
+            "active",
+            "paytrail_merchant_id",
+        )
 
         self.assertMerchantValuesNotEqual(
             merchant, data, attrs_to_skip=merchant_attrs_to_skip
         )
 
-        mocked_update_merchant_response = get_mock_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-        )
         with (
-            patch("requests.post") as mocked_update_merchant_request,
+            requests_mock.Mocker() as req_mock,
             self.assertRaises(WebStoreAPIError),
         ):
-            mocked_update_merchant_request.return_value = (
-                mocked_update_merchant_response
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}merchant/update/"
+                f"merchant/{settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
             self.client.post(
                 f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
                 data,
             )
-            self.assertTrue(mocked_update_merchant_request.called)
+
+            self.assertEqual(req_mock.call_count, 1)
 
         self.assertEqual(Organization.objects.count(), 1)
         self.assertEqual(WebStoreMerchant.objects.count(), 1)
@@ -655,12 +682,22 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
             merchant, data, attrs_to_skip=merchant_attrs_to_skip
         )
 
-        with patch("requests.post") as mocked_update_merchant_request:
+        with requests_mock.Mocker() as req_mock:
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}merchant/update/"
+                f"merchant/{settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+            )
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}merchant/create/"
+                f"merchant/{settings.WEB_STORE_API_NAMESPACE}",
+            )
+
             self.client.post(
                 f"/admin/django_orghierarchy/organization/{self.organization.id}/change/",
                 data,
             )
-            self.assertFalse(mocked_update_merchant_request.called)
+
+            self.assertEqual(req_mock.call_count, 0)
 
         merchant.refresh_from_db()
         self.assertMerchantValuesEqual(
