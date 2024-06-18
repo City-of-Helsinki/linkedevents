@@ -1,12 +1,15 @@
 import shutil
 
 import pytest
+import sentry_sdk
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.management import call_command
 from django_orghierarchy.models import Organization, OrganizationClass
 from rest_framework.test import APIClient
+from sentry_sdk.envelope import Envelope
+from sentry_sdk.transport import Transport
 
 from events.models import DataSource
 
@@ -173,3 +176,56 @@ def organization3(other_data_source, user2):
 def django_cache():
     yield cache
     cache.clear()
+
+
+class TestTransport(Transport):
+    """Copied from https://github.com/getsentry/sentry-python/blob/master/tests/conftest.py."""
+
+    def __init__(self):
+        Transport.__init__(self)
+
+    def capture_envelope(self, _: Envelope) -> None:
+        """No-op capture_envelope for tests"""
+        pass
+
+
+@pytest.fixture
+def sentry_init(request):
+    """Copied from https://github.com/getsentry/sentry-python/blob/master/tests/conftest.py."""
+
+    def inner(*a, **kw):
+        hub = sentry_sdk.Hub.current
+        kw.setdefault("transport", TestTransport())
+        client = sentry_sdk.Client(*a, **kw)
+        hub.bind_client(client)
+
+    if request.node.get_closest_marker("forked"):
+        # Do not run isolation if the test is already running in
+        # ultimate isolation (seems to be required for celery tests that
+        # fork)
+        yield inner
+    else:
+        with sentry_sdk.Hub(None):
+            yield inner
+
+
+@pytest.fixture
+def sentry_capture_events(monkeypatch):
+    """Copied from https://github.com/getsentry/sentry-python/blob/master/tests/conftest.py."""
+
+    def inner():
+        events = []
+        test_client = sentry_sdk.Hub.current.client
+        old_capture_envelope = test_client.transport.capture_envelope
+
+        def append_event(envelope):
+            for item in envelope:
+                if item.headers.get("type") in ("event", "transaction"):
+                    events.append(item.payload.json)
+            return old_capture_envelope(envelope)
+
+        monkeypatch.setattr(test_client.transport, "capture_envelope", append_event)
+
+        return events
+
+    return inner
