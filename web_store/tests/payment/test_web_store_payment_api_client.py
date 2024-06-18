@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import pytest
 import requests_mock
 from django.conf import settings
@@ -15,7 +13,6 @@ from web_store.tests.order.test_web_store_order_api_client import (
     DEFAULT_ORDER_ID,
     DEFAULT_REFUND_ID,
 )
-from web_store.tests.utils import get_mock_response
 
 DEFAULT_PAYMENT_ID = "fa4e9268-9b06-4574-bfa3-5e0ff5b799a8"
 
@@ -105,13 +102,16 @@ def test_mandatory_web_store_payment_setting_missing_causes_right_exception(
 
 def test_get_payment_success():
     client = WebStorePaymentAPIClient()
-    mocked_response = get_mock_response(
-        status_code=status.HTTP_200_OK, json_return_value=DEFAULT_GET_PAYMENT_DATA
-    )
 
-    with patch("requests.get") as mocked_request:
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{client.payment_api_base_url}admin/{DEFAULT_ORDER_ID}",
+            json=DEFAULT_GET_PAYMENT_DATA,
+        )
+
         response_json = client.get_payment(order_id=DEFAULT_ORDER_ID)
+
+        assert req_mock.call_count == 1
 
     assert response_json == DEFAULT_GET_PAYMENT_DATA
 
@@ -121,11 +121,16 @@ def test_get_payment_success():
 )
 def test_get_payment_exception(status_code):
     client = WebStorePaymentAPIClient()
-    mocked_response = get_mock_response(status_code=status_code)
 
-    with patch("requests.get") as mocked_request, pytest.raises(RequestException):
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock, pytest.raises(RequestException):
+        req_mock.get(
+            f"{client.payment_api_base_url}admin/{DEFAULT_ORDER_ID}",
+            status_code=status_code,
+        )
+
         client.get_payment(order_id=DEFAULT_ORDER_ID)
+
+        assert req_mock.call_count == 1
 
 
 def test_get_refund_payment_success():

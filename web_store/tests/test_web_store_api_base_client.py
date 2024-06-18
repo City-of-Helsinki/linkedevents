@@ -1,12 +1,12 @@
-from unittest.mock import patch
+from urllib.parse import parse_qs, urlencode
 
 import pytest
+import requests_mock
 from requests.exceptions import RequestException
 from rest_framework import status
 
 from web_store.clients import WebStoreAPIBaseClient
 from web_store.exceptions import WebStoreImproperlyConfiguredException
-from web_store.tests.utils import get_mock_response
 
 DEFAULT_API_URL = "https://test_api/v1/"
 DEFAULT_HEADERS = {
@@ -54,13 +54,17 @@ def test_api_base_url_with_and_without_slash(settings, api_base_url):
 @pytest.mark.parametrize("http_method", ["get", "post", "put", "patch", "delete"])
 def test_make_successful_request_with_different_http_methods(http_method):
     client = WebStoreAPIBaseClient()
-    mocked_response = get_mock_response()
 
-    with patch(f"requests.{http_method}") as mocked_request:
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock:
+        getattr(req_mock, http_method)(DEFAULT_API_URL, json={})
+
         resp_json = client._make_request(DEFAULT_API_URL, http_method)
 
-        mocked_request.assert_called_with(DEFAULT_API_URL, timeout=client.TIMEOUT)
+        assert req_mock.call_count == 1
+
+        req_history = req_mock.request_history[0]
+        assert req_history.url == DEFAULT_API_URL
+        assert req_history.timeout == client.TIMEOUT
 
     assert isinstance(resp_json, dict)
 
@@ -77,17 +81,24 @@ def test_make_successful_request_with_different_http_methods(http_method):
 )
 def test_make_successful_request_with_params(http_method, params_key, params_value):
     client = WebStoreAPIBaseClient()
-    mocked_response = get_mock_response()
 
-    with patch(f"requests.{http_method}") as mocked_request:
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock:
+        getattr(req_mock, http_method)(DEFAULT_API_URL, json={})
+
         resp_json = client._make_request(
             DEFAULT_API_URL, http_method, params=params_value
         )
 
-        mocked_request.assert_called_with(
-            DEFAULT_API_URL, timeout=client.TIMEOUT, **{params_key: params_value}
-        )
+        assert req_mock.call_count == 1
+
+        req_history = req_mock.request_history[0]
+        assert req_history.timeout == client.TIMEOUT
+        if params_key == "params":
+            assert req_history.url.startswith(DEFAULT_API_URL) is True
+            assert req_history.qs == parse_qs(urlencode(params_value))
+        else:
+            assert req_history.url == DEFAULT_API_URL
+            assert req_history.json() == params_value
 
     assert isinstance(resp_json, dict)
 
@@ -104,15 +115,18 @@ def test_make_successful_request_with_params(http_method, params_key, params_val
 )
 def test_make_successful_request_with_headers(http_method, headers):
     client = WebStoreAPIBaseClient()
-    mocked_response = get_mock_response()
 
-    with patch(f"requests.{http_method}") as mocked_request:
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock:
+        getattr(req_mock, http_method)(DEFAULT_API_URL, json={})
+
         resp_json = client._make_request(DEFAULT_API_URL, http_method, headers=headers)
 
-        mocked_request.assert_called_with(
-            DEFAULT_API_URL, timeout=client.TIMEOUT, **{"headers": headers}
-        )
+        assert req_mock.call_count == 1
+
+        req_history = req_mock.request_history[0]
+        assert req_history.timeout == client.TIMEOUT
+        assert req_history.url == DEFAULT_API_URL
+        assert headers.items() <= req_history.headers.items()
 
     assert isinstance(resp_json, dict)
 
@@ -134,11 +148,13 @@ def test_make_successful_request_with_headers(http_method, headers):
 )
 def test_make_failed_request(http_method, status_code):
     client = WebStoreAPIBaseClient()
-    mocked_response = get_mock_response(status_code=status_code)
 
     with (
-        patch(f"requests.{http_method}") as mocked_request,
+        requests_mock.Mocker() as req_mock,
         pytest.raises(RequestException),
     ):
-        mocked_request.return_value = mocked_response
+        getattr(req_mock, http_method)(DEFAULT_API_URL, status_code=status_code)
+
         client._make_request(DEFAULT_API_URL, http_method)
+
+        assert req_mock.call_count == 1

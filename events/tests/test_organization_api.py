@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import pytest
 import requests_mock
 from django.conf import settings as django_settings
@@ -21,8 +19,8 @@ from registrations.tests.factories import (
 from registrations.tests.utils import create_user_by_role
 from web_store.tests.merchant.test_web_store_merchant_api_client import (
     DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+    DEFAULT_MERCHANT_ID,
 )
-from web_store.tests.utils import get_mock_response
 
 organization_name = "test org"
 edited_organization_name = "new name"
@@ -760,17 +758,15 @@ def test_superuser_or_financial_and_event_admin_can_create_organization_with_web
 
     assert WebStoreMerchant.objects.count() == 0
 
-    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
-    json_return_value["merchantId"] = "1234"
-    mocked_web_store_api_response = get_mock_response(
-        json_return_value=json_return_value,
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url, json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA
+        )
 
         response = assert_create_organization(api_client, payload)
 
-    assert mocked_web_store_api_request.called is True
+        assert req_mock.call_count == 1
+
     assert len(response.data["web_store_merchants"]) == 1
     assert (
         response.data["web_store_merchants"][0]["url"]
@@ -815,17 +811,15 @@ def test_superuser_or_financial_and_event_admin_can_update_organization_with_web
 
     assert WebStoreMerchant.objects.count() == 0
 
-    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
-    json_return_value["merchantId"] = "1234"
-    mocked_web_store_api_response = get_mock_response(
-        json_return_value=json_return_value,
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url, json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA
+        )
 
         response = assert_update_organization(api_client, organization.id, payload)
 
-    assert mocked_web_store_api_request.called is True
+        assert req_mock.call_count == 1
+
     assert len(response.data["web_store_merchants"]) == 1
     assert (
         response.data["web_store_merchants"][0]["url"]
@@ -862,17 +856,15 @@ def test_superuser_and_financial_admin_can_patch_organization_with_web_store_mer
 
     assert WebStoreMerchant.objects.count() == 0
 
-    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
-    json_return_value["merchantId"] = "1234"
-    mocked_web_store_api_response = get_mock_response(
-        json_return_value=json_return_value,
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url, json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA
+        )
 
         response = assert_patch_organization(api_client, organization.id, payload)
 
-    assert mocked_web_store_api_request.called is True
+        assert req_mock.call_count == 1
+
     assert len(response.data["web_store_merchants"]) == 1
     assert (
         response.data["web_store_merchants"][0]["url"]
@@ -905,7 +897,11 @@ def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
         merchant = WebStoreMerchantFactory(
-            organization=organization, merchant_id="1234"
+            organization=organization,
+            merchant_id="1234",
+            paytrail_merchant_id=default_web_store_merchants_data[0][
+                "paytrail_merchant_id"
+            ],
         )
 
     merchants_data = default_web_store_merchants_data[0].copy()
@@ -926,17 +922,17 @@ def test_superuser_and_financial_can_patch_organizations_web_store_merchant(
     assert merchant.last_modified_by is None
     last_modified_time = merchant.last_modified_time
 
-    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
-    mocked_web_store_api_response = get_mock_response(
-        status_code=status.HTTP_200_OK,
-        json_return_value=json_return_value,
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+            json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+        )
 
         response = assert_patch_organization(api_client, organization.id, payload)
 
-    assert mocked_web_store_api_request.called is True
+        assert req_mock.call_count == 1
+
     assert len(response.data["web_store_merchants"]) == 1
     assert (
         response.data["web_store_merchants"][0]["url"]
@@ -1048,9 +1044,17 @@ def test_superuser_and_financial_can_make_web_store_merchant_inactive(
     assert merchant.last_modified_by is None
     last_modified_time = merchant.last_modified_time
 
-    with patch("requests.post") as mocked_web_store_api_request:
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(merchant_create_url)
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}"
+        )
+
         response = assert_patch_organization(api_client, organization.id, payload)
-    assert mocked_web_store_api_request.called is False
+
+        assert req_mock.call_count == 0
+
     assert len(response.data["web_store_merchants"]) == 1
 
     merchant.refresh_from_db()
@@ -1072,7 +1076,6 @@ def test_cannot_post_web_store_merchant_id_or_url(
     api_client.force_authenticate(user)
 
     origin_id = "test_organization2"
-    original_merchant_id = "1234"
 
     web_store_merchant_data = default_web_store_merchants_data[0].copy()
     web_store_merchant_data.update(
@@ -1091,23 +1094,22 @@ def test_cannot_post_web_store_merchant_id_or_url(
 
     assert WebStoreMerchant.objects.count() == 0
 
-    json_return_value = DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA.copy()
-    json_return_value["merchantId"] = original_merchant_id
-    mocked_web_store_api_response = get_mock_response(
-        json_return_value=json_return_value,
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url, json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA
+        )
 
         response = assert_create_organization(api_client, payload)
-    assert mocked_web_store_api_request.called is True
+
+        assert req_mock.call_count == 1
+
     assert len(response.data["web_store_merchants"]) == 1
 
     assert WebStoreMerchant.objects.count() == 1
     assert (
         WebStoreMerchant.objects.filter(
             organization_id=response.data["id"],
-            merchant_id=original_merchant_id,
+            merchant_id=DEFAULT_MERCHANT_ID,
             url=django_settings.LINKED_EVENTS_UI_URL,
         ).count()
         == 1
@@ -1152,9 +1154,16 @@ def test_cannot_put_web_store_merchant_id_or_url(
 
     assert WebStoreMerchant.objects.count() == 1
 
-    with patch("requests.post") as mocked_web_store_api_request:
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+            json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+        )
+
         assert_update_organization(api_client, organization.id, payload)
-    assert mocked_web_store_api_request.called is True
+
+        assert req_mock.call_count == 1
 
     assert WebStoreMerchant.objects.count() == 1
 
@@ -1192,9 +1201,16 @@ def test_cannot_patch_web_store_merchant_id_or_url(
     assert WebStoreMerchant.objects.count() == 1
     assert merchant.merchant_id == original_merchant_id
 
-    with patch("requests.post") as mocked_web_store_api_request:
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+            json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+        )
+
         assert_patch_organization(api_client, organization.id, payload)
-    assert mocked_web_store_api_request.called is True
+
+        assert req_mock.call_count == 1
 
     assert WebStoreMerchant.objects.count() == 1
 
@@ -1235,11 +1251,15 @@ def test_not_allowed_user_roles_cannot_create_an_organization_with_a_web_store_m
 
     assert WebStoreMerchant.objects.count() == 0
 
-    with patch("requests.post") as mocked_web_store_api_request:
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(merchant_create_url)
+
         response = create_organization(api_client, payload)
+
+        assert req_mock.call_count == 0
+
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.data.get("web_store_merchants") is None
-    assert mocked_web_store_api_request.called is False
 
     assert WebStoreMerchant.objects.count() == 0
 
@@ -1276,11 +1296,15 @@ def test_not_allowed_user_roles_cannot_update_an_organization_with_a_web_store_m
 
     assert WebStoreMerchant.objects.count() == 0
 
-    with patch("requests.post") as mocked_web_store_api_request:
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(merchant_create_url)
+
         response = update_organization(api_client, organization.id, payload)
+
+        assert req_mock.call_count == 0
+
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.data.get("web_store_merchants") is None
-    assert mocked_web_store_api_request.called is False
 
     assert WebStoreMerchant.objects.count() == 0
 
@@ -1326,11 +1350,19 @@ def test_not_allowed_user_roles_cannot_update_an_organizations_web_store_merchan
 
     assert WebStoreMerchant.objects.count() == 1
 
-    with patch("requests.post") as mocked_web_store_api_request:
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+        )
+        req_mock.post(merchant_create_url)
+
         response = update_organization(api_client, organization.id, payload)
+
+        assert req_mock.call_count == 0
+
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.data.get("web_store_merchants") is None
-    assert mocked_web_store_api_request.called is False
 
     assert WebStoreMerchant.objects.count() == 1
 
@@ -1368,12 +1400,19 @@ def test_not_allowed_user_roles_cannot_patch_an_organizations_web_store_merchant
 
     assert WebStoreMerchant.objects.count() == 1
 
-    with patch("requests.post") as mocked_web_store_api_request:
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+        )
+        req_mock.post(merchant_create_url)
+
         response = patch_organization(api_client, organization.id, payload)
+
+        assert req_mock.call_count == 0
+
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.data.get("web_store_merchants") is None
-    assert mocked_web_store_api_request.called is False
-
     assert WebStoreMerchant.objects.count() == 1
 
 
@@ -1586,16 +1625,18 @@ def test_create_organization_with_web_store_merchant_api_field_exception(
     json_return_value = {
         "errors": [{"code": "test", "message": "Merchant already exists."}]
     }
-    mocked_web_store_api_response = get_mock_response(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        exception_json_return_value=json_return_value,
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            json=json_return_value,
+        )
 
         response = create_organization(api_client, payload)
+
+        assert req_mock.call_count == 1
+
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert mocked_web_store_api_request.called is True
     assert response.data[0] == (
         f"Talpa web store API error (status_code: {status.HTTP_400_BAD_REQUEST}): "
         f"{json_return_value['errors']}"
@@ -1624,15 +1665,16 @@ def test_create_organization_with_web_store_merchant_api_unknown_exception(
     assert Organization.objects.count() == 1
     assert WebStoreMerchant.objects.count() == 0
 
-    mocked_web_store_api_response = get_mock_response(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
         response = create_organization(api_client, payload)
+
+        assert req_mock.call_count == 1
+
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert mocked_web_store_api_request.called is True
     assert response.data[0] == (
         f"Unknown Talpa web store API error (status_code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
     )
@@ -1662,20 +1704,22 @@ def test_update_organization_with_web_store_merchant_api_field_exception(
     json_return_value = {
         "errors": [{"code": "test", "message": "Merchant already exists."}]
     }
-    mocked_web_store_api_response = get_mock_response(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        exception_json_return_value=json_return_value,
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            json=json_return_value,
+        )
 
         response = update_organization(api_client, organization.id, payload)
+
+        assert req_mock.call_count == 1
+
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data[0] == (
         f"Talpa web store API error (status_code: {status.HTTP_400_BAD_REQUEST}): "
         f"{json_return_value['errors']}"
     )
-    assert mocked_web_store_api_request.called is True
 
     assert WebStoreMerchant.objects.count() == 0
 
@@ -1698,18 +1742,19 @@ def test_update_organization_with_web_store_merchant_api_unknown_exception(
 
     assert WebStoreMerchant.objects.count() == 0
 
-    mocked_web_store_api_response = get_mock_response(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    )
-    with patch("requests.post") as mocked_web_store_api_request:
-        mocked_web_store_api_request.return_value = mocked_web_store_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
         response = update_organization(api_client, organization.id, payload)
+
+        assert req_mock.call_count == 1
+
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data[0] == (
         f"Unknown Talpa web store API error (status_code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
     )
-    assert mocked_web_store_api_request.called is True
 
     assert WebStoreMerchant.objects.count() == 0
 
@@ -1749,9 +1794,15 @@ def test_do_not_update_web_store_merchant_in_talpa_if_data_is_unchanged(
 
     assert WebStoreMerchant.objects.count() == 1
 
-    with patch("requests.post") as mocked_web_store_api_request:
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+        )
+
         assert_update_organization(api_client, organization.id, payload)
-    assert mocked_web_store_api_request.called is False
+
+        assert req_mock.call_count == 0
 
     assert WebStoreMerchant.objects.count() == 1
 
@@ -1786,9 +1837,16 @@ def test_do_not_patch_web_store_merchant_in_talpa_if_data_is_unchanged(
 
     assert WebStoreMerchant.objects.count() == 1
 
-    with patch("requests.post") as mocked_web_store_api_request:
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{merchant.merchant_id}",
+            json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+        )
+
         assert_patch_organization(api_client, organization.id, payload)
-    assert mocked_web_store_api_request.called is False
+
+        assert req_mock.call_count == 0
 
     assert WebStoreMerchant.objects.count() == 1
 

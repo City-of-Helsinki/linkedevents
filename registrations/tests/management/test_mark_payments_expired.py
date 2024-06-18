@@ -1,7 +1,7 @@
 from datetime import timedelta
-from unittest.mock import patch
 
 import pytest
+import requests_mock
 from django.conf import settings
 from django.core import mail
 from django.core.management import call_command
@@ -27,11 +27,14 @@ from registrations.tests.factories import (
 )
 from registrations.tests.utils import assert_payment_link_email_sent
 from web_store.payment.enums import WebStorePaymentStatus
-from web_store.tests.order.test_web_store_order_api_client import DEFAULT_GET_ORDER_DATA
+from web_store.tests.order.test_web_store_order_api_client import (
+    DEFAULT_CANCEL_ORDER_DATA,
+    DEFAULT_GET_ORDER_DATA,
+    DEFAULT_ORDER_ID,
+)
 from web_store.tests.payment.test_web_store_payment_api_client import (
     DEFAULT_GET_PAYMENT_DATA,
 )
-from web_store.tests.utils import get_mock_response
 
 _CONTACT_PERSON_EMAIL = "test@test.com"
 _CONTACT_PERSON2_EMAIL = "test2@test.com"
@@ -66,7 +69,7 @@ def _test_payments_expired(
     marked = SignUpPaymentFactory(
         status=SignUpPayment.PaymentStatus.CREATED,
         expires_at=fourteen_days_ago,
-        external_order_id="4321",
+        external_order_id=DEFAULT_ORDER_ID,
         signup__registration=registration,
     )
     marked2 = SignUpPaymentFactory(
@@ -100,17 +103,30 @@ def _test_payments_expired(
     assert marked2.deleted is False
     assert marked2.signup_group.deleted is False
 
-    mocked_api_response = get_mock_response(status_code=status.HTTP_404_NOT_FOUND)
-    with (
-        patch("requests.get") as mocked_get_payment_request,
-        patch("requests.post") as mocked_cancel_order_request,
-    ):
-        mocked_get_payment_request.return_value = mocked_api_response
+    marked2_order_data = DEFAULT_GET_ORDER_DATA.copy()
+    marked2_order_data["orderId"] = marked2.external_order_id
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{marked.external_order_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{marked2.external_order_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/{marked.external_order_id}/cancel",
+            json=DEFAULT_CANCEL_ORDER_DATA,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/{marked2.external_order_id}/cancel",
+            json=marked2_order_data,
+        )
 
         call_command("mark_payments_expired")
 
-    assert mocked_get_payment_request.called is True
-    assert mocked_cancel_order_request.called is True
+        assert req_mock.call_count == 4
 
     not_marked.refresh_from_db()
     assert not_marked.status == SignUpPayment.PaymentStatus.CREATED
@@ -317,7 +333,7 @@ def test_payment_expired_event_type(
     payment = SignUpPaymentFactory(
         status=SignUpPayment.PaymentStatus.CREATED,
         expires_at=fourteen_days_ago,
-        external_order_id="4321",
+        external_order_id=DEFAULT_ORDER_ID,
         signup__registration=registration,
     )
 
@@ -327,17 +343,19 @@ def test_payment_expired_event_type(
         service_language=service_lang,
     )
 
-    mocked_api_response = get_mock_response(status_code=status.HTTP_404_NOT_FOUND)
-    with (
-        patch("requests.get") as mocked_get_payment_request,
-        patch("requests.post") as mocked_cancel_order_request,
-    ):
-        mocked_get_payment_request.return_value = mocked_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/{payment.external_order_id}/cancel",
+            json=DEFAULT_CANCEL_ORDER_DATA,
+        )
 
         call_command("mark_payments_expired")
 
-    assert mocked_get_payment_request.called is True
-    assert mocked_cancel_order_request.called is True
+        assert req_mock.call_count == 2
 
     assert len(mail.outbox) == 1
 
@@ -391,24 +409,23 @@ def test_mark_payments_expired_signup_moved_to_waitlisted_with_payment_link():
     assert SignUpPayment.objects.count() == 1
     assert SignUp.objects.count() == 2
 
-    mocked_get_payment_api_response = get_mock_response(
-        status_code=status.HTTP_404_NOT_FOUND
-    )
-    mocked_create_order_api_response = get_mock_response(
-        status_code=status.HTTP_201_CREATED, json_return_value=DEFAULT_GET_ORDER_DATA
-    )
-
-    with (
-        patch("requests.get") as mocked_get_payment_request,
-        patch("requests.post") as mocked_create_payment_request,
-    ):
-        mocked_get_payment_request.return_value = mocked_get_payment_api_response
-        mocked_create_payment_request.return_value = mocked_create_order_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/{payment.external_order_id}/cancel",
+            json=DEFAULT_CANCEL_ORDER_DATA,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
 
         call_command("mark_payments_expired")
 
-    assert mocked_get_payment_request.called is True
-    assert mocked_create_payment_request.called is True
+        assert req_mock.call_count == 3
 
     assert SignUpPayment.objects.count() == 1
     assert SignUp.objects.count() == 1
@@ -454,21 +471,19 @@ def test_payment_expired_order_cancellation_api_exception():
         service_language=service_lang,
     )
 
-    mocked_api_get_response = get_mock_response(status_code=status.HTTP_404_NOT_FOUND)
-    mocked_api_post_response = get_mock_response(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-    )
-    with (
-        patch("requests.get") as mocked_get_payment_request,
-        patch("requests.post") as mocked_cancel_order_request,
-    ):
-        mocked_get_payment_request.return_value = mocked_api_get_response
-        mocked_cancel_order_request.return_value = mocked_api_post_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/{payment.external_order_id}/cancel",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
         call_command("mark_payments_expired")
 
-    assert mocked_get_payment_request.called is True
-    assert mocked_cancel_order_request.called is True
+        assert req_mock.call_count == 2
 
     _assert_email_sent(
         contact_person.email, f"Registration payment expired - {_EVENT_NAME}"
@@ -505,15 +520,15 @@ def test_mark_payments_expired_payment_cancelled():
 
     api_payment_data = DEFAULT_GET_PAYMENT_DATA.copy()
     api_payment_data["status"] = WebStorePaymentStatus.CANCELLED.value
-    mocked_api_response = get_mock_response(
-        status_code=status.HTTP_200_OK, json_return_value=api_payment_data
-    )
-    with patch("requests.get") as mocked_get_payment_request:
-        mocked_get_payment_request.return_value = mocked_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            json=api_payment_data,
+        )
 
         call_command("mark_payments_expired")
 
-    assert mocked_get_payment_request.called is True
+        assert req_mock.call_count == 1
 
     assert SignUpPayment.objects.count() == 0
     assert SignUp.objects.count() == 0
@@ -565,24 +580,19 @@ def test_mark_payments_expired_payment_cancelled_signup_moved_to_waitlisted_with
 
     api_payment_data = DEFAULT_GET_PAYMENT_DATA.copy()
     api_payment_data["status"] = WebStorePaymentStatus.CANCELLED.value
-    mocked_get_payment_api_response = get_mock_response(
-        status_code=status.HTTP_200_OK, json_return_value=api_payment_data
-    )
-    mocked_create_order_api_response = get_mock_response(
-        status_code=status.HTTP_201_CREATED, json_return_value=DEFAULT_GET_ORDER_DATA
-    )
-
-    with (
-        patch("requests.get") as mocked_get_payment_request,
-        patch("requests.post") as mocked_create_payment_request,
-    ):
-        mocked_get_payment_request.return_value = mocked_get_payment_api_response
-        mocked_create_payment_request.return_value = mocked_create_order_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            json=api_payment_data,
+        )
+        req_mock.post(
+            f"{settings.WEB_STORE_API_BASE_URL}order/",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
 
         call_command("mark_payments_expired")
 
-    assert mocked_get_payment_request.called is True
-    assert mocked_create_payment_request.called is True
+        assert req_mock.call_count == 2
 
     assert SignUpPayment.objects.count() == 1
     assert SignUp.objects.count() == 1
@@ -637,15 +647,15 @@ def test_mark_payments_expired_payment_paid(has_contact_person):
 
     api_payment_data = DEFAULT_GET_PAYMENT_DATA.copy()
     api_payment_data["status"] = WebStorePaymentStatus.PAID.value
-    mocked_api_response = get_mock_response(
-        status_code=status.HTTP_200_OK, json_return_value=api_payment_data
-    )
-    with patch("requests.get") as mocked_get_payment_request:
-        mocked_get_payment_request.return_value = mocked_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            json=api_payment_data,
+        )
 
         call_command("mark_payments_expired")
 
-    assert mocked_get_payment_request.called is True
+        assert req_mock.call_count == 1
 
     payment.refresh_from_db()
     assert payment.status == SignUpPayment.PaymentStatus.PAID
@@ -681,15 +691,15 @@ def test_mark_payments_expired_payer_in_payment_phase():
     api_payment_data = DEFAULT_GET_PAYMENT_DATA.copy()
     api_payment_data["status"] = WebStorePaymentStatus.CREATED.value
     api_payment_data["timestamp"] = payment_phase_timestamp.strftime("%Y%m%d-%H%M%S")
-    mocked_api_response = get_mock_response(
-        status_code=status.HTTP_200_OK, json_return_value=api_payment_data
-    )
-    with patch("requests.get") as mocked_get_payment_request:
-        mocked_get_payment_request.return_value = mocked_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            json=api_payment_data,
+        )
 
         call_command("mark_payments_expired")
 
-    assert mocked_get_payment_request.called is True
+        assert req_mock.call_count == 1
 
     payment.refresh_from_db()
     assert payment.status == SignUpPayment.PaymentStatus.CREATED
@@ -725,13 +735,15 @@ def test_mark_payments_expired_web_store_api_exception(api_status_code):
     assert payment.deleted is False
     assert payment.signup.deleted is False
 
-    mocked_api_response = get_mock_response(status_code=api_status_code)
-    with patch("requests.get") as mocked_get_payment_request:
-        mocked_get_payment_request.return_value = mocked_api_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{payment.external_order_id}",
+            status_code=api_status_code,
+        )
 
         call_command("mark_payments_expired")
 
-    assert mocked_get_payment_request.called is True
+        assert req_mock.call_count == 1
 
     payment.refresh_from_db()
     assert payment.status == SignUpPayment.PaymentStatus.CREATED

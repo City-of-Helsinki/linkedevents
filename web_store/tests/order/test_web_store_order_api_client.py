@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 import pytest
 import requests_mock
 from django.conf import settings as django_settings
@@ -9,7 +7,6 @@ from rest_framework import status
 from web_store.exceptions import WebStoreImproperlyConfiguredException
 from web_store.order.clients import WebStoreOrderAPIClient
 from web_store.order.enums import WebStoreOrderStatus
-from web_store.tests.utils import get_mock_response
 
 DEFAULT_USER_UUID = "f5e87f5c-8d16-4746-8e96-5a5a88b9224e"
 DEFAULT_ORDER_ID = "c7ae2960-8284-4b92-b82e-9da882c452d7"
@@ -45,9 +42,9 @@ DEFAULT_CREATE_ORDER_DATA = {
 DEFAULT_GET_ORDER_DATA = {
     "orderId": DEFAULT_ORDER_ID,
     "createdAt": "2024-02-01T12:00:00Z",
-    "checkoutUrl": "https://test.dev/",
+    "checkoutUrl": "https://checkout.dev/v1/123/?user=abcdefg",
     "receiptUrl": "https://test.dev/receipt/",
-    "loggedInCheckoutUrl": "https://test.dev/logged_in/",
+    "loggedInCheckoutUrl": "https://logged-in-checkout.dev/v1/123/",
     "updateCardUrl": "https://test.dev/cart/update/",
     "isValidForCheckout": True,
     "invoice": {
@@ -161,13 +158,18 @@ def test_mandatory_web_store_order_setting_missing_causes_right_exception(
 
 def test_create_order_success():
     client = WebStoreOrderAPIClient()
-    mocked_response = get_mock_response(json_return_value=DEFAULT_CREATE_ORDER_DATA)
 
-    with patch("requests.post") as mocked_request:
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{client.order_api_base_url}",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
+
         response_json = client.create_order(DEFAULT_CREATE_ORDER_DATA)
 
-    assert response_json == DEFAULT_CREATE_ORDER_DATA
+        assert req_mock.call_count == 1
+
+    assert response_json == DEFAULT_GET_ORDER_DATA
 
 
 @pytest.mark.parametrize(
@@ -175,22 +177,30 @@ def test_create_order_success():
 )
 def test_create_order_exception(status_code):
     client = WebStoreOrderAPIClient()
-    mocked_response = get_mock_response(status_code=status_code)
 
-    with patch("requests.post") as mocked_request, pytest.raises(RequestException):
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock, pytest.raises(RequestException):
+        req_mock.post(
+            f"{client.order_api_base_url}",
+            status_code=status_code,
+        )
+
         client.create_order(DEFAULT_CREATE_ORDER_DATA)
+
+        assert req_mock.call_count == 1
 
 
 def test_get_order_success():
     client = WebStoreOrderAPIClient()
-    mocked_response = get_mock_response(
-        status_code=status.HTTP_200_OK, json_return_value=DEFAULT_GET_ORDER_DATA
-    )
 
-    with patch("requests.get") as mocked_request:
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(
+            f"{client.order_api_base_url}admin/{DEFAULT_ORDER_ID}",
+            json=DEFAULT_GET_ORDER_DATA,
+        )
+
         response_json = client.get_order(order_id=DEFAULT_ORDER_ID)
+
+        assert req_mock.call_count == 1
 
     assert response_json == DEFAULT_GET_ORDER_DATA
 
@@ -205,26 +215,34 @@ def test_get_order_success():
 )
 def test_get_order_exception(status_code):
     client = WebStoreOrderAPIClient()
-    mocked_response = get_mock_response(status_code=status_code)
 
-    with patch("requests.get") as mocked_request, pytest.raises(RequestException):
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock, pytest.raises(RequestException):
+        req_mock.get(
+            f"{client.order_api_base_url}admin/{DEFAULT_ORDER_ID}",
+            status_code=status_code,
+        )
+
         client.get_order(order_id=DEFAULT_ORDER_ID)
+
+        assert req_mock.call_count == 1
 
 
 def test_cancel_order_success():
     client = WebStoreOrderAPIClient()
-    mocked_response = get_mock_response(
-        status_code=status.HTTP_200_OK, json_return_value=DEFAULT_CANCEL_ORDER_DATA
-    )
 
-    with patch("requests.post") as mocked_request:
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{client.order_api_base_url}{DEFAULT_ORDER_ID}/cancel",
+            json=DEFAULT_CANCEL_ORDER_DATA,
+        )
+
         response_json = client.cancel_order(
             order_id=DEFAULT_ORDER_ID, user_uuid=DEFAULT_USER_UUID
         )
 
-        assert response_json == DEFAULT_CANCEL_ORDER_DATA
+        assert req_mock.call_count == 1
+
+    assert response_json == DEFAULT_CANCEL_ORDER_DATA
 
 
 @pytest.mark.parametrize(
@@ -238,11 +256,16 @@ def test_cancel_order_success():
 )
 def test_cancel_order_exception(status_code):
     client = WebStoreOrderAPIClient()
-    mocked_response = get_mock_response(status_code=status_code)
 
-    with patch("requests.post") as mocked_request, pytest.raises(RequestException):
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock, pytest.raises(RequestException):
+        req_mock.post(
+            f"{client.order_api_base_url}{DEFAULT_ORDER_ID}/cancel",
+            status_code=status_code,
+        )
+
         client.cancel_order(order_id=DEFAULT_ORDER_ID, user_uuid=DEFAULT_USER_UUID)
+
+        assert req_mock.call_count == 1
 
 
 def test_create_instant_refunds_success():

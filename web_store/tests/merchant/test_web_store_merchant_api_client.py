@@ -1,12 +1,12 @@
-from unittest.mock import patch
-
 import pytest
+import requests_mock
 from requests import RequestException
 from rest_framework import status
 
 from web_store.exceptions import WebStoreImproperlyConfiguredException
 from web_store.merchant.clients import WebStoreMerchantAPIClient
-from web_store.tests.utils import get_mock_response
+
+DEFAULT_MERCHANT_ID = "ec3d83a2-a60c-4a0d-ae5e-55b37d95d059"
 
 DEFAULT_CREATE_UPDATE_MERCHANT_DATA = {
     "merchantName": "string",
@@ -22,7 +22,7 @@ DEFAULT_CREATE_UPDATE_MERCHANT_DATA = {
 }
 
 DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA = {
-    "merchantId": "string",
+    "merchantId": DEFAULT_MERCHANT_ID,
     "namespace": "string",
     "createdAt": "string",
     "updatedAt": "string",
@@ -58,13 +58,16 @@ def test_merchant_client_mandatory_setting_missing_causes_right_exception(
 
 def test_create_merchant_success():
     client = WebStoreMerchantAPIClient()
-    mocked_response = get_mock_response(
-        json_return_value=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA
-    )
 
-    with patch("requests.post") as mocked_request:
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{client.merchant_api_base_url}create/merchant/{client.api_namespace}",
+            json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+        )
+
         response_json = client.create_merchant(DEFAULT_CREATE_UPDATE_MERCHANT_DATA)
+
+        assert req_mock.call_count == 1
 
     assert response_json == DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA
 
@@ -79,25 +82,33 @@ def test_create_merchant_success():
 )
 def test_create_merchant_exception(status_code):
     client = WebStoreMerchantAPIClient()
-    mocked_response = get_mock_response(status_code=status_code)
 
-    with patch("requests.post") as mocked_request, pytest.raises(RequestException):
-        mocked_request.return_value = mocked_response
+    with requests_mock.Mocker() as req_mock, pytest.raises(RequestException):
+        req_mock.post(
+            f"{client.merchant_api_base_url}create/merchant/{client.api_namespace}",
+            status_code=status_code,
+        )
+
         client.create_merchant(DEFAULT_CREATE_UPDATE_MERCHANT_DATA)
+
+        assert req_mock.call_count == 1
 
 
 def test_update_merchant_success():
     client = WebStoreMerchantAPIClient()
-    mocked_response = get_mock_response(
-        status_code=status.HTTP_200_OK,
-        json_return_value=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
-    )
 
-    with patch("requests.post") as mocked_request:
-        mocked_request.return_value = mocked_response
-        response_json = client.update_merchant(
-            "1234", DEFAULT_CREATE_UPDATE_MERCHANT_DATA
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{client.merchant_api_base_url}update/merchant/"
+            f"{client.api_namespace}/{DEFAULT_MERCHANT_ID}",
+            json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
         )
+
+        response_json = client.update_merchant(
+            DEFAULT_MERCHANT_ID, DEFAULT_CREATE_UPDATE_MERCHANT_DATA
+        )
+
+        assert req_mock.call_count == 1
 
     assert response_json == DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA
 
@@ -112,8 +123,14 @@ def test_update_merchant_success():
 )
 def test_update_merchant_exception(status_code):
     client = WebStoreMerchantAPIClient()
-    mocked_response = get_mock_response(status_code=status_code)
 
-    with patch("requests.post") as mocked_request, pytest.raises(RequestException):
-        mocked_request.return_value = mocked_response
-        client.update_merchant("1234", DEFAULT_CREATE_UPDATE_MERCHANT_DATA)
+    with requests_mock.Mocker() as req_mock, pytest.raises(RequestException):
+        req_mock.post(
+            f"{client.merchant_api_base_url}update/merchant/"
+            f"{client.api_namespace}/{DEFAULT_MERCHANT_ID}",
+            status_code=status_code,
+        )
+
+        client.update_merchant(DEFAULT_MERCHANT_ID, DEFAULT_CREATE_UPDATE_MERCHANT_DATA)
+
+        assert req_mock.call_count == 1
