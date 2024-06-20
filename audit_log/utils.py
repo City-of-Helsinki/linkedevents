@@ -4,6 +4,7 @@ from django.utils import timezone
 from audit_log.enums import Operation, Role, Status
 from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
+from registrations.auth import WebStoreWebhookUser
 
 _OPERATION_MAPPING = {
     "GET": Operation.READ.value,
@@ -50,6 +51,9 @@ def _get_user_role(user):
 
     if not user.is_authenticated:
         return Role.ANONYMOUS.value
+
+    if isinstance(user, WebStoreWebhookUser):
+        return Role.EXTERNAL.value
 
     if (
         user.is_superuser
