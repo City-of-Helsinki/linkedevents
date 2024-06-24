@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.7.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.6.0...linkedevents-v3.7.0) (2024-06-24)
+
+
+### Features
+
+* **analytics:** Data_source endpoint to analytics api ([2e513f4](https://github.com/City-of-Helsinki/linkedevents/commit/2e513f4ed771a9af8f67bcf71a7b39feb59e2629))
+* **registration:** Ics support for recurring events ([b355998](https://github.com/City-of-Helsinki/linkedevents/commit/b35599815a6712b4ba50b882107c0ddcddd6e94b))
+* **registration:** Mandatory maximum attendee capacity ([b5e7fc2](https://github.com/City-of-Helsinki/linkedevents/commit/b5e7fc259c327c674d66360da6cf354e12f6e429))
+* Scrub sensitive data through sentry_sdk ([7658f0e](https://github.com/City-of-Helsinki/linkedevents/commit/7658f0e322abe67383a6c175ef980b5b9e6ccaff))
+
+
+### Bug Fixes
+
+* Ensure correct default for checkout language ([6d388b2](https://github.com/City-of-Helsinki/linkedevents/commit/6d388b27ffa7a42ac9887762c8009a09fa059723))
+* Ensure correct default for order language ([a8ce79f](https://github.com/City-of-Helsinki/linkedevents/commit/a8ce79ff60fabf12ecdca44ea314ee1c008c9de9))
+* **registration:** Validate PriceGroup description max_length ([c03ccd4](https://github.com/City-of-Helsinki/linkedevents/commit/c03ccd47a4f6891d5094e189d454bec14e014f14))
+* Use correct timezone for lastValidPurchaseDateTime ([2531a92](https://github.com/City-of-Helsinki/linkedevents/commit/2531a921918c4d4c908acf7b2b8c8a100640050b))
+* Use geomodelserializer in analytics api ([6e2e6f0](https://github.com/City-of-Helsinki/linkedevents/commit/6e2e6f09388b79a3f54cd52815e8707f441b1901))
+
 ## [3.6.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.5.0...linkedevents-v3.6.0) (2024-06-11)
 
 
