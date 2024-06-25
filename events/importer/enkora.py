@@ -1585,9 +1585,20 @@ class EnkoraImporter(Importer):
             if field_name not in course:
                 dates[field_name] = None
             else:
-                dates[field_name] = timezone.make_aware(
-                    course[field_name], EnkoraImporter.EEST
-                )
+                try:
+                    dates[field_name] = timezone.make_aware(
+                        course[field_name], EnkoraImporter.EEST
+                    )
+                except AttributeError:
+                    logging.error(
+                        (
+                            "Enkora event ID {}: unable to add timezone info for field name {}"
+                            ", skipping event and related sub-events"
+                        ).format(
+                            course["reservation_event_group_id"],
+                            field_name,
+                        )
+                    )
 
         # Course capacity:
         if (
