@@ -200,7 +200,7 @@ class EnkoraImporter(Importer):
     place_map = {
         1: {
             "enkora-name": "Latokartanon liikuntahalli",  # 4 TPrek paikkaa
-            "tprek-id": 45931,
+            "tprek-id": 72921,  # tprek-id appears to have changed
             "keywords": set(),
         },
         2: {
@@ -627,9 +627,24 @@ class EnkoraImporter(Importer):
             "keywords": set(),
         },
         325: {
-            "enkora-name": "Kuntosali Ruoholahti, Itämerenkatu 21, 4.krs.",  # ELIXIA Ruoholahti / Kuntokeskus
-            "tprek-id": 40101,
+            # Replacing ELIXIA Ruoholahti / Kuntokeskus (tprek:40101) for Enkora courses
+            # as it can't be displayed on liikunta.hel.fi because of contractual reasons
+            "enkora-name": "Kuntosali Ruoholahti, Itämerenkatu 21, 4.krs.",
+            "tprek-id": None,
+            "street-address": "Itämerenkatu 21",
+            "city": "Helsinki",
+            "zip-code": "00180",
+            "epsg:4326": (60.16377733194139, 24.91081911419979),
             "keywords": {SPORT_GYM},
+        },
+        327: {
+            "enkora-name": "Perhetalo Unikko",
+            "tprek-id": None,
+            "street-address": "Unikkotie 8",
+            "city": "Helsinki",
+            "zip-code": "00720",
+            "epsg:4326": (60.24545426653339, 24.99044444303867),
+            "keywords": set(),
         },
     }
 
@@ -889,7 +904,7 @@ class EnkoraImporter(Importer):
             defaults=defaults, **ds_args
         )
         org_args = dict(origin_id=org_parts[1], data_source=self.publisher_datasource)
-        defaults = dict(name="Tietotekniikka- ja viestintäosasto")
+        defaults = dict(name="Liikuntaan aktivointi")
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )
@@ -1994,7 +2009,11 @@ class EnkoraImporter(Importer):
             try:
                 Place.objects.get(id=tprek_id)
             except ObjectDoesNotExist:
-                logger.error("Unknown place '{}'!".format(tprek_id))
+                logger.error(
+                    "Unknown place '{} for course with ID {}".format(
+                        tprek_id, course["reservation_event_group_id"]
+                    )
+                )
                 raise
 
             location["id"] = tprek_id
