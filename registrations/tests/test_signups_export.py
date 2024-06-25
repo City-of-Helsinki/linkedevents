@@ -19,6 +19,8 @@ from registrations.tests.factories import (
     SignUpGroupFactory,
 )
 from registrations.tests.test_registration_post import hel_email
+from registrations.tests.test_signup_post import test_email1
+from registrations.tests.utils import create_user_by_role
 
 # === util methods ===
 
@@ -84,21 +86,20 @@ def _create_default_signups_data(registration):
 
 
 @pytest.mark.parametrize(
-    "organization_rel",
+    "user_role",
     [
-        "admin_organizations",
-        "financial_admin_organizations",
-        "organization_memberships",
+        "admin",
+        "financial_admin",
+        "regular_user",
     ],
 )
 @pytest.mark.django_db
 def test_signups_export_forbidden_for_admin_and_financial_admin_and_regular_user(
-    registration, api_client, organization_rel
+    registration, api_client, user_role
 ):
     _create_default_signups_data(registration)
 
-    user = UserFactory()
-    getattr(user, organization_rel).add(registration.publisher)
+    user = create_user_by_role(user_role, registration.publisher)
     api_client.force_authenticate(user)
 
     response = _get_signups_export(api_client, registration.id, file_format="xlsx")
@@ -106,23 +107,22 @@ def test_signups_export_forbidden_for_admin_and_financial_admin_and_regular_user
 
 
 @pytest.mark.parametrize(
-    "organization_rel",
+    "user_role",
     [
-        "admin_organizations",
-        "financial_admin_organizations",
-        "organization_memberships",
+        "admin",
+        "financial_admin",
+        "regular_user",
     ],
 )
 @pytest.mark.django_db
 def test_signups_export_forbidden_for_admin_and_financial_admin_and_regular_user_of_another_org(
-    registration, api_client, organization_rel
+    registration, api_client, user_role
 ):
     _create_default_signups_data(registration)
 
     organization2 = OrganizationFactory()
 
-    user = UserFactory()
-    getattr(user, organization_rel).add(organization2)
+    user = create_user_by_role(user_role, organization2)
     api_client.force_authenticate(user)
 
     response = _get_signups_export(api_client, registration.id, file_format="xlsx")
@@ -135,8 +135,7 @@ def test_signups_export_forbidden_for_weakly_identified_registration_user(
 ):
     _create_default_signups_data(registration)
 
-    user = UserFactory()
-    user.organization_memberships.add(registration.publisher)
+    user = create_user_by_role("regular_user", registration.publisher)
     api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
@@ -272,28 +271,21 @@ def test_signups_export_allowed_for_superuser_regardless_of_other_roles(
 ):
     _create_default_signups_data(registration)
 
-    user = UserFactory(is_superuser=True)
-
-    other_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            registration.publisher
-        ),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            registration.publisher
-        ),
-        "registration_user_access": lambda usr: RegistrationUserAccessFactory(
-            registration=registration, email=user.email
-        ),
-        "registration_substitute_user": lambda usr: RegistrationUserAccessFactory(
-            registration=registration, email=user.email, is_substitute_user=True
-        ),
-        "regular_user": lambda usr: usr.organization_memberships.add(
-            registration.publisher
-        ),
-        "none": lambda usr: None,
-    }
-    other_role_mapping[other_role](user)
+    user = create_user_by_role(
+        other_role,
+        registration.publisher,
+        additional_roles={
+            "registration_user_access": lambda usr: RegistrationUserAccessFactory(
+                registration=registration, email=test_email1
+            ),
+            "registration_substitute_user": lambda usr: RegistrationUserAccessFactory(
+                registration=registration, email=test_email1, is_substitute_user=True
+            ),
+            "none": lambda usr: None,
+        },
+    )
+    user.is_superuser = True
+    user.save(update_fields=["is_superuser"])
 
     if other_role == "registration_substitute_user":
         user.email = hel_email
@@ -308,8 +300,7 @@ def test_signups_export_allowed_for_superuser_regardless_of_other_roles(
 def test_signups_export_allowed_for_registration_admin(registration, api_client):
     _create_default_signups_data(registration)
 
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     _assert_get_signups_export(api_client, registration.id, file_format="xlsx")
@@ -317,8 +308,7 @@ def test_signups_export_allowed_for_registration_admin(registration, api_client)
 
 @pytest.mark.django_db
 def test_signups_export_allowed_for_created_by_admin(registration, api_client):
-    user = UserFactory()
-    user.admin_organizations.add(registration.publisher)
+    user = create_user_by_role("admin", registration.publisher)
     api_client.force_authenticate(user)
 
     registration.created_by = user
@@ -335,8 +325,7 @@ def test_signups_export_allowed_for_strongly_identified_registration_user(
 ):
     _create_default_signups_data(registration)
 
-    user = UserFactory()
-    user.organization_memberships.add(registration.publisher)
+    user = create_user_by_role("regular_user", registration.publisher)
     api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
@@ -362,7 +351,7 @@ def test_signups_export_allowed_for_registration_substitute_user(
     api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(
-        registration=registration, email=user.email, is_substitute_user=True
+        registration=registration, email=hel_email, is_substitute_user=True
     )
 
     _assert_get_signups_export(api_client, registration.id, file_format="xlsx")
@@ -400,7 +389,7 @@ def test_signups_export_allowed_for_apikey_with_registration_permission(
 def test_signups_export_file_formats(registration, api_client, file_format, allowed):
     _create_default_signups_data(registration)
 
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", registration.publisher)
     api_client.force_authenticate(user)
 
     base_url = f"http://testserver/v1/registration/{registration.id}/signups/export"
@@ -441,7 +430,7 @@ def test_signups_export_ui_language_parameter(
 ):
     _create_default_signups_data(registration)
 
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", registration.publisher)
     api_client.force_authenticate(user)
 
     response = _get_signups_export(
@@ -460,7 +449,7 @@ def test_signups_export_ui_language_parameter(
 
 @pytest.mark.django_db
 def test_signups_export_registration_not_found(api_client):
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
 
     response = _get_signups_export(api_client, 999, file_format="xlsx")
@@ -469,7 +458,7 @@ def test_signups_export_registration_not_found(api_client):
 
 @pytest.mark.django_db
 def test_signups_export_without_signups_data(registration, api_client):
-    user = UserFactory(is_superuser=True)
+    user = create_user_by_role("superuser", registration.publisher)
     api_client.force_authenticate(user)
 
     _assert_get_signups_export(api_client, registration.id, file_format="xlsx")
@@ -486,8 +475,7 @@ def test_signup_ids_are_audit_logged_on_signups_export(
     SignUpFactory(registration=registration, signup_group=other_signup_group)
     SignUpFactory(registration=other_registration)
 
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     assert AuditLogEntry.objects.count() == 0

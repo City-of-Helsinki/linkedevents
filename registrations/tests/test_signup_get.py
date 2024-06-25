@@ -134,36 +134,87 @@ def assert_signup_fields_exist(data):
 # === tests ===
 
 
+@pytest.mark.parametrize("user_role", ["regular_user", "admin", "financial_admin"])
 @pytest.mark.django_db
-def test_registration_non_created_admin_user_cannot_get_signup(
-    registration, signup, user2, user_api_client
+def test_registration_non_created_user_or_admin_or_financial_admin_cannot_get_signup(
+    registration, signup, user2, api_client, user_role
 ):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
     registration.created_by = user2
     registration.save(update_fields=["created_by"])
 
-    response = get_detail(user_api_client, signup.id)
+    response = get_detail(api_client, signup.id)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
-def test_registration_created_admin_user_can_get_signup(
-    registration, signup, user, user_api_client
-):
+def test_registration_created_admin_can_get_signup(registration, signup, api_client):
+    user = create_user_by_role("admin", registration.publisher)
+    api_client.force_authenticate(user)
+
     registration.created_by = user
     registration.save(update_fields=["created_by"])
 
-    assert_get_detail(user_api_client, signup.id)
+    response = assert_get_detail(api_client, signup.id)
+    assert_signup_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] is False
+    assert response.data["has_contact_person_access"] is False
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    ["regular_user", "admin", "financial_admin", "regular_user_without_organization"],
+)
+@pytest.mark.django_db
+def test_created_user_or_admin_or_financial_admin_can_get_signup(
+    registration, signup, api_client, user_role
+):
+    if user_role == "regular_user_without_organization":
+        user = UserFactory()
+    else:
+        user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup.created_by = user
+    signup.save(update_fields=["created_by"])
+
+    response = assert_get_detail(api_client, signup.id)
+    assert_signup_fields_exist(response.data)
+    assert response.data["is_created_by_current_user"] is True
+    assert response.data["has_contact_person_access"] is False
 
 
 @pytest.mark.django_db
-def test_registration_admin_user_can_get_signup(user_api_client, signup, user):
-    default_organization = user.get_default_organization()
-    default_organization.admin_users.remove(user)
-    default_organization.registration_admin_users.add(user)
+def test_registration_admin_user_can_get_signup(api_client, signup):
+    user = create_user_by_role("registration_admin", signup.publisher)
+    api_client.force_authenticate(user)
 
-    response = assert_get_detail(user_api_client, signup.id)
+    response = assert_get_detail(api_client, signup.id)
     assert response.data["is_created_by_current_user"] is False
     assert response.data["has_contact_person_access"] is False
+
+
+@pytest.mark.django_db
+def test_non_created_user_without_organization_cannot_get_signup(
+    api_client, registration, signup
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    response = get_detail(api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_user_from_other_organization_cannot_get_signup(
+    api_client, registration, signup, user2
+):
+    api_client.force_authenticate(user2)
+
+    response = get_detail(api_client, signup.id)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.parametrize("is_substitute_user", [False, True])
@@ -333,89 +384,6 @@ def test_contact_person_cannot_get_signup_when_not_strongly_identified(
 
 
 @pytest.mark.django_db
-def test_non_created_financial_admin_cannot_get_signup(api_client, signup):
-    user = UserFactory()
-    user.financial_admin_organizations.add(signup.publisher)
-    api_client.force_authenticate(user)
-
-    response = get_detail(api_client, signup.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_created_financial_admin_can_get_signup(api_client, signup):
-    user = UserFactory()
-    user.financial_admin_organizations.add(signup.publisher)
-    api_client.force_authenticate(user)
-
-    signup.created_by = user
-    signup.save(update_fields=["created_by"])
-
-    assert_get_detail(api_client, signup.id)
-
-
-@pytest.mark.django_db
-def test_regular_non_created_user_cannot_get_signup(
-    user_api_client, registration, signup, user
-):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
-
-    response = get_detail(user_api_client, signup.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_regular_created_user_can_get_signup(
-    user_api_client, registration, signup, user
-):
-    signup.created_by = user
-    signup.save(update_fields=["created_by"])
-
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
-
-    response = assert_get_detail(user_api_client, signup.id)
-    assert_signup_fields_exist(response.data)
-    assert response.data["is_created_by_current_user"] is True
-    assert response.data["has_contact_person_access"] is False
-
-
-@pytest.mark.django_db
-def test_non_created_user_without_organization_cannot_get_signup(
-    api_client, registration, signup
-):
-    user = UserFactory()
-    api_client.force_authenticate(user)
-
-    response = get_detail(api_client, signup.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_created_user_without_organization_can_get_signup(api_client, registration):
-    user = UserFactory()
-    api_client.force_authenticate(user)
-    signup = SignUpFactory(created_by=user)
-    SignUpContactPersonFactory(signup=signup)
-
-    response = assert_get_detail(api_client, signup.id)
-    assert_signup_fields_exist(response.data)
-    assert response.data["is_created_by_current_user"] is True
-    assert response.data["has_contact_person_access"] is False
-
-
-@pytest.mark.django_db
-def test_user_from_other_organization_cannot_get_signup(
-    api_client, registration, signup, user2
-):
-    api_client.force_authenticate(user2)
-
-    response = get_detail(api_client, signup.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
 def test_api_key_with_organization_and_registration_permission_can_get_signup(
     api_client, data_source, organization, registration, signup
 ):
@@ -521,24 +489,32 @@ def test_api_key_from_wrong_data_source_cannot_get_signup(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.parametrize("user_role", ["superuser", "admin", "registration_admin"])
 @pytest.mark.django_db
-def test_superuser_can_get_signup_list(
-    api_client, registration, signup, signup2, super_user
+def test_superuser_or_created_admin_or_registration_admin_can_get_signup_list(
+    api_client, registration, signup, signup2, user_role
 ):
-    api_client.force_authenticate(super_user)
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    if user_role == "admin":
+        registration.created_by = user
+        registration.save(update_fields=["created_by"])
+
     get_list_and_assert_signups(
         api_client, f"registration={registration.id}", [signup, signup2]
     )
 
 
+@pytest.mark.parametrize("user_role", ["admin", "financial_admin"])
 @pytest.mark.django_db
-def test_registration_non_created_admin_user_cannot_get_signup_list(
-    registration, signup, signup2, user2, user_api_client
+def test_registration_non_created_admin_or_financial_admin_cannot_get_signup_list(
+    registration, signup, signup2, api_client, user_role
 ):
-    registration.created_by = user2
-    registration.save(update_fields=["created_by"])
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
 
-    response = get_list(user_api_client, f"registration={registration.id}")
+    response = get_list(api_client, f"registration={registration.id}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -564,43 +540,6 @@ def test_contact_person_cannot_get_signup_list(api_client, registration):
         )
         assert mocked.called is True
     assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_financial_admin_user_cannot_get_signup_list(
-    registration, signup, signup2, api_client
-):
-    user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
-    api_client.force_authenticate(user)
-
-    response = get_list(api_client, f"registration={registration.id}")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_registration_created_admin_user_can_get_signup_list(
-    registration, signup, signup2, user, user_api_client
-):
-    registration.created_by = user
-    registration.save(update_fields=["created_by"])
-
-    get_list_and_assert_signups(
-        user_api_client, f"registration={registration.id}", [signup, signup2]
-    )
-
-
-@pytest.mark.django_db
-def test_registration_admin_user_can_get_signup_list(
-    registration, signup, signup2, user_api_client, user
-):
-    default_organization = user.get_default_organization()
-    default_organization.admin_users.remove(user)
-    default_organization.registration_admin_users.add(user)
-
-    get_list_and_assert_signups(
-        user_api_client, f"registration={registration.id}", [signup, signup2]
-    )
 
 
 @pytest.mark.parametrize("is_substitute_user", [False, True])
@@ -676,13 +615,11 @@ def test_anonymous_user_cannot_get_signup_list(api_client, registration, signup)
 
 
 @pytest.mark.django_db
-def test_regular_user_cannot_get_signup_list(
-    registration, signup, signup2, user, user_api_client
-):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
+def test_regular_user_cannot_get_signup_list(registration, signup, signup2, api_client):
+    user = create_user_by_role("regular_user", registration.publisher)
+    api_client.force_authenticate(user)
 
-    response = get_list(user_api_client, f"registration={registration.id}")
+    response = get_list(api_client, f"registration={registration.id}")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -804,9 +741,10 @@ def test_api_key_with_wrong_organization_cannot_get_signup_list(
 )
 @pytest.mark.django_db
 def test_signup_list_assert_text_filter(
-    field, contact_person_field, registration, signup, signup2, user_api_client, user
+    field, contact_person_field, registration, signup, signup2, api_client
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     if contact_person_field:
         setattr(signup.contact_person, field, "field_value_1")
@@ -820,14 +758,14 @@ def test_signup_list_assert_text_filter(
         signup2.save()
 
     get_list_and_assert_signups(
-        user_api_client, f"registration={registration.id}&text=field_value_1", [signup]
+        api_client, f"registration={registration.id}&text=field_value_1", [signup]
     )
 
 
 @pytest.mark.django_db
 def test_signup_list_assert_attendee_status_filter(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signup = SignUpFactory(
         registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
@@ -835,8 +773,6 @@ def test_signup_list_assert_attendee_status_filter(api_client, registration):
     signup2 = SignUpFactory(
         registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
     )
-
-    api_client.force_authenticate(user)
 
     get_list_and_assert_signups(
         api_client,
@@ -866,11 +802,9 @@ def test_signup_list_assert_attendee_status_filter(api_client, registration):
 
 
 @pytest.mark.django_db
-def test_filter_signups(
-    api_client, registration, registration2, user, user2, event, event2
-):
-    user.get_default_organization().registration_admin_users.add(user)
-    user2.get_default_organization().registration_admin_users.add(user2)
+def test_filter_signups(api_client, registration, registration2, event, event2):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    user2 = create_user_by_role("registration_admin", registration2.publisher)
 
     signup = SignUpFactory(
         registration=registration,
@@ -976,8 +910,7 @@ def test_filter_signups(
 
 @pytest.mark.django_db
 def test_no_signups_found_with_registration_id(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     SignUpFactory(registration=registration)
@@ -991,8 +924,7 @@ def test_no_signups_found_with_registration_id(api_client, registration):
 
 @pytest.mark.django_db
 def test_signup_id_is_audit_logged_on_get_detail(api_client, signup):
-    user = UserFactory()
-    user.registration_admin_organizations.add(signup.publisher)
+    user = create_user_by_role("registration_admin", signup.publisher)
     api_client.force_authenticate(user)
 
     assert_get_detail(api_client, signup.id)
@@ -1003,8 +935,7 @@ def test_signup_id_is_audit_logged_on_get_detail(api_client, signup):
 
 @pytest.mark.django_db
 def test_signup_id_is_audit_logged_on_get_list(api_client, signup, signup2):
-    user = UserFactory()
-    user.registration_admin_organizations.add(signup.publisher)
+    user = create_user_by_role("registration_admin", signup.publisher)
     api_client.force_authenticate(user)
 
     get_list_and_assert_signups(api_client, "", [signup, signup2])

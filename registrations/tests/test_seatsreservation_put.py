@@ -6,9 +6,9 @@ from rest_framework import status
 
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
 from registrations.tests.factories import SeatReservationCodeFactory
 from registrations.tests.test_seatsreservation_post import assert_reserve_seats
+from registrations.tests.utils import create_user_by_role
 
 
 def update_seats_reservation(api_client, pk, reservation_data):
@@ -27,36 +27,20 @@ def assert_update_seats_reservation(api_client, pk, reservation_data):
     return response
 
 
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "admin", "registration_admin", "regular_user"]
+)
 @pytest.mark.django_db
-def test_authenticated_admin_user_can_update_seats_reservation(
-    user_api_client, registration
+def test_allowed_user_roles_can_update_seats_reservation(
+    api_client, registration, user_role
 ):
-    registration.maximum_attendee_capacity = 2
-    registration.save(update_fields=["maximum_attendee_capacity"])
-
-    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
-    reservation_data = {
-        "seats": 2,
-        "registration": registration.id,
-        "code": reservation.code,
-    }
-    assert_update_seats_reservation(user_api_client, reservation.id, reservation_data)
-
-
-@pytest.mark.django_db
-def test_authenticated_regular_user_can_update_seats_reservation(
-    api_client, registration
-):
-    user = UserFactory()
-    user.organization_memberships.add(registration.publisher)
-
-    registration.maximum_attendee_capacity = 2
-    registration.save(update_fields=["maximum_attendee_capacity"])
-
-    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
-
+    user = create_user_by_role(user_role, registration.publisher)
     api_client.force_authenticate(user)
 
+    registration.maximum_attendee_capacity = 2
+    registration.save(update_fields=["maximum_attendee_capacity"])
+
+    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
     reservation_data = {
         "seats": 2,
         "registration": registration.id,

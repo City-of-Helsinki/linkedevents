@@ -3,7 +3,6 @@ from typing import Optional
 from unittest.mock import patch, PropertyMock
 
 import pytest
-from freezegun import freeze_time
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -25,6 +24,7 @@ from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import create_user_by_role
 
 description_fields = ("description_fi", "description_sv", "description_en")
+new_signup_name = "Edited first name"
 
 # === util methods ===
 
@@ -114,51 +114,62 @@ def assert_patch_signup_price_group_failed(
 
 
 @pytest.mark.parametrize(
-    "user_role,allowed_to_patch",
+    "user_role, expected_status_code, expected_presence_status",
     [
-        ("admin", False),
-        ("financial_admin", False),
-        ("registration_created_admin", True),
-        ("registration_admin", True),
-        ("registration_user_superuser", True),
-        ("registration_user_admin", True),
-        ("created_user", False),
+        ("admin", status.HTTP_403_FORBIDDEN, SignUp.PresenceStatus.NOT_PRESENT),
+        (
+            "financial_admin",
+            status.HTTP_403_FORBIDDEN,
+            SignUp.PresenceStatus.NOT_PRESENT,
+        ),
+        (
+            "registration_created_admin",
+            status.HTTP_200_OK,
+            SignUp.PresenceStatus.PRESENT,
+        ),
+        ("registration_admin", status.HTTP_200_OK, SignUp.PresenceStatus.PRESENT),
+        (
+            "registration_user_superuser",
+            status.HTTP_200_OK,
+            SignUp.PresenceStatus.PRESENT,
+        ),
+        ("registration_user_admin", status.HTTP_200_OK, SignUp.PresenceStatus.PRESENT),
+        ("created_user", status.HTTP_403_FORBIDDEN, SignUp.PresenceStatus.NOT_PRESENT),
     ],
 )
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_can_patch_presence_status_of_signup_based_on_role(
-    api_client, registration, user_role, allowed_to_patch
+    api_client,
+    organization,
+    user_role,
+    expected_status_code,
+    expected_presence_status,
 ):
-    user = UserFactory(is_superuser=user_role == "registration_user_superuser")
+    user = create_user_by_role(
+        user_role,
+        organization,
+        additional_roles={
+            "registration_created_admin": lambda usr: usr.admin_organizations.add(
+                organization
+            ),
+            "registration_user_admin": lambda usr: usr.registration_admin_organizations.add(
+                organization
+            ),
+            "registration_user_superuser": lambda usr: None,
+            "created_user": lambda usr: None,
+        },
+    )
+    if user_role == "registration_user_superuser":
+        user.is_superuser = True
+        user.save(update_fields=["is_superuser"])
+    api_client.force_authenticate(user)
 
-    if user_role == "registration_created_admin":
-        registration.created_by = user
-        registration.save(update_fields=["created_by"])
-
+    registration = RegistrationFactory(
+        event__publisher=organization,
+        created_by=user if user_role == "registration_created_admin" else None,
+    )
     if user_role in ("registration_user_superuser", "registration_user_admin"):
         RegistrationUserAccessFactory(registration=registration, email=user.email)
-
-    user_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            registration.publisher
-        ),
-        "registration_created_admin": lambda usr: usr.admin_organizations.add(
-            registration.publisher
-        ),
-        "registration_admin": lambda usr: usr.registration_admin_organizations.add(
-            registration.publisher
-        ),
-        "registration_user_admin": lambda usr: usr.registration_admin_organizations.add(
-            registration.publisher
-        ),
-        "registration_user_superuser": lambda usr: None,
-        "created_user": lambda usr: None,
-    }
-    user_role_mapping[user_role](user)
-
-    api_client.force_authenticate(user)
 
     signup = SignUpFactory(
         registration=registration,
@@ -171,16 +182,12 @@ def test_can_patch_presence_status_of_signup_based_on_role(
     }
 
     response = patch_signup(api_client, signup.id, signup_data)
+    assert response.status_code == expected_status_code
+    if response.status_code == status.HTTP_200_OK:
+        assert response.data["presence_status"] == expected_presence_status
 
     signup.refresh_from_db()
-
-    if allowed_to_patch:
-        assert response.status_code == status.HTTP_200_OK
-        assert response.data["presence_status"] == SignUp.PresenceStatus.PRESENT
-        assert signup.presence_status == SignUp.PresenceStatus.PRESENT
-    else:
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+    assert signup.presence_status == expected_presence_status
 
 
 @pytest.mark.django_db
@@ -192,8 +199,6 @@ def test_contact_person_can_patch_signup_when_strongly_identified(
 
     signup = SignUpFactory(registration=registration)
     SignUpContactPersonFactory(signup=signup, user=user)
-
-    new_signup_name = "Edited first name"
 
     assert signup.first_name != new_signup_name
     assert signup.last_modified_by_id is None
@@ -229,8 +234,6 @@ def test_contact_person_cannot_patch_signup_when_not_strongly_identified(
     signup = SignUpFactory(registration=registration)
     SignUpContactPersonFactory(signup=signup, user=user)
 
-    new_signup_name = "Edited first name"
-
     assert signup.first_name != new_signup_name
     assert signup.last_modified_by_id is None
 
@@ -256,19 +259,16 @@ def test_contact_person_cannot_patch_signup_when_not_strongly_identified(
     assert signup.last_modified_by_id is None
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_patch_extra_info_of_signup_with_empty_data(api_client, registration, signup):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signup = SignUpFactory(registration=registration)
     SignUpProtectedDataFactory(
         signup=signup, registration=registration, extra_info="Extra info"
     )
     assert signup.extra_info == "Extra info"
-
-    api_client.force_authenticate(user)
 
     signup_data = {
         "extra_info": "",
@@ -281,11 +281,9 @@ def test_patch_extra_info_of_signup_with_empty_data(api_client, registration, si
     assert signup.extra_info == ""
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_patch_user_consent(api_client, registration, signup):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup = SignUpFactory(registration=registration)
@@ -300,11 +298,9 @@ def test_patch_user_consent(api_client, registration, signup):
     assert signup.user_consent is True
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_patch_phone_number(api_client, registration, signup):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup = SignUpFactory(registration=registration)
@@ -320,25 +316,19 @@ def test_patch_phone_number(api_client, registration, signup):
 
 
 @pytest.mark.django_db
-def test_registration_user_access_who_created_signup_can_patch_presence_status(
-    api_client, event
+def test_strongly_identified_registration_user_access_can_patch_presence_status(
+    api_client, registration
 ):
     user = UserFactory()
-
-    registration = RegistrationFactory(
-        event=event,
-    )
+    api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     signup = SignUpFactory(
         registration=registration,
         street_address="Street address",
-        created_by=user,
     )
     assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
-    api_client.force_authenticate(user)
 
     signup_data = {
         "presence_status": SignUp.PresenceStatus.PRESENT,
@@ -387,20 +377,11 @@ def test_can_patch_presence_status_with_registration_price_groups(
     assert signup.presence_status == SignUp.PresenceStatus.PRESENT
 
 
-@pytest.mark.parametrize(
-    "identification_method",
-    [
-        pytest.param(["suomi_fi"], id="strong"),
-        pytest.param([], id="not-strong"),
-    ],
-)
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_user_access_can_patch_signup_presence_status_based_on_identification_method(
-    api_client, registration, identification_method
+def test_non_strongly_identified_registration_user_access_cannot_patch_signup_presence_status(
+    api_client, registration
 ):
     user = UserFactory()
-    user.organization_memberships.add(registration.publisher)
     api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
@@ -415,19 +396,15 @@ def test_registration_user_access_can_patch_signup_presence_status_based_on_iden
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
         new_callable=PropertyMock,
-        return_value=identification_method,
+        return_value=[],
     ) as mocked:
         response = patch_signup(api_client, signup.id, signup_data)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
         assert mocked.called is True
 
     signup.refresh_from_db()
-
-    if not identification_method:
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-    else:
-        assert response.status_code == status.HTTP_200_OK
-        assert signup.presence_status == SignUp.PresenceStatus.PRESENT
+    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 
 @pytest.mark.django_db
@@ -459,11 +436,9 @@ def test_registration_substitute_user_can_patch_signup(api_client, registration)
     assert signup.extra_info == signup_data["extra_info"]
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_can_patch_signup_contact_person(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup = SignUpFactory(registration=registration)
@@ -481,13 +456,11 @@ def test_can_patch_signup_contact_person(api_client, registration):
     assert contact_person.membership_number == "1234"
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_contact_person_deleted_when_signup_linked_to_group_in_patch(
     api_client, registration
 ):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -516,8 +489,7 @@ def test_contact_person_deleted_when_signup_linked_to_group_in_patch(
 
 @pytest.mark.django_db
 def test_signup_id_is_audit_logged_on_patch(api_client, signup):
-    user = UserFactory()
-    user.registration_admin_organizations.add(signup.publisher)
+    user = create_user_by_role("registration_admin", signup.registration.publisher)
     api_client.force_authenticate(user)
 
     signup_data = {

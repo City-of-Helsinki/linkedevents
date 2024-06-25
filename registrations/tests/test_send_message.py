@@ -1,4 +1,5 @@
 from collections import Counter
+from typing import Union
 
 import pytest
 from django.conf import settings
@@ -9,13 +10,19 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.factories import ApiKeyUserFactory, LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
 from registrations.models import SignUp
 from registrations.tests.factories import (
     SignUpContactPersonFactory,
     SignUpFactory,
     SignUpGroupFactory,
 )
+from registrations.tests.utils import create_user_by_role
+
+default_send_message_data: dict[str, Union[str, list]] = {
+    "subject": "Message subject",
+    "body": "Message body",
+}
+
 
 # === util methods ===
 
@@ -108,18 +115,16 @@ def test_registration_created_admin_user_can_send_message_to_all_signups(
         signup=signup, email="test2@test.com"
     )
 
-    signup2 = SignUpFactory(registration=registration)
-    signup2_contact_person = SignUpContactPersonFactory(
-        signup=signup2, email="test3@test.com"
+    signup2 = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
     )
-
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
+    SignUpContactPersonFactory(signup=signup2, email="test3@test.com")
 
     assert_send_message(
         user_api_client,
         registration.id,
-        send_message_data,
-        [group_contact_person, signup_contact_person, signup2_contact_person],
+        default_send_message_data,
+        [group_contact_person, signup_contact_person],
     )
     # Default language for the email is Finnish
     assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
@@ -145,57 +150,12 @@ def test_registration_non_created_admin_cannot_send_message(
     signup2 = SignUpFactory(registration=registration)
     SignUpContactPersonFactory(signup=signup2, email="test3@test.com")
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(user_api_client, registration.id, send_message_data)
+    response = send_message(user_api_client, registration.id, default_send_message_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.django_db
-def test_email_is_sent_to_all_with_attending_status_if_no_groups_or_signups_given(
-    api_client, registration, user
-):
-    # Group
-    signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
-    )
-    SignUpFactory(
-        signup_group=signup_group,
-        registration=registration,
-    )
-    SignUpContactPersonFactory(signup_group=signup_group, email="test2@test.com")
-
-    # Individual
-    third_signup = SignUpFactory(registration=registration)
-    SignUpContactPersonFactory(signup=third_signup, email="test3@test.com")
-
-    fourth_signup = SignUpFactory(
-        registration=registration,
-        attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
-    )
-    SignUpContactPersonFactory(signup=fourth_signup, email="test4@test.com")
-
-    api_client.force_authenticate(user)
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    assert_send_message(
-        api_client,
-        registration.id,
-        send_message_data,
-        [
-            signup_group.contact_person,
-            third_signup.contact_person,
-        ],
-    )
-    # Default language for the email is Finnish
-    assert "Tarkastele ilmoittautumistasi täällä" in str(mail.outbox[0].alternatives[0])
-
-
-@pytest.mark.django_db
-def test_email_is_sent_to_selected_signups_only(api_client, registration, user):
+def test_email_is_sent_to_selected_signups_only(user_api_client, registration):
     first_signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(
         signup_group=first_signup_group,
@@ -224,16 +184,16 @@ def test_email_is_sent_to_selected_signups_only(api_client, registration, user):
     third_signup = SignUpFactory(registration=registration)
     SignUpContactPersonFactory(signup=third_signup, email="test4@test.com")
 
-    api_client.force_authenticate(user)
-    send_message_data = {
-        "subject": "Message subject",
-        "body": "Message body",
-        "signups": [second_signup.pk],
-        "signup_groups": [first_signup_group.pk],
-    }
+    send_message_data = default_send_message_data.copy()
+    send_message_data.update(
+        {
+            "signups": [second_signup.pk],
+            "signup_groups": [first_signup_group.pk],
+        }
+    )
 
     assert_send_message(
-        api_client,
+        user_api_client,
         registration.id,
         send_message_data,
         [second_signup.contact_person, first_signup_group.contact_person],
@@ -264,13 +224,12 @@ def test_email_is_sent_to_selected_signups_only(api_client, registration, user):
 )
 @pytest.mark.django_db
 def test_email_is_sent_in_signup_service_language(
-    api_client,
+    user_api_client,
     expected_heading,
     expected_cta_button_text,
     language_pk,
     registration,
     signup,
-    user,
 ):
     LanguageFactory(pk=language_pk, service_language=True)
 
@@ -280,15 +239,15 @@ def test_email_is_sent_in_signup_service_language(
         signup.contact_person.service_language_id = language_pk
         signup.contact_person.save(update_fields=["service_language_id"])
 
-        api_client.force_authenticate(user)
-        send_message_data = {
-            "subject": "Message subject",
-            "body": "Message body",
-            "signups": [signup.id],
-        }
+        send_message_data = default_send_message_data.copy()
+        send_message_data.update(
+            {
+                "signups": [signup.id],
+            }
+        )
 
         assert_send_message(
-            api_client, registration.id, send_message_data, [signup.contact_person]
+            user_api_client, registration.id, send_message_data, [signup.contact_person]
         )
         assert expected_heading in str(mail.outbox[0].alternatives[0])
         assert expected_cta_button_text in str(mail.outbox[0].alternatives[0])
@@ -303,140 +262,76 @@ def test_email_is_sent_in_signup_service_language(
 )
 @pytest.mark.django_db
 def test_required_fields_has_to_be_filled(
-    api_client, registration, required_field, signup, signup2, user
+    user_api_client, registration, required_field, signup
 ):
-    api_client.force_authenticate(user)
-
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    assert_send_message(
-        api_client,
-        registration.id,
-        send_message_data,
-        [signup.contact_person, signup2.contact_person],
-    )
-
+    send_message_data = default_send_message_data.copy()
     send_message_data[required_field] = ""
 
-    response = send_message(api_client, registration.id, send_message_data)
+    response = send_message(user_api_client, registration.id, send_message_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data[required_field][0].code == "blank"
 
 
 @pytest.mark.django_db
-def test_send_message_to_selected_signups(
-    api_client, registration, signup, signup2, signup3, user
-):
-    api_client.force_authenticate(user)
-    send_message_data = {
-        "subject": "Message subject",
-        "body": "Message body",
-        "signups": [signup.id, signup3.id],
-    }
-
-    response = assert_send_message(
-        api_client,
-        registration.id,
-        send_message_data,
-        [signup.contact_person, signup3.contact_person],
-    )
-    assert response.data["signups"] == [signup.id, signup3.id]
-
-
-@pytest.mark.django_db
 def test_cannot_send_message_to_nonexistent_signups(
-    api_client, registration, registration2, signup, signup2, user
+    user_api_client, registration, registration2, signup
 ):
-    signup2.registration = registration2
-    signup2.save()
-    api_client.force_authenticate(user)
+    signup2 = SignUpFactory(registration=registration2)
 
-    send_message_data = {
-        "subject": "Message subject",
-        "body": "Message body",
-        "signups": [signup2.id],
-    }
-    response = send_message(api_client, registration.id, send_message_data)
+    send_message_data = default_send_message_data.copy()
+    send_message_data.update(
+        {
+            "signups": [signup2.id],
+        }
+    )
+
+    response = send_message(user_api_client, registration.id, send_message_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["signups"][0].code == "does_not_exist"
 
 
+@pytest.mark.parametrize("payload_key", ["signups", "signup_groups"])
 @pytest.mark.django_db
 def test_cannot_send_message_with_invalid_signup_pk_type(
-    api_client, registration, signup, user
+    user_api_client, registration, signup, payload_key
 ):
-    api_client.force_authenticate(user)
-    send_message_data = {
-        "subject": "Message subject",
-        "body": "Message body",
-        "signups": ["not-exist"],
-    }
+    send_message_data = default_send_message_data.copy()
+    send_message_data.update(
+        {
+            payload_key: ["not-exist"],
+        }
+    )
 
-    response = send_message(api_client, registration.id, send_message_data)
+    response = send_message(user_api_client, registration.id, send_message_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["signups"][0].code == "incorrect_type"
-
-
-@pytest.mark.django_db
-def test_cannot_send_message_with_invalid_signup_group_pk_type(
-    api_client, registration, signup, user
-):
-    api_client.force_authenticate(user)
-    send_message_data = {
-        "subject": "Message subject",
-        "body": "Message body",
-        "signup_groups": ["not-exist"],
-    }
-
-    response = send_message(api_client, registration.id, send_message_data)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data["signup_groups"][0].code == "incorrect_type"
+    assert response.data[payload_key][0].code == "incorrect_type"
 
 
 @pytest.mark.django_db
 def test_cannot_send_message_with_nonexistent_registration_id(
-    api_client, organization, user
+    user_api_client, organization
 ):
-    api_client.force_authenticate(user)
-
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, "nonexistent-id", send_message_data)
-
+    response = send_message(
+        user_api_client, "nonexistent-id", default_send_message_data
+    )
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.django_db
 def test_unauthenticated_user_cannot_send_message(api_client, registration):
-    api_client.force_authenticate(None)
-
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, registration.id, send_message_data)
+    response = send_message(api_client, registration.id, default_send_message_data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.parametrize("user_role", ["financial_admin", "regular_user"])
 @pytest.mark.django_db
-def test_non_admin_cannot_send_message(api_client, registration, user):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
+def test_not_allowed_user_roles_cannot_send_message(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
     api_client.force_authenticate(user)
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, registration.id, send_message_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_financial_admin_cannot_send_message(api_client, registration):
-    user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
-    api_client.force_authenticate(user)
-
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, registration.id, send_message_data)
+    response = send_message(api_client, registration.id, default_send_message_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -446,39 +341,27 @@ def test_user_from_other_organization_cannot_send_message(
 ):
     api_client.force_authenticate(user2)
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, registration.id, send_message_data)
+    response = send_message(api_client, registration.id, default_send_message_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.parametrize("user_role", ["admin", "registration_admin"])
 @pytest.mark.django_db
-def test_admin_can_send_message_with_missing_datasource_permission(
-    user_api_client, other_data_source, registration, signup
+def test_admin_or_registration_admin_can_send_message_with_missing_datasource_permission(
+    api_client, other_data_source, registration, signup, user_role
 ):
-    registration.event.data_source = other_data_source
-    registration.event.save()
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    assert_send_message(
-        user_api_client, registration.id, send_message_data, [signup.contact_person]
-    )
-
-
-@pytest.mark.django_db
-def test_registration_admin_can_send_message_with_missing_datasource_permission(
-    user_api_client, other_data_source, registration, signup, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+    if user_role == "admin":
+        registration.created_by = user
+        registration.save(update_fields=["created_by"])
 
     registration.event.data_source = other_data_source
-    registration.event.save()
-
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
+    registration.event.save(update_fields=["data_source"])
 
     assert_send_message(
-        user_api_client, registration.id, send_message_data, [signup.contact_person]
+        api_client, registration.id, default_send_message_data, [signup.contact_person]
     )
 
 
@@ -495,12 +378,10 @@ def test_registration_created_api_key_with_organization_can_send_message(
     data_source.save(update_fields=["owner"])
     api_client.credentials(apikey=data_source.api_key)
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
     assert_send_message(
         api_client,
         registration.id,
-        send_message_data,
+        default_send_message_data,
         [signup.contact_person, signup2.contact_person],
     )
 
@@ -513,9 +394,7 @@ def test_registration_non_created_api_key_with_organization_cannot_send_message(
     data_source.save(update_fields=["owner"])
     api_client.credentials(apikey=data_source.api_key)
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, registration.id, send_message_data)
+    response = send_message(api_client, registration.id, default_send_message_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -528,74 +407,44 @@ def test_api_key_with_wrong_data_source_cannot_send_message(
 
     api_client.credentials(apikey=other_data_source.api_key)
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, registration.id, send_message_data)
+    response = send_message(api_client, registration.id, default_send_message_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.parametrize("api_key", ["", "unknown"])
 @pytest.mark.django_db
-def test_unknown_api_key_cannot_send_message(api_client, registration):
-    api_client.credentials(apikey="unknown")
+def test_invalid_api_key_cannot_send_message(api_client, registration, api_key):
+    api_client.credentials(apikey=api_key)
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, registration.id, send_message_data)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-
-@pytest.mark.django_db
-def test_empty_api_key_cannot_send_message(api_client, registration):
-    api_client.credentials(apikey="")
-
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(api_client, registration.id, send_message_data)
+    response = send_message(api_client, registration.id, default_send_message_data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.parametrize("user_editable_resources", [False, True])
+@pytest.mark.parametrize("user_role", ["admin", "registration_admin"])
 @pytest.mark.django_db
-def test_admin_can_send_message_regardless_of_non_user_editable_resources(
-    user_api_client,
+def test_admin_or_registration_admin_can_send_message_regardless_of_user_editable_resources(
+    api_client,
     data_source,
     organization,
     registration,
     signup,
     user_editable_resources,
+    user_role,
 ):
-    data_source.owner = organization
-    data_source.user_editable_resources = user_editable_resources
-    data_source.save(update_fields=["owner", "user_editable_resources"])
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    assert_send_message(
-        user_api_client, registration.id, send_message_data, [signup.contact_person]
-    )
-
-
-@pytest.mark.parametrize("user_editable_resources", [False, True])
-@pytest.mark.django_db
-def test_registration_admin_can_send_message_regardless_of_non_user_editable_resources(
-    user_api_client,
-    data_source,
-    organization,
-    registration,
-    signup,
-    user,
-    user_editable_resources,
-):
-    user.get_default_organization().registration_admin_users.add(user)
+    if user_role == "admin":
+        registration.created_by = user
+        registration.save(update_fields=["created_by"])
 
     data_source.owner = organization
     data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
     assert_send_message(
-        user_api_client, registration.id, send_message_data, [signup.contact_person]
+        api_client, registration.id, default_send_message_data, [signup.contact_person]
     )
 
 
@@ -613,9 +462,7 @@ def test_send_message_no_contact_persons_found(user_api_client, registration):
     second_signup = SignUpFactory(registration=registration)
     SignUpContactPersonFactory(signup=second_signup, email="")
 
-    send_message_data = {"subject": "Message subject", "body": "Message body"}
-
-    response = send_message(user_api_client, registration.id, send_message_data)
+    response = send_message(user_api_client, registration.id, default_send_message_data)
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -639,9 +486,7 @@ def test_signup_ids_are_audit_logged_on_send_message(
 
 
 @pytest.mark.django_db
-def test_cannot_send_message_to_soft_deleted_signups(api_client, registration, user):
-    api_client.force_authenticate(user)
-
+def test_cannot_send_message_to_soft_deleted_signups(user_api_client, registration):
     signup = SignUpFactory(registration=registration)
     SignUpContactPersonFactory(signup=signup, email="test@test.com")
     signup.soft_delete()
@@ -650,14 +495,15 @@ def test_cannot_send_message_to_soft_deleted_signups(api_client, registration, u
     SignUpContactPersonFactory(signup_group=signup_group, email="test-group@test.com")
     signup_group.soft_delete()
 
-    send_message_data = {
-        "subject": "Message subject",
-        "body": "Message body",
-        "signups": [signup.id],
-        "signup_groups": [signup_group.id],
-    }
+    send_message_data = default_send_message_data.copy()
+    send_message_data.update(
+        {
+            "signups": [signup.id],
+            "signup_groups": [signup_group.id],
+        }
+    )
 
-    response = send_message(api_client, registration.id, send_message_data)
+    response = send_message(user_api_client, registration.id, send_message_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["signups"][0].code == "does_not_exist"
     assert response.data["signup_groups"][0].code == "does_not_exist"

@@ -2,7 +2,6 @@ from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
-from freezegun import freeze_time
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -16,6 +15,7 @@ from registrations.models import (
     SignUpPriceGroup,
 )
 from registrations.tests.factories import (
+    RegistrationFactory,
     RegistrationPriceGroupFactory,
     RegistrationUserAccessFactory,
     SignUpContactPersonFactory,
@@ -28,6 +28,7 @@ from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_patch import description_fields
 from registrations.tests.utils import create_user_by_role
 
+new_signup_first_name = "Edited name"
 new_signup_group_extra_info = "Edited extra info"
 
 # === util methods ===
@@ -120,18 +121,15 @@ def assert_signup_group_price_group_update_failed(
 # === tests ===
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_registration_admin_can_update_signup_group(
-    user_api_client, registration, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_registration_admin_can_update_signup_group(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
-    signup0 = SignUpFactory(signup_group=signup_group, registration=registration)
     signup1 = SignUpFactory(signup_group=signup_group, registration=registration)
+    signup2 = SignUpFactory(signup_group=signup_group, registration=registration)
 
-    new_signup_name = "Edited name"
     new_signup_phone_number = "040111111"
 
     assert SignUpGroup.objects.count() == 1
@@ -140,20 +138,20 @@ def test_registration_admin_can_update_signup_group(
     assert signup_group.extra_info is None
     assert signup_group.last_modified_by_id is None
 
-    assert signup0.first_name != new_signup_name
-    assert signup0.last_modified_by_id is None
-    assert signup0.user_consent is False
-
-    assert signup1.first_name != new_signup_name
+    assert signup1.first_name != new_signup_first_name
     assert signup1.last_modified_by_id is None
+    assert signup1.user_consent is False
+
+    assert signup2.first_name != new_signup_first_name
+    assert signup2.last_modified_by_id is None
 
     signup_group_data = {
         "registration": registration.id,
         "extra_info": new_signup_group_extra_info,
         "signups": [
             {
-                "id": signup0.id,
-                "first_name": new_signup_name,
+                "id": signup1.id,
+                "first_name": new_signup_first_name,
                 "user_consent": True,
                 "phone_number": new_signup_phone_number,
             },
@@ -161,7 +159,7 @@ def test_registration_admin_can_update_signup_group(
         ],
     }
 
-    assert_update_signup_group(user_api_client, signup_group.id, signup_group_data)
+    assert_update_signup_group(api_client, signup_group.id, signup_group_data)
 
     assert SignUpGroup.objects.count() == 1
     assert SignUp.objects.count() == 2
@@ -171,15 +169,15 @@ def test_registration_admin_can_update_signup_group(
     assert signup_group.extra_info == new_signup_group_extra_info
     assert signup_group.last_modified_by_id == user.id
 
-    signup0.refresh_from_db()
-    assert signup0.first_name == new_signup_name
-    assert signup0.phone_number == new_signup_phone_number
-    assert signup0.last_modified_by_id == user.id
-    assert signup0.user_consent is True
-
     signup1.refresh_from_db()
-    assert signup1.first_name != new_signup_name
-    assert signup1.last_modified_by_id is None
+    assert signup1.first_name == new_signup_first_name
+    assert signup1.phone_number == new_signup_phone_number
+    assert signup1.last_modified_by_id == user.id
+    assert signup1.user_consent is True
+
+    signup2.refresh_from_db()
+    assert signup2.first_name != new_signup_first_name
+    assert signup2.last_modified_by_id is None
 
 
 @pytest.mark.django_db
@@ -193,15 +191,13 @@ def test_contact_person_can_update_signup_group_when_strongly_identified(
     signup = SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpContactPersonFactory(signup_group=signup_group, user=user)
 
-    new_signup_name = "Edited name"
-
     signup_group_data = {
         "registration": registration.id,
         "extra_info": new_signup_group_extra_info,
         "signups": [
             {
                 "id": signup.id,
-                "first_name": new_signup_name,
+                "first_name": new_signup_first_name,
             },
         ],
     }
@@ -209,7 +205,7 @@ def test_contact_person_can_update_signup_group_when_strongly_identified(
     assert signup_group.extra_info is None
     assert signup_group.last_modified_by_id is None
 
-    assert signup.first_name != new_signup_name
+    assert signup.first_name != new_signup_first_name
     assert signup.last_modified_by_id is None
 
     with patch(
@@ -230,7 +226,7 @@ def test_contact_person_can_update_signup_group_when_strongly_identified(
     assert signup_group.last_modified_by_id == user.id
 
     signup.refresh_from_db()
-    assert signup.first_name == new_signup_name
+    assert signup.first_name == new_signup_first_name
     assert signup.last_modified_by_id == user.id
 
 
@@ -246,15 +242,13 @@ def test_contact_person_cannot_update_signup_group_when_not_strongly_identified(
     signup = SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpContactPersonFactory(signup_group=signup_group, user=user)
 
-    new_signup_name = "Edited name"
-
     signup_group_data = {
         "registration": registration.id,
         "extra_info": new_signup_group_extra_info,
         "signups": [
             {
                 "id": signup.id,
-                "first_name": new_signup_name,
+                "first_name": new_signup_first_name,
             },
         ],
     }
@@ -262,7 +256,7 @@ def test_contact_person_cannot_update_signup_group_when_not_strongly_identified(
     assert signup_group.extra_info is None
     assert signup_group.last_modified_by_id is None
 
-    assert signup.first_name != new_signup_name
+    assert signup.first_name != new_signup_first_name
     assert signup.last_modified_by_id is None
 
     with patch(
@@ -284,24 +278,20 @@ def test_contact_person_cannot_update_signup_group_when_not_strongly_identified(
     assert signup_group.last_modified_by_id is None
 
     signup.refresh_from_db()
-    assert signup.first_name != new_signup_name
+    assert signup.first_name != new_signup_first_name
     assert signup.last_modified_by_id is None
 
 
-@pytest.mark.parametrize("admin_role", ["created_admin", "registration_created_admin"])
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_created_admin_can_update_signup_group(
-    registration, user, user_api_client, admin_role
-):
-    if admin_role == "registration_created_admin":
-        registration.created_by = user
-        registration.save(update_fields=["created_by"])
+def test_registration_created_admin_can_update_signup_group(organization, api_client):
+    user = create_user_by_role("admin", organization)
+    api_client.force_authenticate(user)
 
-    signup_group = SignUpGroupFactory(
-        registration=registration,
-        created_by=user if admin_role == "created_admin" else None,
+    registration = RegistrationFactory(
+        event__publisher=organization,
+        created_by=user,
     )
+    signup_group = SignUpGroupFactory(registration=registration)
 
     assert signup_group.extra_info is None
     assert signup_group.last_modified_by_id is None
@@ -311,7 +301,7 @@ def test_created_admin_can_update_signup_group(
         "extra_info": new_signup_group_extra_info,
     }
 
-    assert_update_signup_group(user_api_client, signup_group.id, signup_group_data)
+    assert_update_signup_group(api_client, signup_group.id, signup_group_data)
 
     signup_group.refresh_from_db()
     del signup_group.extra_info
@@ -319,7 +309,6 @@ def test_created_admin_can_update_signup_group(
     assert signup_group.last_modified_by_id == user.id
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_can_update_signup_group_with_empty_extra_info(
     registration, user, user_api_client
@@ -348,39 +337,31 @@ def test_can_update_signup_group_with_empty_extra_info(
 
 
 @pytest.mark.parametrize(
-    "user_role,created_by",
+    "user_role",
     [
-        ("admin", False),
-        ("financial_admin", False),
-        ("registration_user", False),
-        ("regular", False),
-        ("regular_without_organization", False),
-        ("admin", True),
-        ("financial_admin", True),
-        ("registration_user", True),
-        ("regular", True),
-        ("regular_without_organization", True),
+        "admin",
+        "financial_admin",
+        "registration_user",
+        "regular_user",
+        "regular_user_without_organization",
     ],
 )
-@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.parametrize("created_by", [True, False])
 @pytest.mark.django_db
 def test_can_update_signup_group_based_on_role_and_created_by(
     api_client, registration, user_role, created_by
 ):
-    user = UserFactory()
-
-    user_role_mapping = {
-        "admin": lambda usr: usr.admin_organizations.add(registration.publisher),
-        "financial_admin": lambda usr: usr.financial_admin_organizations.add(
-            registration.publisher
-        ),
-        "registration_user": lambda usr: RegistrationUserAccessFactory(
-            registration=registration, email=usr.email
-        ),
-        "regular": lambda usr: usr.organization_memberships.add(registration.publisher),
-        "regular_without_organization": lambda usr: None,
-    }
-    user_role_mapping[user_role](user)
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+        additional_roles={
+            "registration_user": lambda usr: RegistrationUserAccessFactory(
+                registration=registration, email=usr.email
+            ),
+            "regular_user_without_organization": lambda usr: None,
+        },
+    )
+    api_client.force_authenticate(user)
 
     signup_group_kwargs = {
         "registration": registration,
@@ -391,14 +372,10 @@ def test_can_update_signup_group_based_on_role_and_created_by(
     assert signup_group.extra_info is None
     assert signup_group.last_modified_by_id is None
 
-    new_extra_info = "Edited extra info"
-
     signup_group_data = {
         "registration": registration.id,
-        "extra_info": new_extra_info,
+        "extra_info": new_signup_group_extra_info,
     }
-
-    api_client.force_authenticate(user)
 
     response = update_signup_group(api_client, signup_group.id, signup_group_data)
 
@@ -407,7 +384,7 @@ def test_can_update_signup_group_based_on_role_and_created_by(
 
     if created_by:
         assert response.status_code == status.HTTP_200_OK
-        assert signup_group.extra_info == new_extra_info
+        assert signup_group.extra_info == new_signup_group_extra_info
         assert signup_group.last_modified_by_id == user.id
     else:
         assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -416,9 +393,12 @@ def test_can_update_signup_group_based_on_role_and_created_by(
 
 
 @pytest.mark.django_db
-def test_registration_user_access_cannot_update_signup_group(api_client, registration):
+def test_strongly_identified_registration_user_access_cannot_update_signup_group(
+    api_client, registration
+):
     user = UserFactory()
     api_client.force_authenticate(user)
+
     signup_group = SignUpGroupFactory(registration=registration)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
@@ -458,34 +438,9 @@ def test_registration_substitute_user_can_update_signup_group(api_client, regist
 
 
 @pytest.mark.django_db
-def test_registration_user_who_created_signup_group_can_update_signup_group(
-    api_client, registration
-):
-    user = UserFactory()
+def test_cannot_update_attendee_status_of_signup_in_group(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
-    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
-
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
-
-    signup_group_data = {
-        "registration": registration.id,
-        "extra_info": new_signup_group_extra_info,
-    }
-    with patch(
-        "helevents.models.UserModelPermissionMixin.token_amr_claim",
-        new_callable=PropertyMock,
-        return_value=["suomi_fi"],
-    ) as mocked:
-        assert_update_signup_group(api_client, signup_group.id, signup_group_data)
-        assert mocked.called is True
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_cannot_update_attendee_status_of_signup_in_group(
-    user_api_client, registration, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
     signup = SignUpFactory(
@@ -501,7 +456,7 @@ def test_cannot_update_attendee_status_of_signup_in_group(
         ],
     }
 
-    response = update_signup_group(user_api_client, signup_group.id, signup_group_data)
+    response = update_signup_group(api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["attendee_status"]
@@ -509,12 +464,12 @@ def test_cannot_update_attendee_status_of_signup_in_group(
     )
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_cannot_update_registration_of_signup_group(
-    user_api_client, registration, registration2, user
+    api_client, registration, registration2
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
 
@@ -522,7 +477,7 @@ def test_cannot_update_registration_of_signup_group(
         "registration": registration2.id,
     }
 
-    response = update_signup_group(user_api_client, signup_group.id, signup_group_data)
+    response = update_signup_group(api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["registration"][0]
@@ -530,7 +485,6 @@ def test_cannot_update_registration_of_signup_group(
     )
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_api_key_with_organization_and_user_editable_registrations_can_update_signup_group(
     api_client, data_source, organization, registration
@@ -587,11 +541,12 @@ def test_api_key_from_wrong_data_source_with_user_editable_registrations_cannot_
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.parametrize("api_key", ["", "unknown"])
 @pytest.mark.django_db
-def test_unknown_api_key_cannot_update_signup_group(api_client, registration):
+def test_invalid_api_key_cannot_update_signup_group(api_client, registration, api_key):
     signup_group = SignUpGroupFactory(registration=registration)
 
-    api_client.credentials(apikey="unknown")
+    api_client.credentials(apikey=api_key)
 
     signup_group_data = {
         "registration": registration.id,
@@ -600,27 +555,6 @@ def test_unknown_api_key_cannot_update_signup_group(api_client, registration):
 
     response = update_signup_group(api_client, signup_group.id, signup_group_data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_user_editable_resources_can_update_signup_group(
-    user_api_client, data_source, organization, registration, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
-
-    signup_group = SignUpGroupFactory(registration=registration)
-
-    data_source.owner = organization
-    data_source.user_editable_resources = True
-    data_source.save(update_fields=["owner", "user_editable_resources"])
-
-    signup_group_data = {
-        "registration": registration.id,
-        "extra_info": "Edited extra_info",
-    }
-
-    assert_update_signup_group(user_api_client, signup_group.id, signup_group_data)
 
 
 @pytest.mark.django_db
@@ -645,10 +579,10 @@ def test_non_user_editable_resources_cannot_update_signup_group(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_signup_group_text_fields_are_sanitized(registration, user, user_api_client):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_signup_group_text_fields_are_sanitized(registration, api_client):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
     signup = SignUpFactory(signup_group=signup_group, registration=registration)
@@ -675,7 +609,7 @@ def test_signup_group_text_fields_are_sanitized(registration, user, user_api_cli
         },
     }
 
-    assert_update_signup_group(user_api_client, signup_group.id, signup_group_data)
+    assert_update_signup_group(api_client, signup_group.id, signup_group_data)
     signup_group.refresh_from_db()
     assert signup_group.extra_info == "Extra info for group Html"
 
@@ -693,11 +627,9 @@ def test_signup_group_text_fields_are_sanitized(registration, user, user_api_cli
     assert contact_person.phone_number == "0441111111"
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_signup_group_update_contact_person(registration, api_client):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -732,13 +664,11 @@ def test_signup_group_update_contact_person(registration, api_client):
     assert contact_person.email == "new@test.com"
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_signup_group_missing_contact_person_created_on_update(
     registration, api_client
 ):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -767,11 +697,9 @@ def test_signup_group_missing_contact_person_created_on_update(
     assert signup_group.contact_person.phone_number == "0441111111"
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_contact_person_can_be_null_on_signup_group_update(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -796,8 +724,7 @@ def test_contact_person_can_be_null_on_signup_group_update(api_client, registrat
 
 @pytest.mark.django_db
 def test_signup_group_id_is_audit_logged_on_put(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)

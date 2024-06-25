@@ -14,7 +14,6 @@ from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.models import (
     PriceGroup,
@@ -159,20 +158,12 @@ def test_signup_url_is_not_linked_to_event_offer_on_registration_update(
     assert offer.info_url_en in blank_values
 
 
+@pytest.mark.parametrize("user_role", ["financial_admin", "regular_user"])
 @pytest.mark.django_db
-def test_financial_admin_cannot_update_registration(api_client, event, registration):
-    user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
-    api_client.force_authenticate(user)
-
-    registration_data = get_minimal_required_registration_data(registration.event_id)
-    response = update_registration(api_client, registration.id, registration_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_non_admin_cannot_update_registration(api_client, event, registration, user):
-    event.publisher.admin_users.remove(user)
+def test_not_allowed_roles_cannot_update_registration(
+    api_client, event, registration, user_role
+):
+    user = create_user_by_role(user_role, event.publisher)
     api_client.force_authenticate(user)
 
     registration_data = get_minimal_required_registration_data(registration.event_id)
@@ -234,9 +225,10 @@ def test_api_key_without_organization_cannot_update_registration(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.parametrize("api_key", ["", "unknown"])
 @pytest.mark.django_db
-def test_unknown_api_key_cannot_update_registration(api_client, registration):
-    api_client.credentials(apikey="unknown")
+def test_invalid_api_key_cannot_update_registration(api_client, registration, api_key):
+    api_client.credentials(apikey=api_key)
 
     registration_data = get_minimal_required_registration_data(registration.event_id)
     response = update_registration(api_client, registration.id, registration_data)
@@ -244,40 +236,25 @@ def test_unknown_api_key_cannot_update_registration(api_client, registration):
 
 
 @pytest.mark.parametrize("user_editable_resources", [False, True])
+@pytest.mark.parametrize("user_role", ["admin", "registration_admin"])
 @pytest.mark.django_db
-def test_admin_can_update_registration_regardless_of_non_user_editable_resources(
-    user_api_client,
+def test_admin_or_registration_admin_can_update_registration_regardless_of_user_editable_resources(
+    api_client,
     data_source,
     organization,
     registration,
     user_editable_resources,
+    user_role,
 ):
-    data_source.owner = organization
-    data_source.user_editable_resources = user_editable_resources
-    data_source.save(update_fields=["owner", "user_editable_resources"])
-
-    registration_data = get_minimal_required_registration_data(registration.event_id)
-    assert_update_registration(user_api_client, registration.id, registration_data)
-
-
-@pytest.mark.parametrize("user_editable_resources", [False, True])
-@pytest.mark.django_db
-def test_registration_admin_can_update_registration_regardless_of_non_user_editable_resources(
-    user_api_client,
-    data_source,
-    organization,
-    registration,
-    user,
-    user_editable_resources,
-):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
 
     data_source.owner = organization
     data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
     registration_data = get_minimal_required_registration_data(registration.event_id)
-    assert_update_registration(user_api_client, registration.id, registration_data)
+    assert_update_registration(api_client, registration.id, registration_data)
 
 
 @pytest.mark.django_db

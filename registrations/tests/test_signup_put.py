@@ -2,7 +2,6 @@ from decimal import Decimal
 from unittest.mock import patch, PropertyMock
 
 import pytest
-from freezegun import freeze_time
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -112,11 +111,15 @@ def assert_signup_price_group_update_failed(
 # === tests ===
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.parametrize("user_role", ["superuser", "registration_admin", "admin"])
 @pytest.mark.django_db
-def test_registration_admin_can_update_signup(api_client, signup):
-    user = UserFactory()
-    user.registration_admin_organizations.add(signup.publisher)
+def test_allowed_user_roles_can_update_signup(api_client, signup, user_role):
+    user = create_user_by_role(user_role, signup.publisher)
+
+    if user_role == "admin":
+        signup.registration.created_by = user
+        signup.registration.save(update_fields=["created_by"])
+
     api_client.force_authenticate(user)
 
     assert signup.first_name != new_signup_name
@@ -176,7 +179,7 @@ def test_contact_person_can_update_signup_when_strongly_identified(
 
 
 @pytest.mark.django_db
-def test_contact_person_can_update_signup_when_strongly_identified(
+def test_contact_person_cannot_update_signup_when_not_strongly_identified(
     api_client, registration
 ):
     user = UserFactory()
@@ -209,40 +212,6 @@ def test_contact_person_can_update_signup_when_strongly_identified(
     signup.refresh_from_db()
     assert signup.first_name != new_signup_name
     assert signup.last_modified_by_id is None
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_registration_created_admin_can_update_signup(
-    registration, user, user_api_client
-):
-    registration.created_by = user
-    registration.save(update_fields=["created_by"])
-
-    signup = SignUpFactory(registration=registration)
-
-    assert signup.first_name != new_signup_name
-    assert signup.last_modified_by_id is None
-    assert signup.user_consent is False
-    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
-
-    signup_data = {
-        "registration": registration.id,
-        "first_name": new_signup_name,
-        "date_of_birth": new_date_of_birth,
-        "phone_number": new_phone_number,
-        "user_consent": True,
-        "presence_status": SignUp.PresenceStatus.PRESENT,
-    }
-
-    assert_update_signup(user_api_client, signup.id, signup_data)
-
-    signup.refresh_from_db()
-    assert signup.first_name == new_signup_name
-    assert signup.phone_number == new_phone_number
-    assert signup.last_modified_by_id == user.id
-    assert signup.user_consent is True
-    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
 
 
 @pytest.mark.django_db
@@ -280,11 +249,10 @@ def test_can_update_signup_with_empty_extra_info_and_date_of_birth(
     assert signup.last_modified_by_id == user.id
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.parametrize("user_role", ["admin", "financial_admin", "regular_user"])
 @pytest.mark.django_db
-def test_created_financial_admin_can_update_signup(registration, api_client):
-    user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
+def test_created_user_roles_can_update_signup(registration, api_client, user_role):
+    user = create_user_by_role(user_role, registration.publisher)
     api_client.force_authenticate(user)
 
     signup = SignUpFactory(registration=registration, created_by=user)
@@ -304,13 +272,12 @@ def test_created_financial_admin_can_update_signup(registration, api_client):
     assert signup.last_modified_by_id == user.pk
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
+@pytest.mark.parametrize("user_role", ["admin", "financial_admin", "regular_user"])
 @pytest.mark.django_db
-def test_non_created_financial_admin_cannot_update_signup(
-    registration, user2, api_client
+def test_non_created_user_roles_cannot_update_signup(
+    registration, api_client, user_role
 ):
-    user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
+    user = create_user_by_role(user_role, registration.publisher)
     api_client.force_authenticate(user)
 
     signup = SignUpFactory(registration=registration)
@@ -331,73 +298,18 @@ def test_non_created_financial_admin_cannot_update_signup(
     assert signup.last_modified_by_id is None
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_non_created_admin_cannot_update_signup(registration, user2, user_api_client):
-    registration.created_by = user2
-    registration.save(update_fields=["created_by"])
-
-    signup = SignUpFactory(registration=registration)
-    assert signup.first_name != new_signup_name
-    assert signup.last_modified_by_id is None
-
-    signup_data = {
-        "registration": registration.id,
-        "first_name": new_signup_name,
-        "date_of_birth": new_date_of_birth,
-    }
-
-    response = update_signup(user_api_client, signup.id, signup_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    signup.refresh_from_db()
-    assert signup.first_name != new_signup_name
-    assert signup.last_modified_by_id is None
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_created_regular_user_can_update_signup(
-    user_api_client, registration, signup, user
-):
-    signup.created_by = user
-    signup.save(update_fields=["created_by"])
-
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
-
-    db_signup = SignUp.objects.get(pk=signup.id)
-    assert db_signup.first_name != new_signup_name
-    assert db_signup.last_modified_by_id is None
-
-    signup_data = {
-        "registration": registration.id,
-        "first_name": new_signup_name,
-        "date_of_birth": new_date_of_birth,
-        "phone_number": new_phone_number,
-    }
-
-    assert_update_signup(user_api_client, signup.id, signup_data)
-
-    db_signup.refresh_from_db()
-    assert db_signup.first_name == new_signup_name
-    assert db_signup.phone_number == new_phone_number
-    assert db_signup.last_modified_by_id == user.id
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.parametrize("is_organization_member", [False, True])
 @pytest.mark.django_db
 def test_created_regular_user_cannot_update_signup_presence_status(
     api_client, registration, is_organization_member
 ):
-    user = UserFactory()
     if is_organization_member:
-        user.organization_memberships.add(registration.publisher)
+        user = create_user_by_role("regular_user", registration.publisher)
+    else:
+        user = UserFactory()
+    api_client.force_authenticate(user)
 
     signup = SignUpFactory(registration=registration, created_by=user)
-
-    new_signup_name = "Edited name"
 
     assert signup.first_name != new_signup_name
     assert signup.last_modified_by_id is None
@@ -406,11 +318,9 @@ def test_created_regular_user_cannot_update_signup_presence_status(
     signup_data = {
         "registration": registration.id,
         "first_name": new_signup_name,
-        "date_of_birth": "2015-01-01",
+        "date_of_birth": new_date_of_birth,
         "presence_status": SignUp.PresenceStatus.PRESENT,
     }
-
-    api_client.force_authenticate(user)
 
     response = update_signup(api_client, signup.id, signup_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -421,36 +331,11 @@ def test_created_regular_user_cannot_update_signup_presence_status(
     assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
-@pytest.mark.django_db
-def test_non_created_regular_user_cannot_update_signup(
-    user_api_client, registration, signup, user
-):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
-
-    db_signup = SignUp.objects.get(pk=signup.id)
-    assert db_signup.first_name != new_signup_name
-    assert db_signup.last_modified_by_id is None
-
-    signup_data = {
-        "registration": registration.id,
-        "first_name": new_signup_name,
-        "date_of_birth": new_date_of_birth,
-    }
-
-    response = update_signup(user_api_client, signup.id, signup_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-    db_signup.refresh_from_db()
-    assert db_signup.first_name != new_signup_name
-    assert db_signup.last_modified_by_id is None
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_created_user_without_organization_can_update_signup(api_client, registration):
     user = UserFactory()
     api_client.force_authenticate(user)
+
     signup = SignUpFactory(registration=registration, created_by=user)
 
     assert signup.first_name != new_signup_name
@@ -471,13 +356,13 @@ def test_created_user_without_organization_can_update_signup(api_client, registr
     assert signup.last_modified_by_id == user.id
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_non_created_user_without_organization_cannot_update_signup(
     api_client, registration
 ):
     user = UserFactory()
     api_client.force_authenticate(user)
+
     signup = SignUpFactory(registration=registration)
 
     assert signup.first_name != new_signup_name
@@ -491,29 +376,27 @@ def test_non_created_user_without_organization_cannot_update_signup(
 
     response = update_signup(api_client, signup.id, signup_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
     signup.refresh_from_db()
     assert signup.first_name != new_signup_name
     assert signup.last_modified_by_id is None
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_cannot_update_attendee_status_of_signup(
-    registration, signup, user_api_client, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_cannot_update_attendee_status_of_signup(registration, api_client):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
-    signup.attendee_status = SignUp.AttendeeStatus.ATTENDING
-    signup.save()
+    signup = SignUpFactory(
+        registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+    )
 
     signup_data = {
         "registration": registration.id,
-        "first_name": new_signup_name,
-        "date_of_birth": new_date_of_birth,
         "attendee_status": SignUp.AttendeeStatus.WAITING_LIST,
     }
 
-    response = update_signup(user_api_client, signup.id, signup_data)
+    response = update_signup(api_client, signup.id, signup_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["attendee_status"]
@@ -521,12 +404,12 @@ def test_cannot_update_attendee_status_of_signup(
     )
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_cannot_update_registration_of_signup(
-    registration, registration2, signup, user_api_client, user
+    registration, registration2, signup, api_client
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signup_data = {
         "first_name": new_signup_name,
@@ -534,7 +417,7 @@ def test_cannot_update_registration_of_signup(
         "registration": registration2.id,
     }
 
-    response = update_signup(user_api_client, signup.id, signup_data)
+    response = update_signup(api_client, signup.id, signup_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["registration"]
@@ -547,6 +430,7 @@ def test_registration_user_access_cannot_update_signup(
     registration, signup, api_client
 ):
     user = UserFactory()
+    api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
@@ -555,8 +439,6 @@ def test_registration_user_access_cannot_update_signup(
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
-
-    api_client.force_authenticate(user)
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -574,8 +456,10 @@ def test_registration_user_access_who_created_signup_can_update(
     registration, api_client
 ):
     user = UserFactory()
+    api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
+
     signup = SignUpFactory(
         registration=registration,
         first_name="Name",
@@ -587,8 +471,6 @@ def test_registration_user_access_who_created_signup_can_update(
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
-
-    api_client.force_authenticate(user)
 
     with patch(
         "helevents.models.UserModelPermissionMixin.token_amr_claim",
@@ -633,19 +515,18 @@ def test_registration_user_access_who_is_superuser_or_registration_admin_can_upd
     user = UserFactory(is_superuser=True if admin_type == "superuser" else False)
     if admin_type == "registration_admin":
         user.registration_admin_organizations.add(registration.publisher)
+    api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     signup_data = {
         "registration": registration.id,
-        "first_name": "Edited name",
-        "date_of_birth": "2015-01-01",
+        "first_name": new_signup_name,
+        "date_of_birth": new_date_of_birth,
     }
 
     assert signup.first_name != signup_data["first_name"]
     assert signup.date_of_birth is None
-
-    api_client.force_authenticate(user)
 
     assert_update_signup(api_client, signup.id, signup_data)
 
@@ -655,21 +536,6 @@ def test_registration_user_access_who_is_superuser_or_registration_admin_can_upd
     assert signup.date_of_birth.strftime("%Y-%m-%d") == signup_data["date_of_birth"]
 
 
-@pytest.mark.django_db
-def test_regular_user_cannot_update_signup(registration, signup, user, user_api_client):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
-
-    signup_data = {
-        "registration": registration.id,
-        "first_name": new_signup_name,
-        "date_of_birth": new_date_of_birth,
-    }
-    response = update_signup(user_api_client, signup.id, signup_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_api_key_with_organization_and_registration_permission_can_update_signup(
     api_client, data_source, organization, registration, signup
@@ -687,7 +553,6 @@ def test_api_key_with_organization_and_registration_permission_can_update_signup
     assert_update_signup(api_client, signup.id, signup_data)
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_api_key_with_organization_without_registration_permission_cannot_update_signup(
     api_client, data_source, organization, registration, signup
@@ -759,11 +624,11 @@ def test_registration_admin_can_update_signup_regardless_of_non_user_editable_re
     organization,
     registration,
     signup,
-    user_api_client,
-    user,
+    api_client,
     user_editable_resources,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", organization)
+    api_client.force_authenticate(user)
 
     data_source.owner = organization
     data_source.user_editable_resources = user_editable_resources
@@ -774,13 +639,13 @@ def test_registration_admin_can_update_signup_regardless_of_non_user_editable_re
         "first_name": new_signup_name,
         "date_of_birth": new_date_of_birth,
     }
-    assert_update_signup(user_api_client, signup.id, signup_data)
+    assert_update_signup(api_client, signup.id, signup_data)
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
-def test_signup_text_fields_are_sanitized(user_api_client, registration, user):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_signup_text_fields_are_sanitized(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signup = SignUpFactory(registration=registration)
     contact_person = SignUpContactPersonFactory(signup=signup)
@@ -797,7 +662,7 @@ def test_signup_text_fields_are_sanitized(user_api_client, registration, user):
         "zipcode": "<p>zip</p>",
     }
 
-    assert_update_signup(user_api_client, signup.id, signup_data)
+    assert_update_signup(api_client, signup.id, signup_data)
 
     signup.refresh_from_db()
     assert signup.last_modified_by_id == user.id
@@ -811,13 +676,11 @@ def test_signup_text_fields_are_sanitized(user_api_client, registration, user):
     assert contact_person.phone_number == "0441111111"
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_contact_person_deleted_when_signup_linked_to_group_in_update(
     api_client, registration
 ):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -848,11 +711,9 @@ def test_contact_person_deleted_when_signup_linked_to_group_in_update(
     assert getattr(signup, "contact_person", None) is None
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_contact_person_can_be_null_on_signup_update(api_client, registration):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup = SignUpFactory(registration=registration)
@@ -877,8 +738,7 @@ def test_contact_person_can_be_null_on_signup_update(api_client, registration):
 
 @pytest.mark.django_db
 def test_signup_id_is_audit_logged_on_put(api_client, registration, signup):
-    user = UserFactory()
-    user.registration_admin_organizations.add(signup.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     signup_data = {
