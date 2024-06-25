@@ -1118,7 +1118,7 @@ def test_create_registration_with_product_accounting_api_exception(
         (1000000, 1000000, status.HTTP_201_CREATED),
     ],
 )
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_create_registration_maximum_attendee_capacity(
     api_client,
     event,
@@ -1145,6 +1145,54 @@ def test_create_registration_maximum_attendee_capacity(
         assert (
             registration.maximum_attendee_capacity == expected_maximum_attendee_capacity
         )
+        assert (
+            registration.remaining_attendee_capacity
+            == expected_maximum_attendee_capacity
+        )
+    else:
+        assert Registration.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "waiting_list_capacity, expected_waiting_list_capacity, expected_status_code",
+    [
+        ("", None, status.HTTP_400_BAD_REQUEST),
+        (None, None, status.HTTP_201_CREATED),
+        (0, 0, status.HTTP_201_CREATED),
+        (1, 1, status.HTTP_201_CREATED),
+        (1000000, 1000000, status.HTTP_201_CREATED),
+    ],
+)
+@pytest.mark.django_db(transaction=True)
+def test_create_registration_waiting_list_capacity(
+    api_client,
+    event,
+    waiting_list_capacity,
+    expected_waiting_list_capacity,
+    expected_status_code,
+):
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration_data = {
+        "event": {"@id": get_event_url(event.pk)},
+        "maximum_attendee_capacity": 1000001,
+        "waiting_list_capacity": waiting_list_capacity,
+    }
+
+    assert Registration.objects.count() == 0
+
+    response = create_registration(api_client, registration_data)
+    assert response.status_code == expected_status_code
+
+    if expected_status_code == status.HTTP_201_CREATED:
+        assert Registration.objects.count() == 1
+        registration = Registration.objects.first()
+        assert registration.waiting_list_capacity == expected_waiting_list_capacity
+        assert (
+            registration.remaining_waiting_list_capacity
+            == expected_waiting_list_capacity
+        )
     else:
         assert Registration.objects.count() == 0
 
@@ -1158,7 +1206,7 @@ def test_create_registration_maximum_attendee_capacity(
         (1000000, 1000000),
     ],
 )
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_create_registration_minimum_attendee_capacity(
     api_client, event, minimum_attendee_capacity, expected_minimum_attendee_capacity
 ):

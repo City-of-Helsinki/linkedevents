@@ -458,7 +458,7 @@ class Registration(CreatedModifiedBaseModel):
     minimum_attendee_capacity = models.PositiveIntegerField(
         verbose_name=_("Minimum attendee capacity"), null=True, blank=True
     )
-    waiting_list_capacity = models.PositiveSmallIntegerField(
+    waiting_list_capacity = models.PositiveIntegerField(
         verbose_name=_("Waiting list capacity"), null=True, blank=True
     )
     maximum_group_size = models.PositiveSmallIntegerField(
@@ -487,10 +487,10 @@ class Registration(CreatedModifiedBaseModel):
         through_fields=("registration", "price_group"),
     )
 
-    remaining_attendee_capacity = models.PositiveSmallIntegerField(
+    remaining_attendee_capacity = models.PositiveIntegerField(
         blank=True, null=True, default=None
     )
-    remaining_waiting_list_capacity = models.PositiveSmallIntegerField(
+    remaining_waiting_list_capacity = models.PositiveIntegerField(
         blank=True,
         null=True,
         default=None,
