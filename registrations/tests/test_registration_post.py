@@ -228,22 +228,12 @@ def test_unauthenticated_user_cannot_create_registration(api_client, event):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.parametrize("user_role", ["financial_admin", "regular_user"])
 @pytest.mark.django_db
-def test_non_admin_cannot_create_registration(api_client, event, user):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
-    api_client.force_authenticate(user)
-
-    registration_data = get_minimal_required_registration_data(event.id)
-
-    response = create_registration(api_client, registration_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_financial_admin_cannot_create_registration(api_client, event):
-    user = UserFactory()
-    user.financial_admin_organizations.add(event.publisher)
+def test_not_allowed_user_roles_cannot_create_registration(
+    api_client, event, user_role
+):
+    user = create_user_by_role(user_role, event.publisher)
     api_client.force_authenticate(user)
 
     registration_data = get_minimal_required_registration_data(event.id)
@@ -301,18 +291,10 @@ def test_api_key_with_wrong_data_source_cannot_create_registration(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.parametrize("api_key", ["", "unknown"])
 @pytest.mark.django_db
-def test_unknown_api_key_cannot_create_registration(api_client, event):
-    api_client.credentials(apikey="unknown")
-
-    registration_data = get_minimal_required_registration_data(event.id)
-    response = create_registration(api_client, registration_data)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-
-@pytest.mark.django_db
-def test_empty_api_key_cannot_create_registration(api_client, event):
-    api_client.credentials(apikey="")
+def test_invalid_api_key_cannot_create_registration(api_client, event, api_key):
+    api_client.credentials(apikey=api_key)
 
     registration_data = get_minimal_required_registration_data(event.id)
     response = create_registration(api_client, registration_data)
@@ -320,31 +302,20 @@ def test_empty_api_key_cannot_create_registration(api_client, event):
 
 
 @pytest.mark.parametrize("user_editable_resources", [False, True])
+@pytest.mark.parametrize("user_role", ["admin", "registration_admin"])
 @pytest.mark.django_db
-def test_admin_can_create_registration_regardless_of_non_user_editable_resources(
-    user_api_client, data_source, event, organization, user_editable_resources
+def test_admin_or_registration_admin_can_create_registration_regardless_of_user_editable_resources(
+    api_client, data_source, event, organization, user_editable_resources, user_role
 ):
-    data_source.owner = organization
-    data_source.user_editable_resources = user_editable_resources
-    data_source.save(update_fields=["owner", "user_editable_resources"])
-
-    registration_data = get_minimal_required_registration_data(event.id)
-    assert_create_registration(user_api_client, registration_data)
-
-
-@pytest.mark.parametrize("user_editable_resources", [False, True])
-@pytest.mark.django_db
-def test_registration_admin_can_create_registration_regardless_of_non_user_editable_resources(
-    user_api_client, data_source, event, organization, user, user_editable_resources
-):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
 
     data_source.owner = organization
     data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
     registration_data = get_minimal_required_registration_data(event.id)
-    assert_create_registration(user_api_client, registration_data)
+    assert_create_registration(api_client, registration_data)
 
 
 @pytest.mark.django_db

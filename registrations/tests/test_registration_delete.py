@@ -1,14 +1,13 @@
 from decimal import Decimal
 
 import pytest
-from freezegun import freeze_time
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
-from registrations.models import PriceGroup, RegistrationPriceGroup
+from registrations.models import PriceGroup, Registration, RegistrationPriceGroup
 from registrations.tests.factories import PriceGroupFactory
+from registrations.tests.utils import create_user_by_role
 
 
 def delete_registration(api_client, id):
@@ -16,26 +15,21 @@ def delete_registration(api_client, id):
     return api_client.delete(delete_url)
 
 
+def assert_delete_registration(
+    api_client, registration_pk: int, registrations_count: int = 1
+):
+    assert Registration.objects.count() == registrations_count
+
+    response = delete_registration(api_client, registration_pk)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    assert Registration.objects.count() == registrations_count - 1
+
+
 @pytest.mark.django_db
 def test_delete_registration(api_client, registration, user):
     api_client.force_authenticate(user)
-
-    response = delete_registration(api_client, registration.id)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    detail_url = reverse("registration-detail", kwargs={"pk": registration.id})
-    response = api_client.get(detail_url)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.django_db
-def test_financial_admin_cannot_delete_registration(api_client, registration):
-    user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
-    api_client.force_authenticate(user)
-
-    response = delete_registration(api_client, registration.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert_delete_registration(api_client, registration.pk)
 
 
 @pytest.mark.django_db
@@ -44,7 +38,6 @@ def test_unauthenticated_user_cannot_delete_registration(api_client, registratio
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_with_signups_cannot_be_deleted(
     api_client, registration, signup, user
@@ -56,10 +49,12 @@ def test_registration_with_signups_cannot_be_deleted(
     assert response.data["detail"] == "Registration with signups cannot be deleted"
 
 
+@pytest.mark.parametrize("user_role", ["financial_admin", "regular_user"])
 @pytest.mark.django_db
-def test_non_admin_cannot_delete_registration(api_client, registration, user):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
+def test_not_allowed_user_roles_cannot_delete_registration(
+    api_client, registration, user_role
+):
+    user = create_user_by_role(user_role, registration.publisher)
     api_client.force_authenticate(user)
 
     response = delete_registration(api_client, registration.id)
@@ -67,36 +62,24 @@ def test_non_admin_cannot_delete_registration(api_client, registration, user):
 
 
 @pytest.mark.parametrize("user_editable_resources", [False, True])
+@pytest.mark.parametrize("user_role", ["admin", "registration_admin"])
 @pytest.mark.django_db
-def test_admin_can_delete_registration_regardless_of_non_user_editable_resources(
-    user_api_client, data_source, organization, registration, user_editable_resources
-):
-    data_source.owner = organization
-    data_source.user_editable_resources = user_editable_resources
-    data_source.save(update_fields=["owner", "user_editable_resources"])
-
-    response = delete_registration(user_api_client, registration.id)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-
-@pytest.mark.parametrize("user_editable_resources", [False, True])
-@pytest.mark.django_db
-def test_registration_admin_can_delete_registration_regardless_of_non_user_editable_resources(
-    user_api_client,
+def test_admin_and_registration_admin_can_delete_registration_regardless_of_user_editable_resources(
+    api_client,
     data_source,
     organization,
     registration,
-    user,
     user_editable_resources,
+    user_role,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
 
     data_source.owner = organization
     data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
-    response = delete_registration(user_api_client, registration.id)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert_delete_registration(api_client, registration.pk)
 
 
 @pytest.mark.django_db
@@ -107,8 +90,7 @@ def test_api_key_with_organization_can_delete_registration(
     data_source.save()
     api_client.credentials(apikey=data_source.api_key)
 
-    response = delete_registration(api_client, registration.id)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert_delete_registration(api_client, registration.pk)
 
 
 @pytest.mark.django_db

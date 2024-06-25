@@ -17,7 +17,6 @@ from audit_log.models import AuditLogEntry
 from events.models import Event, Language
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
 from registrations.models import (
     MandatoryFields,
     PriceGroup,
@@ -507,8 +506,27 @@ def test_create_signup_payment_without_pricetotal_in_response(api_client):
     )
 
 
+@pytest.mark.parametrize(
+    "status_code, api_response, expected_error_message",
+    [
+        (
+            status.HTTP_400_BAD_REQUEST,
+            DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
+            f"Talpa web store API error (status_code: {status.HTTP_400_BAD_REQUEST}): "
+            f"{DEFAULT_CREATE_ORDER_ERROR_RESPONSE['errors']}",
+        ),
+        (
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            {},
+            f"Unknown Talpa web store API error "
+            f"(status_code: {status.HTTP_500_INTERNAL_SERVER_ERROR})",
+        ),
+    ],
+)
 @pytest.mark.django_db
-def test_create_signup_payment_web_store_api_field_error(registration, api_client):
+def test_create_signup_payment_web_store_api_error(
+    registration, api_client, status_code, api_response, expected_error_message
+):
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
         RegistrationWebStoreMerchantFactory(registration=registration)
     RegistrationWebStoreAccountFactory(registration=registration)
@@ -535,80 +553,22 @@ def test_create_signup_payment_web_store_api_field_error(registration, api_clien
         }
     )
 
-    web_store_api_status_code = status.HTTP_400_BAD_REQUEST
-
     assert SignUpPayment.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.post(
             f"{settings.WEB_STORE_API_BASE_URL}order/",
-            status_code=web_store_api_status_code,
-            json=DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
+            status_code=status_code,
+            json=api_response,
         )
 
         response = create_signups(api_client, signups_data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data[0] == expected_error_message
 
         assert req_mock.call_count == 1
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
     assert SignUpPayment.objects.count() == 0
-
-    errors = DEFAULT_CREATE_ORDER_ERROR_RESPONSE["errors"]
-    assert response.data[0] == (
-        f"Talpa web store API error (status_code: {web_store_api_status_code}): {errors}"
-    )
-
-
-@pytest.mark.django_db
-def test_create_signup_payment_web_store_api_non_field_error(registration, api_client):
-    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
-        RegistrationWebStoreMerchantFactory(registration=registration)
-    RegistrationWebStoreAccountFactory(registration=registration)
-    RegistrationWebStoreProductMappingFactory(registration=registration)
-
-    LanguageFactory(pk="fi", service_language=True)
-    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
-    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
-
-    user = create_user_by_role("registration_admin", registration.publisher)
-    api_client.force_authenticate(user)
-
-    signups_data = deepcopy(default_signups_data)
-    signups_data.update(
-        {
-            "registration": registration.pk,
-            "reservation_code": reservation.code,
-        }
-    )
-    signups_data["signups"][0].update(
-        {
-            "price_group": {"registration_price_group": registration_price_group.pk},
-            "create_payment": True,
-        }
-    )
-
-    web_store_api_status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
-    assert SignUpPayment.objects.count() == 0
-
-    with requests_mock.Mocker() as req_mock:
-        req_mock.post(
-            f"{settings.WEB_STORE_API_BASE_URL}order/",
-            status_code=web_store_api_status_code,
-        )
-
-        response = create_signups(api_client, signups_data)
-
-        assert req_mock.call_count == 1
-
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    assert SignUpPayment.objects.count() == 0
-
-    assert response.data[0] == (
-        f"Unknown Talpa web store API error (status_code: {web_store_api_status_code})"
-    )
 
 
 @pytest.mark.parametrize(
@@ -879,9 +839,11 @@ def test_non_authenticated_user_cannot_create_signups_with_payments(
 
 
 @pytest.mark.django_db
-def test_add_signups_to_group(user_api_client, languages, registration, user):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_add_signups_to_group(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
+    LanguageFactory(id="fi", service_language=True)
     reservation = SeatReservationCodeFactory(registration=registration, seats=2)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -916,7 +878,7 @@ def test_add_signups_to_group(user_api_client, languages, registration, user):
         ],
     }
 
-    assert_create_signups(user_api_client, signups_data)
+    assert_create_signups(api_client, signups_data)
 
     signup_group.refresh_from_db()
     assert signup_group.signups.count() == 3
@@ -985,7 +947,7 @@ def test_registration_user_access_cannot_signup_if_enrolment_is_not_opened(
 
 @pytest.mark.django_db
 def test_non_created_event_admin_cannot_signup_if_enrolment_is_closed(
-    api_client, registration, user
+    api_client, registration
 ):
     user = create_user_by_role("admin", registration.publisher)
     api_client.force_authenticate(user)
@@ -1015,7 +977,7 @@ def test_non_created_event_admin_cannot_signup_if_enrolment_is_closed(
 
 @pytest.mark.django_db
 def test_created_event_admin_can_signup_if_enrolment_is_closed(
-    api_client, registration, user
+    api_client, registration
 ):
     user = create_user_by_role("admin", registration.publisher)
     api_client.force_authenticate(user)
@@ -1113,32 +1075,32 @@ def test_substitute_user_can_signup_if_enrolment_is_closed(api_client, registrat
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_reservation_code_is_missing(
-    user_api_client, registration, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_cannot_signup_if_reservation_code_is_missing(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signups_payload = {
         "registration": registration.id,
         "signups": [],
     }
 
-    response = create_signups(user_api_client, signups_payload)
+    response = create_signups(api_client, signups_payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["reservation_code"][0].code == "required"
 
 
 @pytest.mark.django_db
-def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(
-    user_api_client, event, registration, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(api_client, event):
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
 
-    registration.audience_min_age = None
-    registration.audience_max_age = None
-    registration.maximum_attendee_capacity = None
-    registration.maximum_group_size = 2
-    registration.save()
+    registration = RegistrationFactory(
+        event=event,
+        maximum_group_size=2,
+        audience_max_age=None,
+        audience_min_age=None,
+        maximum_attendee_capacity=None,
+    )
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=3)
     code = reservation.code
@@ -1154,16 +1116,15 @@ def test_amount_if_signups_cannot_be_greater_than_maximum_group_size(
         "reservation_code": code,
         "signups": [signup_payload, signup_payload, signup_payload],
     }
-    response = create_signups(user_api_client, signups_payload)
+    response = create_signups(api_client, signups_payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["signups"][0].code == "max_group_size"
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_reservation_code_is_invalid(
-    user_api_client, registration, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_cannot_signup_if_reservation_code_is_invalid(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signups_payload = {
         "registration": registration.id,
@@ -1171,16 +1132,17 @@ def test_cannot_signup_if_reservation_code_is_invalid(
         "signups": [],
     }
 
-    response = create_signups(user_api_client, signups_payload)
+    response = create_signups(api_client, signups_payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["reservation_code"][0] == "Reservation code doesn't exist."
 
 
 @pytest.mark.django_db
 def test_cannot_signup_if_reservation_code_is_for_different_registration(
-    user_api_client, registration, registration2, user
+    api_client, registration, registration2
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     reservation = SeatReservationCodeFactory(registration=registration2, seats=2)
     code = reservation.code
@@ -1190,16 +1152,17 @@ def test_cannot_signup_if_reservation_code_is_for_different_registration(
         "signups": [],
     }
 
-    response = create_signups(user_api_client, signups_payload)
+    response = create_signups(api_client, signups_payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["reservation_code"][0] == "Reservation code doesn't exist."
 
 
 @pytest.mark.django_db
 def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
-    user_api_client, registration, user
+    api_client, registration
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=1)
 
@@ -1223,7 +1186,7 @@ def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
             },
         ],
     }
-    response = create_signups(user_api_client, signups_data)
+    response = create_signups(api_client, signups_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["signups"][0]
@@ -1232,10 +1195,9 @@ def test_cannot_signup_if_number_of_signups_exceeds_number_reserved_seats(
 
 
 @pytest.mark.django_db
-def test_cannot_signup_if_reservation_code_is_expired(
-    user_api_client, registration, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_cannot_signup_if_reservation_code_is_expired(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     reservation.timestamp = reservation.timestamp - timedelta(days=1)
@@ -1255,14 +1217,15 @@ def test_cannot_signup_if_reservation_code_is_expired(
             },
         ],
     }
-    response = create_signups(user_api_client, signups_payload)
+    response = create_signups(api_client, signups_payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data["reservation_code"][0] == "Reservation code has expired."
 
 
 @pytest.mark.django_db
-def test_can_signup_twice_with_same_phone_or_email(user_api_client, registration, user):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_can_signup_twice_with_same_phone_or_email(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=3)
     signup_data = {
@@ -1285,7 +1248,7 @@ def test_can_signup_twice_with_same_phone_or_email(user_api_client, registration
     }
 
     # Create a signups
-    assert_create_signups(user_api_client, signups_data)
+    assert_create_signups(api_client, signups_data)
 
 
 @pytest.mark.parametrize("min_age", [None, 0, 10])
@@ -1294,24 +1257,21 @@ def test_can_signup_twice_with_same_phone_or_email(user_api_client, registration
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
-    user_api_client, date_of_birth, min_age, max_age, registration, user
+    api_client, date_of_birth, min_age, max_age, organization
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", organization)
+    api_client.force_authenticate(user)
 
     falsy_values = ("", None)
 
-    # Update registration
-    registration.maximum_attendee_capacity = 1
-    registration.audience_min_age = None
-    registration.audience_max_age = None
-    registration.enrolment_start_time = localtime()
-    registration.enrolment_end_time = localtime() + timedelta(days=10)
-
-    if min_age not in falsy_values:
-        registration.audience_min_age = min_age
-    if max_age not in falsy_values:
-        registration.audience_max_age = max_age
-    registration.save()
+    registration = RegistrationFactory(
+        event__publisher=organization,
+        maximum_attendee_capacity=1,
+        audience_min_age=min_age if min_age not in falsy_values else None,
+        audience_max_age=max_age if max_age not in falsy_values else None,
+        enrolment_start_time=localtime(),
+        enrolment_end_time=localtime() + timedelta(days=10),
+    )
 
     if (
         min_age not in falsy_values or max_age not in falsy_values
@@ -1340,7 +1300,7 @@ def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
         "reservation_code": reservation.code,
         "signups": [signup_data],
     }
-    response = create_signups(user_api_client, signups_data)
+    response = create_signups(api_client, signups_data)
     assert response.status_code == expected_status
 
     if expected_error:
@@ -1380,27 +1340,28 @@ def test_date_of_birth_is_mandatory_if_audience_min_or_max_age_specified(
 @freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_signup_age_has_to_match_the_audience_min_max_age(
-    user_api_client,
+    api_client,
+    organization,
     date_of_birth,
     expected_error,
     expected_status,
-    registration,
-    user,
     has_event_start_time,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", organization)
+    api_client.force_authenticate(user)
 
-    registration.event.start_time = (
-        localtime() + timedelta(days=365) if has_event_start_time else None
+    registration = RegistrationFactory(
+        event__publisher=organization,
+        event__start_time=(
+            localtime() + timedelta(days=365) if has_event_start_time else None
+        ),
+        event__end_time=localtime() + timedelta(days=2 * 365),
+        audience_max_age=40,
+        audience_min_age=20,
+        enrolment_start_time=localtime(),
+        enrolment_end_time=localtime() + timedelta(days=10),
+        maximum_attendee_capacity=1,
     )
-    registration.event.end_time = localtime() + timedelta(days=2 * 365)
-    registration.event.save()
-    registration.audience_max_age = 40
-    registration.audience_min_age = 20
-    registration.enrolment_start_time = localtime()
-    registration.enrolment_end_time = localtime() + timedelta(days=10)
-    registration.maximum_attendee_capacity = 1
-    registration.save()
 
     signup_data = {
         "first_name": "Michael",
@@ -1419,7 +1380,7 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
         "signups": [signup_data],
     }
 
-    response = create_signups(user_api_client, signups_data)
+    response = create_signups(api_client, signups_data)
 
     assert response.status_code == expected_status
     if expected_error:
@@ -1439,12 +1400,13 @@ def test_signup_age_has_to_match_the_audience_min_max_age(
 )
 @pytest.mark.django_db
 def test_signup_mandatory_fields_has_to_be_filled(
-    user_api_client, mandatory_field_id, registration, user
+    api_client, mandatory_field_id, registration
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     registration.mandatory_fields = [mandatory_field_id]
-    registration.save()
+    registration.save(update_fields=["mandatory_fields"])
 
     signup_data = {
         "first_name": "Michael",
@@ -1466,7 +1428,7 @@ def test_signup_mandatory_fields_has_to_be_filled(
         "signups": [signup_data],
     }
 
-    response = create_signups(user_api_client, signups_data)
+    response = create_signups(api_client, signups_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["signups"][0][mandatory_field_id][0]
@@ -1474,15 +1436,15 @@ def test_signup_mandatory_fields_has_to_be_filled(
     )
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_cannot_signup_with_not_allowed_service_language(
-    user_api_client, languages, registration, user
+    api_client, languages, registration
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     languages[0].service_language = False
-    languages[0].save()
+    languages[0].save(update_fields=["service_language"])
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
@@ -1501,7 +1463,7 @@ def test_cannot_signup_with_not_allowed_service_language(
         ],
     }
 
-    response = create_signups(user_api_client, signups_data)
+    response = create_signups(api_client, signups_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert (
         response.data["signups"][0]["contact_person"]["service_language"][0].code
@@ -1510,8 +1472,9 @@ def test_cannot_signup_with_not_allowed_service_language(
 
 
 @pytest.mark.django_db
-def test_group_signup_successful_with_waitlist(user_api_client, registration, user):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_group_signup_successful_with_waitlist(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     registration.maximum_attendee_capacity = 2
     registration.waiting_list_capacity = 2
@@ -1538,7 +1501,7 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration, us
             },
         ],
     }
-    assert_create_signups(user_api_client, signups_payload)
+    assert_create_signups(api_client, signups_payload)
     assert registration.signups.count() == 2
 
     reservation2 = SeatReservationCodeFactory(registration=registration, seats=2)
@@ -1562,7 +1525,7 @@ def test_group_signup_successful_with_waitlist(user_api_client, registration, us
             },
         ],
     }
-    assert_create_signups(user_api_client, signups_payload)
+    assert_create_signups(api_client, signups_payload)
     assert registration.signups.count() == 4
     assert (
         registration.signups.filter(
@@ -1609,8 +1572,7 @@ def test_maximum_attendee_and_waiting_list_capacities(
         waiting_list_capacity=waiting_list_capacity,
     )
 
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=2)
@@ -1675,8 +1637,7 @@ def test_maximum_attendee_and_waiting_list_capacities_with_attendee_status_given
         waiting_list_capacity=waiting_list_capacity,
     )
 
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=2)
@@ -1767,7 +1728,7 @@ def test_maximum_attendee_and_waiting_list_capacities_with_attendee_status_given
 )
 @pytest.mark.django_db
 def test_email_sent_on_successful_signup(
-    user_api_client,
+    api_client,
     expected_heading,
     expected_secondary_heading,
     expected_subject,
@@ -1775,9 +1736,9 @@ def test_email_sent_on_successful_signup(
     registration,
     service_language,
     username,
-    user,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     LanguageFactory(id=service_language, name=service_language, service_language=True)
 
@@ -1807,7 +1768,7 @@ def test_email_sent_on_successful_signup(
             "registrations.models.SignUpContactPerson.create_access_code"
         ) as mocked_access_code:
             mocked_access_code.return_value = test_access_code
-            response = assert_create_signups(user_api_client, signups_data)
+            response = assert_create_signups(api_client, signups_data)
             assert mocked_access_code.called is True
 
         assert signup_data["first_name"] in response.data[0]["first_name"]
@@ -1963,16 +1924,14 @@ def test_email_sent_on_successful_signup_to_a_recurring_event(
         assert f"{expected_heading} None" not in message_string
 
 
-@pytest.mark.parametrize(
-    "access_code_not_sent_reason", ["same_user", "has_full_permissions"]
-)
+@pytest.mark.parametrize("user_role", ["regular_user", "registration_admin"])
 @pytest.mark.django_db
 def test_access_code_not_sent_on_successful_signup_if_user_has_edit_rights(
-    api_client, registration, access_code_not_sent_reason
+    api_client, registration, user_role
 ):
-    user = UserFactory(email=test_email1)
-    if access_code_not_sent_reason == "has_full_permissions":
-        user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role(user_role, registration.publisher)
+    user.email = test_email1
+    user.save(update_fields=["email"])
     api_client.force_authenticate(user)
 
     service_language = LanguageFactory(id="fi", service_language=True)
@@ -2028,15 +1987,15 @@ def test_access_code_not_sent_on_successful_signup_if_user_has_edit_rights(
 )
 @pytest.mark.django_db
 def test_confirmation_template_has_correct_text_per_event_type(
-    user_api_client,
+    api_client,
     event_type,
     expected_heading,
     expected_text,
     languages,
     registration,
-    user,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     registration.event.type_id = event_type
     registration.event.name = "Foo"
@@ -2057,7 +2016,7 @@ def test_confirmation_template_has_correct_text_per_event_type(
         "signups": [signup_data],
     }
 
-    response = assert_create_signups(user_api_client, signups_data)
+    response = assert_create_signups(api_client, signups_data)
     assert signup_data["first_name"] in response.data[0]["first_name"]
 
     #  assert that the email was sent
@@ -2076,14 +2035,14 @@ def test_confirmation_template_has_correct_text_per_event_type(
 )
 @pytest.mark.django_db
 def test_confirmation_message_is_shown_in_service_language(
-    user_api_client,
+    api_client,
     confirmation_message,
     languages,
     registration,
     service_language,
-    user,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     Language.objects.get_or_create(
         id=service_language, defaults={"name": service_language}
@@ -2108,7 +2067,7 @@ def test_confirmation_message_is_shown_in_service_language(
         "signups": [signup_data],
     }
 
-    assert_create_signups(user_api_client, signups_data)
+    assert_create_signups(api_client, signups_data)
     assert confirmation_message in str(mail.outbox[0].alternatives[0])
 
 
@@ -2268,15 +2227,15 @@ def test_different_email_sent_if_user_is_added_to_waiting_list_of_a_recurring_ev
 )
 @pytest.mark.django_db
 def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
-    user_api_client,
+    api_client,
     event_type,
     expected_text,
     languages,
     registration,
     signup,
-    user,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     registration.event.type_id = event_type
     registration.event.name = "Foo"
@@ -2299,7 +2258,7 @@ def test_confirmation_to_waiting_list_template_has_correct_text_per_event_type(
         "signups": [signup_data],
     }
 
-    response = assert_create_signups(user_api_client, signups_data)
+    response = assert_create_signups(api_client, signups_data)
     assert signup_data["first_name"] in response.data[0]["first_name"]
     #  assert that the email was sent
     assert expected_text in str(mail.outbox[0].alternatives[0])
@@ -2374,12 +2333,11 @@ def test_confirmation_to_waiting_list_email_has_correct_text_per_event_type_for_
 
 
 @pytest.mark.django_db
-def test_signup_text_fields_are_sanitized(
-    languages, organization, user, user_api_client
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_signup_text_fields_are_sanitized(languages, registration, api_client):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
-    reservation = SeatReservationCodeFactory(seats=1)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = {
         "registration": reservation.registration.id,
         "reservation_code": reservation.code,
@@ -2397,7 +2355,7 @@ def test_signup_text_fields_are_sanitized(
         ],
     }
 
-    response = assert_create_signups(user_api_client, signups_data)
+    response = assert_create_signups(api_client, signups_data)
     response_signup = response.data[0]
     assert response_signup["first_name"] == "Michael Html"
     assert response_signup["last_name"] == "Jackson Html"
@@ -2409,16 +2367,15 @@ def test_signup_text_fields_are_sanitized(
 
 @pytest.mark.django_db
 def test_signup_id_is_audit_logged_on_post(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
     LanguageFactory(pk="fi", service_language=True)
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=1)
     signups_data = default_signups_data
     signups_data["registration"] = registration.id
     signups_data["reservation_code"] = reservation.code
-
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
-    api_client.force_authenticate(user)
 
     response = assert_create_signups(api_client, signups_data)
 

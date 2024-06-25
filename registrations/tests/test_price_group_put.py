@@ -21,6 +21,11 @@ from registrations.tests.utils import create_user_by_role
 _NEW_DESCRIPTION_FI = "FI desc"
 _NEW_DESCRIPTION_SV = "SV desc"
 _NEW_DESCRIPTION_EN = "EN desc"
+default_price_group_data = {
+    "description": {
+        "en": "English description",
+    },
+}
 
 
 # === util methods ===
@@ -271,7 +276,7 @@ def test_anonymous_user_cannot_update_price_group(api_client, organization):
 
     data = {
         "publisher": organization.pk,
-        "description": {"en": "Test Price Group"},
+        **default_price_group_data,
     }
     response = update_price_group(api_client, price_group.pk, data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -336,7 +341,7 @@ def test_unknown_apikey_user_cannot_update_price_group(api_client, organization)
 
     data = {
         "publisher": organization.pk,
-        "description": {"en": "Test Price Group"},
+        **default_price_group_data,
     }
     response = update_price_group(api_client, price_group.pk, data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -346,9 +351,17 @@ def test_unknown_apikey_user_cannot_update_price_group(api_client, organization)
     assert price_group.description != data["description"]
 
 
-@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.parametrize(
+    "user_role, expected_status_code",
+    [
+        ("superuser", status.HTTP_400_BAD_REQUEST),
+        ("financial_admin", status.HTTP_403_FORBIDDEN),
+    ],
+)
 @pytest.mark.django_db
-def test_cannot_update_default_price_group(api_client, organization, user_role):
+def test_cannot_update_default_price_group(
+    api_client, organization, user_role, expected_status_code
+):
     price_group = PriceGroup.objects.filter(publisher=None).first()
 
     user = create_user_by_role(user_role, organization)
@@ -356,13 +369,10 @@ def test_cannot_update_default_price_group(api_client, organization, user_role):
 
     data = {
         "publisher": organization.pk,
-        "description": {"en": "Test Price Group"},
+        **default_price_group_data,
     }
     response = update_price_group(api_client, price_group.pk, data)
-    if user.is_superuser:
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-    else:
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == expected_status_code
 
 
 @pytest.mark.django_db
@@ -374,7 +384,7 @@ def test_price_group_id_is_audit_logged_on_put(api_client, organization):
 
     data = {
         "publisher": organization.pk,
-        "description": {"en": "Test Price Group"},
+        **default_price_group_data,
     }
     assert_update_price_group(api_client, price_group.pk, data)
 

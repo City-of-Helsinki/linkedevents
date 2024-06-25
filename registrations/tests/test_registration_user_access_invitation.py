@@ -5,10 +5,12 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
-from helevents.tests.factories import UserFactory
 from registrations.models import RegistrationUserAccess
 from registrations.tests.factories import RegistrationUserAccessFactory
-from registrations.tests.utils import assert_invitation_email_is_sent
+from registrations.tests.utils import (
+    assert_invitation_email_is_sent,
+    create_user_by_role,
+)
 
 email = "user@email.com"
 event_name = "Foo"
@@ -63,12 +65,12 @@ def test_anonymous_user_cannot_send_invitation_to_registration_user_access(
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.parametrize("user_role", ["financial_admin", "regular_user"])
 @pytest.mark.django_db
-def test_financial_admin_cannot_send_invitation_to_registration_user_access(
-    api_client, registration
+def test_not_allowed_roles_cannot_send_invitation_to_registration_user_access(
+    api_client, registration, user_role
 ):
-    user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
+    user = create_user_by_role(user_role, registration.publisher)
     api_client.force_authenticate(user)
 
     registration_user_access = RegistrationUserAccess.objects.create(
@@ -76,21 +78,6 @@ def test_financial_admin_cannot_send_invitation_to_registration_user_access(
     )
 
     response = send_invitation(api_client, registration_user_access.pk)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_regular_user_cannot_send_invitation_to_registration_user_access(
-    registration, user, user_api_client
-):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
-
-    registration_user_access = RegistrationUserAccess.objects.create(
-        registration=registration, email=email
-    )
-
-    response = send_invitation(user_api_client, registration_user_access.pk)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 

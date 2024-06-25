@@ -11,6 +11,12 @@ from linkedevents.utils import get_fixed_lang_codes
 from registrations.models import PriceGroup
 from registrations.tests.utils import create_user_by_role
 
+default_price_group_data = {
+    "description": {
+        "en": "English description",
+    },
+}
+
 # === util methods ===
 
 
@@ -63,10 +69,8 @@ def assert_create_price_group_not_allowed(
 
     data = {
         "publisher": organization.pk,
-        "description": {
-            "en": "Test Price Group",
-        },
         "is_free": True,
+        **default_price_group_data,
     }
     response = create_price_group(api_client, data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -148,11 +152,7 @@ def test_not_allowed_user_roles_cannot_create_price_group(
 def test_anonymous_user_cannot_create_price_group(api_client, organization):
     assert PriceGroup.objects.count() == 8
 
-    data = {
-        "publisher": organization.pk,
-        "description": {"en": "Test Price Group"},
-    }
-    response = create_price_group(api_client, data)
+    response = create_price_group(api_client, default_price_group_data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     assert PriceGroup.objects.count() == 8
@@ -192,7 +192,7 @@ def test_unknown_apikey_user_cannot_create_price_group(api_client, organization)
 
     data = {
         "publisher": organization.pk,
-        "description": {"en": "Test Price Group"},
+        **default_price_group_data,
     }
     response = create_price_group(api_client, data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -200,19 +200,16 @@ def test_unknown_apikey_user_cannot_create_price_group(api_client, organization)
     assert PriceGroup.objects.count() == 8
 
 
-@pytest.mark.parametrize("publisher", ["", None, "not_given"])
+@pytest.mark.parametrize("publisher_data", [{"publisher": ""}, {"publisher": None}, {}])
 @pytest.mark.django_db
-def test_cannot_create_signup_group_without_publisher(api_client, publisher):
+def test_cannot_create_signup_group_without_publisher(api_client, publisher_data):
     user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
 
     assert PriceGroup.objects.count() == 8
 
-    data = {
-        "description": {"en": "Test Price Group"},
-    }
-    if publisher != "not_given":
-        data["publisher"] = publisher
+    data = default_price_group_data.copy()
+    data.update(publisher_data)
 
     response = create_price_group(api_client, data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -220,10 +217,12 @@ def test_cannot_create_signup_group_without_publisher(api_client, publisher):
     assert PriceGroup.objects.count() == 8
 
 
-@pytest.mark.parametrize("description", ["", None, "not_given"])
+@pytest.mark.parametrize(
+    "description_data", [{"description": ""}, {"description": None}, {}]
+)
 @pytest.mark.django_db
 def test_cannot_create_signup_group_without_description(
-    api_client, organization, description
+    api_client, organization, description_data
 ):
     user = create_user_by_role("superuser", organization)
     api_client.force_authenticate(user)
@@ -233,8 +232,7 @@ def test_cannot_create_signup_group_without_description(
     data = {
         "publisher": organization.pk,
     }
-    if description != "not_given":
-        data["description"] = {"en": description}
+    data.update(description_data)
 
     response = create_price_group(api_client, data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -249,7 +247,7 @@ def test_price_group_id_is_audit_logged_on_post(api_client, organization):
 
     data = {
         "publisher": organization.pk,
-        "description": {"en": "Test"},
+        **default_price_group_data,
     }
     response = assert_create_price_group(api_client, data)
 

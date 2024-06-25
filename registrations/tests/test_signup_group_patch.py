@@ -3,7 +3,6 @@ from typing import Optional
 from unittest.mock import patch, PropertyMock
 
 import pytest
-from freezegun import freeze_time
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -121,7 +120,6 @@ def assert_patch_signup_group_price_group_failed(
         ("superuser", True),
     ],
 )
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_patch_signup_group_extra_info_based_on_user_role(
     api_client, event, user_role, allowed_to_patch
@@ -165,7 +163,6 @@ def test_patch_signup_group_extra_info_based_on_user_role(
 @pytest.mark.parametrize(
     "user_role", ["superuser", "registration_admin", "registration_created_admin"]
 )
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_user_access_who_is_superuser_or_registration_admin_can_patch_signups_data(
     api_client, registration, user_role
@@ -222,7 +219,6 @@ def test_registration_user_access_who_is_superuser_or_registration_admin_can_pat
     assert second_signup.user_consent is True
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_user_access_who_created_signup_group_can_patch_signups_data(
     api_client, registration
@@ -390,7 +386,6 @@ def test_contact_person_cannot_patch_signup_group_when_not_strongly_identified(
         "regular_user",
     ],
 )
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_admin_or_financial_admin_or_regular_user_cannot_patch_signups_data(
     api_client, registration, user_role
@@ -428,7 +423,6 @@ def test_admin_or_financial_admin_or_regular_user_cannot_patch_signups_data(
     assert second_signup.extra_info is None
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_user_access_can_patch_signups_presence_status_if_strongly_identified(
     api_client, registration
@@ -465,7 +459,6 @@ def test_registration_user_access_can_patch_signups_presence_status_if_strongly_
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_registration_user_access_cannot_patch_signups_presence_status_if_not_strongly_identified(
     api_client, registration
@@ -540,7 +533,6 @@ def test_registration_substitute_user_can_patch_signup_presence_status_if_not_st
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_created_user_cannot_patch_presence_status_of_signups(api_client, registration):
     user = create_user_by_role("regular_user", registration.publisher)
@@ -568,7 +560,6 @@ def test_created_user_cannot_patch_presence_status_of_signups(api_client, regist
     assert second_signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_can_patch_signup_group_contact_person(api_client, registration):
     user = create_user_by_role("registration_admin", registration.publisher)
@@ -595,7 +586,6 @@ def test_can_patch_signup_group_contact_person(api_client, registration):
     assert contact_person.membership_number == "1234"
 
 
-@freeze_time("2023-03-14 03:30:00+02:00")
 @pytest.mark.django_db
 def test_missing_contact_person_created_on_patch(api_client, registration):
     user = create_user_by_role("registration_admin", registration.publisher)

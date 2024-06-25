@@ -98,58 +98,55 @@ def assert_delete_signup_group_failed(
 # === tests ===
 
 
+@pytest.mark.parametrize("user_role", ["superuser", "admin", "registration_admin"])
 @pytest.mark.django_db
-def test_registration_admin_can_delete_signup_group(
-    user_api_client, registration, user
+def test_registration_created_admin_or_registration_admin_can_delete_signup_group(
+    api_client, registration, user_role
 ):
-    default_organization = user.get_default_organization()
-    default_organization.admin_users.remove(user)
-    default_organization.registration_admin_users.add(user)
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    if user_role == "admin":
+        registration.created_by = user
+        registration.save(update_fields=["created_by"])
 
     signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(signup_group=signup_group, registration=registration)
-    SignUpFactory(signup_group=signup_group, registration=registration)
-    SignUpContactPersonFactory(signup_group=signup_group)
 
     assert SignUpGroup.objects.count() == 1
-    assert SignUp.objects.count() == 2
-    assert SignUpContactPerson.objects.count() == 1
 
-    assert_delete_signup_group(user_api_client, signup_group.id)
+    assert_delete_signup_group(api_client, signup_group.id)
 
     assert SignUpGroup.objects.count() == 0
-    assert SignUp.objects.count() == 0
-    assert SignUpContactPerson.objects.count() == 0
 
 
 @pytest.mark.django_db
-def test_registration_non_created_admin_cannot_delete_signup_group(
-    user_api_client, registration, user2
+def test_created_financial_admin_can_delete_signup_group(api_client, registration):
+    user = create_user_by_role("financial_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+
+    assert SignUpGroup.objects.count() == 1
+
+    assert_delete_signup_group(api_client, signup_group.id)
+
+    assert SignUpGroup.objects.count() == 0
+
+
+@pytest.mark.parametrize("user_role", ["admin", "financial_admin", "regular_user"])
+@pytest.mark.django_db
+def test_non_created_admin_or_financial_admin_or_regular_user_cannot_delete_signup_group(
+    api_client, registration, user_role
 ):
-    registration.created_by = user2
-    registration.save(update_fields=["created_by"])
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpContactPersonFactory(signup_group=signup_group)
 
-    assert_delete_signup_group_failed(user_api_client, signup_group.pk)
-
-
-@pytest.mark.django_db
-def test_registration_created_admin_can_delete_signup_group(
-    user_api_client, registration, user
-):
-    registration.created_by = user
-    registration.save(update_fields=["created_by"])
-
-    signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(signup_group=signup_group, registration=registration)
-    SignUpFactory(signup_group=signup_group, registration=registration)
-    SignUpContactPersonFactory(signup_group=signup_group)
-
-    assert_delete_signup_group(user_api_client, signup_group.pk)
+    assert_delete_signup_group_failed(api_client, signup_group.pk)
 
 
 @pytest.mark.django_db
@@ -195,24 +192,10 @@ def test_contact_person_cannot_delete_signup_group_when_not_strongly_identified(
 
 
 @pytest.mark.django_db
-def test_regular_user_cannot_delete_signup_group(user_api_client, registration, user):
-    default_organization = user.get_default_organization()
-    default_organization.admin_users.remove(user)
-    default_organization.regular_users.add(user)
+def test_registration_user_access_cannot_delete_signup_group(api_client, registration):
+    user = create_user_by_role("regular_user", registration.publisher)
+    api_client.force_authenticate(user)
 
-    signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(signup_group=signup_group, registration=registration)
-    SignUpFactory(signup_group=signup_group, registration=registration)
-    SignUpContactPersonFactory(signup_group=signup_group)
-
-    assert_delete_signup_group_failed(user_api_client, signup_group.pk)
-
-
-@pytest.mark.django_db
-def test_registration_user_access_cannot_delete_signup_group(
-    user_api_client, registration, user
-):
-    user.get_default_organization().admin_users.remove(user)
     RegistrationUserAccessFactory(registration=registration, email=user.email)
 
     signup_group = SignUpGroupFactory(registration=registration)
@@ -220,7 +203,7 @@ def test_registration_user_access_cannot_delete_signup_group(
     SignUpFactory(signup_group=signup_group, registration=registration)
     SignUpContactPersonFactory(signup_group=signup_group)
 
-    assert_delete_signup_group_failed(user_api_client, signup_group.pk)
+    assert_delete_signup_group_failed(api_client, signup_group.pk)
 
 
 @pytest.mark.django_db
@@ -298,10 +281,10 @@ def test_email_sent_on_successful_signup_group_deletion(
     registration,
     username,
     service_language,
-    user_api_client,
-    user,
+    api_client,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     service_lang = LanguageFactory(id=service_language, service_language=True)
 
@@ -322,7 +305,7 @@ def test_email_sent_on_successful_signup_group_deletion(
         registration.event.name = "Foo"
         registration.event.save()
 
-        assert_delete_signup_group(user_api_client, signup_group.id)
+        assert_delete_signup_group(api_client, signup_group.id)
 
         #  assert that the email was sent
         assert mail.outbox[0].subject.startswith(expected_subject)
@@ -456,10 +439,10 @@ def test_signup_group_cancellation_confirmation_template_has_correct_text_per_ev
     expected_heading,
     expected_text,
     registration,
-    user_api_client,
-    user,
+    api_client,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     service_lang = LanguageFactory(pk="en", service_language=True)
 
@@ -485,7 +468,7 @@ def test_signup_group_cancellation_confirmation_template_has_correct_text_per_ev
     registration.event.name = "Foo"
     registration.event.save()
 
-    assert_delete_signup_group(user_api_client, signup_group.id)
+    assert_delete_signup_group(api_client, signup_group.id)
 
     # Assert that the email was sent to the group's contact_person.
     assert len(mail.outbox) == 1
@@ -569,52 +552,31 @@ def test_group_cancellation_confirmation_has_correct_text_per_event_type_for_a_r
 
 
 @pytest.mark.django_db
-def test_cannot_delete_already_deleted_signup_group(
-    user_api_client, registration, user
-):
-    user.get_default_organization().registration_admin_users.add(user)
+def test_cannot_delete_already_deleted_signup_group(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
 
-    assert_delete_signup_group(user_api_client, signup_group.id)
-    response = delete_signup_group(user_api_client, signup_group.id)
+    assert_delete_signup_group(api_client, signup_group.id)
+    response = delete_signup_group(api_client, signup_group.id)
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.django_db
-def test_created_financial_admin_can_delete_signup_group(api_client, registration):
-    user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
-    api_client.force_authenticate(user)
-
-    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
-
-    assert_delete_signup_group(api_client, signup_group.id)
-
-
-@pytest.mark.django_db
-def test_non_created_financial_admin_cannot_delete_signup_group(
+def test_created_user_without_organization_can_delete_signup_group(
     api_client, registration
 ):
     user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
     api_client.force_authenticate(user)
 
-    signup_group = SignUpGroupFactory(registration=registration)
-
-    response = delete_signup_group(api_client, signup_group.id)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
-
-@pytest.mark.django_db
-def test_created_user_without_organization_can_delete_signup_group(
-    user_api_client, user, registration
-):
     signup_group = SignUpGroupFactory(registration=registration, created_by=user)
 
-    user.get_default_organization().admin_users.remove(user)
+    assert SignUpGroup.objects.count() == 1
 
-    assert_delete_signup_group(user_api_client, signup_group.id)
+    assert_delete_signup_group(api_client, signup_group.id)
+
+    assert SignUpGroup.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -631,20 +593,10 @@ def test_not_created_user_without_organization_cannot_delete_signup_group(
 
 
 @pytest.mark.django_db
-def test_created_not_authenticated_user_cannot_delete_signup_group(
-    user_api_client, user, organization
-):
-    signup_group = SignUpGroupFactory(
-        registration__event__publisher=organization, created_by=user
-    )
+def test_not_authenticated_user_cannot_delete_signup_group(api_client):
+    signup_group = SignUpGroupFactory()
 
-    user_api_client.logout()
-
-    default_org = user.get_default_organization()
-    default_org.regular_users.add(user)
-    default_org.admin_users.remove(user)
-
-    response = delete_signup_group(user_api_client, signup_group.id)
+    response = delete_signup_group(api_client, signup_group.id)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
@@ -703,11 +655,12 @@ def test_api_key_from_wrong_data_source_cannot_delete_signup_group(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.parametrize("api_key", ["", "unknown"])
 @pytest.mark.django_db
-def test_unknown_api_key_cannot_delete_signup_group(api_client, organization):
+def test_invalid_api_key_cannot_delete_signup_group(api_client, organization, api_key):
     signup_group = SignUpGroupFactory(registration__event__publisher=organization)
 
-    api_client.credentials(apikey="unknown")
+    api_client.credentials(apikey=api_key)
 
     response = delete_signup_group(api_client, signup_group.id)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -716,9 +669,10 @@ def test_unknown_api_key_cannot_delete_signup_group(api_client, organization):
 @pytest.mark.parametrize("user_editable_resources", [False, True])
 @pytest.mark.django_db
 def test_registration_admin_can_delete_signup_group_regardless_of_non_user_editable_resources(
-    data_source, organization, user, user_api_client, user_editable_resources
+    data_source, organization, api_client, user_editable_resources
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", organization)
+    api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(
         registration__event__publisher=organization,
@@ -729,7 +683,7 @@ def test_registration_admin_can_delete_signup_group_regardless_of_non_user_edita
     data_source.user_editable_resources = user_editable_resources
     data_source.save(update_fields=["owner", "user_editable_resources"])
 
-    assert_delete_signup_group(user_api_client, signup_group.id)
+    assert_delete_signup_group(api_client, signup_group.id)
 
 
 @pytest.mark.parametrize(
@@ -743,8 +697,7 @@ def test_registration_admin_can_delete_signup_group_regardless_of_non_user_edita
 def test_signup_group_deletion_leads_to_changing_status_of_first_waitlisted_user(
     api_client, registration, attendee_status
 ):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     registration.maximum_attendee_capacity = 1
@@ -806,14 +759,14 @@ def test_signup_group_deletion_leads_to_changing_status_of_first_waitlisted_user
 )
 @pytest.mark.django_db
 def test_signup_group_send_email_when_moving_participant_from_waitlist(
-    user_api_client,
+    api_client,
     expected_subject,
     expected_text,
     registration,
     service_language,
-    user,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     service_lang = LanguageFactory(pk=service_language, service_language=True)
 
@@ -848,7 +801,7 @@ def test_signup_group_send_email_when_moving_participant_from_waitlist(
 
         assert signup1.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
 
-        assert_delete_signup_group(user_api_client, signup_group.pk)
+        assert_delete_signup_group(api_client, signup_group.pk)
 
         # signup1's status should be changed
         signup1.refresh_from_db()
@@ -961,14 +914,14 @@ def test_signup_group_send_email_when_moving_participant_from_waitlist_for_a_rec
 )
 @pytest.mark.django_db
 def test_signup_group_transferred_as_participant_template_has_correct_text_per_event_type(
-    user_api_client,
+    api_client,
     event_type,
     expected_subject,
     expected_text,
     registration,
-    user,
 ):
-    user.get_default_organization().registration_admin_users.add(user)
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
 
     service_lang = LanguageFactory(pk="en", service_language=True)
 
@@ -987,7 +940,7 @@ def test_signup_group_transferred_as_participant_template_has_correct_text_per_e
     )
     SignUpContactPersonFactory(
         signup_group=signup_group,
-        email="test@test.com",
+        email=test_email1,
     )
 
     signup1 = SignUpFactory(
@@ -1002,7 +955,7 @@ def test_signup_group_transferred_as_participant_template_has_correct_text_per_e
 
     assert signup1.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
 
-    assert_delete_signup_group(user_api_client, signup_group.pk)
+    assert_delete_signup_group(api_client, signup_group.pk)
 
     # signup1's status should be changed
     signup1.refresh_from_db()
@@ -1063,7 +1016,7 @@ def test_group_transferred_as_participant_has_correct_text_per_event_type_for_a_
     )
     SignUpContactPersonFactory(
         signup_group=signup_group,
-        email="test@test.com",
+        email=test_email1,
     )
 
     signup2 = SignUpFactory(
@@ -1096,8 +1049,7 @@ def test_group_transferred_as_participant_has_correct_text_per_event_type_for_a_
 def test_signup_group_id_is_audit_logged_on_delete(api_client, registration):
     signup_group = SignUpGroupFactory(registration=registration)
 
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     assert_delete_signup_group(api_client, signup_group.pk)
@@ -1161,7 +1113,7 @@ def test_soft_deleted_signup_group_is_not_moved_to_attending_from_waiting_list(
     api_client.force_authenticate(user)
 
     signup_group = SignUpGroupFactory(registration=registration)
-    SignUpContactPersonFactory(signup_group=signup_group, email="test@test.com")
+    SignUpContactPersonFactory(signup_group=signup_group, email=test_email1)
 
     soft_deleted_signup_group = SignUpGroupFactory(registration=registration)
     signup = SignUpFactory(
@@ -1170,7 +1122,7 @@ def test_soft_deleted_signup_group_is_not_moved_to_attending_from_waiting_list(
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
     )
     SignUpContactPersonFactory(
-        signup_group=soft_deleted_signup_group, email="test@test.com"
+        signup_group=soft_deleted_signup_group, email=test_email1
     )
 
     soft_deleted_signup_group.soft_delete()
@@ -1251,7 +1203,7 @@ def test_group_send_email_with_payment_link_when_moving_participant_from_waitlis
         signup=signup2,
         first_name="Mickey",
         last_name="Mouse",
-        email="test@test.com",
+        email=test_email1,
         service_language=language,
     )
     SignUpPriceGroupFactory(
@@ -1362,7 +1314,7 @@ def test_group_send_email_with_payment_link_when_moving_to_participant_for_recur
         signup=signup2,
         first_name="Mickey",
         last_name="Mouse",
-        email="test@test.com",
+        email=test_email1,
         service_language=language,
     )
     SignUpPriceGroupFactory(
@@ -1441,7 +1393,7 @@ def test_group_email_with_payment_link_not_sent_when_moving_participant_if_price
         signup=signup2,
         first_name="Mickey",
         last_name="Mouse",
-        email="test@test.com",
+        email=test_email1,
         service_language=language,
     )
 
@@ -1524,7 +1476,7 @@ def test_group_email_with_payment_link_not_sent_when_moving_participant_if_conta
             signup=signup2,
             first_name="Mickey" if field != "first_name" else value,
             last_name="Mouse" if field != "last_name" else value,
-            email="test@test.com" if field != "email" else value,
+            email=test_email1 if field != "email" else value,
             service_language=language,
         )
     SignUpPriceGroupFactory(
@@ -1571,7 +1523,7 @@ def test_signup_grop_web_store_automatically_fully_refund_paid_signup_payment(
     signup.save(update_fields=["signup_group"])
 
     SignUpContactPersonFactory(
-        signup_group=signup_group, email="test@test.com", service_language=language
+        signup_group=signup_group, email=test_email1, service_language=language
     )
 
     payment = SignUpPaymentFactory(
@@ -1623,7 +1575,7 @@ def test_signup_group_web_store_automatically_cancel_unpaid_created_signup_payme
     signup.save(update_fields=["signup_group"])
 
     SignUpContactPersonFactory(
-        signup_group=signup_group, email="test@test.com", service_language=language
+        signup_group=signup_group, email=test_email1, service_language=language
     )
 
     payment = SignUpPaymentFactory(
@@ -1820,7 +1772,9 @@ def test_web_store_refund_already_exists_for_signup_group(api_client, price_grou
 
 
 @pytest.mark.django_db
-def test_web_store_cancellation_already_exists(api_client, price_group):
+def test_web_store_cancellation_already_exists_for_signup_group(
+    api_client, price_group
+):
     signup = price_group.signup
 
     signup_group = SignUpGroupFactory(registration=signup.registration)

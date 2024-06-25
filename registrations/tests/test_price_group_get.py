@@ -66,20 +66,16 @@ def assert_price_group_fields_exist(data):
 
 
 @pytest.mark.parametrize(
-    "user_role,url_type",
+    "user_role",
     [
-        ("superuser", "detail"),
-        ("admin", "detail"),
-        ("registration_admin", "detail"),
-        ("financial_admin", "detail"),
-        ("regular_user", "detail"),
-        ("superuser", "list"),
-        ("admin", "list"),
-        ("registration_admin", "list"),
-        ("financial_admin", "list"),
-        ("regular_user", "list"),
+        "superuser",
+        "admin",
+        "registration_admin",
+        "financial_admin",
+        "regular_user",
     ],
 )
+@pytest.mark.parametrize("url_type", ["detail", "list"])
 @pytest.mark.django_db
 def test_authenticated_user_can_get_price_group_detail_and_list(
     api_client, organization, user_role, url_type

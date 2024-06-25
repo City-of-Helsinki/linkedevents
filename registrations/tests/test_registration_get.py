@@ -145,6 +145,7 @@ def test_admin_can_get_registration_created_by_self(
 
     response = get_detail_and_assert_registration(user_api_client, registration.id)
     assert response.data["is_created_by_current_user"] is True
+    assert_registration_fields_exist(response.data, is_admin_user=True)
 
 
 @pytest.mark.parametrize(
@@ -165,28 +166,18 @@ def test_admin_can_get_registration_not_created_by_self(
     assert_registration_fields_exist(response.data, is_admin_user=True)
 
 
+@pytest.mark.parametrize("user_role", ["admin", "registration_admin"])
 @pytest.mark.django_db
-def test_admin_user_can_see_registration_user_accesses(registration, user_api_client):
-    RegistrationUserAccessFactory(registration=registration)
-    RegistrationUserAccessFactory(registration=registration, email=test_email)
-
-    response = get_detail_and_assert_registration(user_api_client, registration.id)
-    response_registration_user_accesses = response.data["registration_user_accesses"]
-    assert len(response_registration_user_accesses) == 2
-    assert_registration_fields_exist(response.data, is_admin_user=True)
-
-
-@pytest.mark.django_db
-def test_registration_admin_user_can_see_registration_user_accesses(
-    registration, user, user_api_client
+def test_admin_or_registration_admin_can_see_registration_user_accesses(
+    registration, api_client, user_role
 ):
-    user.get_default_organization().registration_admin_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(registration=registration)
     RegistrationUserAccessFactory(registration=registration, email=test_email)
 
-    response = get_detail_and_assert_registration(user_api_client, registration.id)
+    response = get_detail_and_assert_registration(api_client, registration.id)
     response_registration_user_accesses = response.data["registration_user_accesses"]
     assert len(response_registration_user_accesses) == 2
     assert_registration_fields_exist(response.data, is_admin_user=True)
@@ -194,8 +185,7 @@ def test_registration_admin_user_can_see_registration_user_accesses(
 
 @pytest.mark.django_db
 def test_registration_price_groups_in_response(registration, api_client):
-    user = UserFactory()
-    user.registration_admin_organizations.add(registration.publisher)
+    user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
     default_price_group = PriceGroup.objects.filter(publisher=None).first()
@@ -249,8 +239,7 @@ def test_registration_price_groups_in_response(registration, api_client):
 def test_registration_user_access_user_can_see_if_he_has_access(
     registration, api_client
 ):
-    user = UserFactory()
-    user.organization_memberships.add(registration.publisher)
+    user = create_user_by_role("regular_user", registration.publisher)
     api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(
@@ -292,12 +281,12 @@ def test_registration_substitute_user_can_see_if_he_has_access(
     assert_registration_fields_exist(response.data, is_admin_user=True)
 
 
+@pytest.mark.parametrize("user_role", ["financial_admin", "regular_user"])
 @pytest.mark.django_db
-def test_financial_admin_cannot_see_registration_user_accesses(
-    registration, api_client
+def test_not_allowed_user_roles_cannot_see_registration_user_accesses(
+    registration, api_client, user_role
 ):
-    user = UserFactory()
-    user.financial_admin_organizations.add(registration.publisher)
+    user = create_user_by_role(user_role, registration.publisher)
     api_client.force_authenticate(user)
 
     RegistrationUserAccessFactory(registration=registration, email=user.email)
@@ -307,23 +296,9 @@ def test_financial_admin_cannot_see_registration_user_accesses(
 
 
 @pytest.mark.django_db
-def test_regular_user_cannot_see_registration_user_accesses(
-    registration, user, user_api_client
-):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
-
-    RegistrationUserAccessFactory(registration=registration, email=user.email)
-    response = get_detail_and_assert_registration(user_api_client, registration.id)
-
-    assert response.data.get("registration_user_accesses") is None
-
-
-@pytest.mark.django_db
 def test_anonymous_user_can_see_registration(api_client, registration):
-    RegistrationUserAccessFactory(registration=registration)
-
     response = get_detail(api_client, registration.id)
+
     assert response.status_code == status.HTTP_200_OK
     assert_registration_fields_exist(response.data, is_admin_user=False)
 
@@ -407,19 +382,6 @@ def test_get_registration_with_event_and_audience_included(
     response_audience = response.data["event"]["audience"][0]
     assert response_audience["id"] == keyword.id
     assert list(response_audience["name"].values())[0] == keyword.name
-
-
-@pytest.mark.django_db
-def test_registration_non_created_admin_cannot_include_signups(
-    registration, signup, signup2, user2, user_api_client
-):
-    registration.created_by = user2
-    registration.save(update_fields=["created_by"])
-
-    response = get_detail_and_assert_registration(
-        user_api_client, registration.id, include_signups_query
-    )
-    assert response.data["signups"] is None
 
 
 @pytest.mark.django_db
@@ -509,17 +471,22 @@ def test_registration_substitute_user_can_include_signups_when_not_strongly_iden
     assert len(response_signups) == 2
 
 
+@pytest.mark.parametrize("user_role", ["admin", "financial_admin", "regular_user"])
 @pytest.mark.django_db
-def test_regular_user_cannot_include_signups(
-    registration, signup, signup2, user, user_api_client
+def test_not_allowed_user_roles_cannot_include_signups(
+    registration, signup, signup2, api_client, user_role
 ):
-    user.get_default_organization().regular_users.add(user)
-    user.get_default_organization().admin_users.remove(user)
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    if user_role == "admin":
+        registration.created_by = UserFactory()
+        registration.save(update_fields=["created_by"])
+
     response = get_detail_and_assert_registration(
-        user_api_client, registration.id, include_signups_query
+        api_client, registration.id, include_signups_query
     )
-    response_signups = response.data["signups"]
-    assert response_signups is None
+    assert response.data["signups"] is None
 
 
 @pytest.mark.django_db

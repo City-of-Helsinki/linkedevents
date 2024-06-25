@@ -19,6 +19,12 @@ from registrations.tests.factories import (
 from registrations.tests.test_price_group_put import _NEW_DESCRIPTION_EN
 from registrations.tests.utils import create_user_by_role
 
+default_price_group_data = {
+    "description": {
+        "en": "English description",
+    },
+}
+
 # === util methods ===
 
 
@@ -239,10 +245,7 @@ def test_user_of_another_organization_cannot_patch_price_group(
 def test_anonymous_user_cannot_patch_price_group(api_client, organization):
     price_group = PriceGroupFactory(publisher=organization)
 
-    data = {
-        "description": {"en": "Test Price Group"},
-    }
-    response = patch_price_group(api_client, price_group.pk, data)
+    response = patch_price_group(api_client, price_group.pk, default_price_group_data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     price_group.refresh_from_db()
@@ -303,33 +306,32 @@ def test_unknown_apikey_user_cannot_patch_price_group(api_client, organization):
 
     api_client.credentials(apikey="bs")
 
-    data = {
-        "description": {"en": "Test Price Group"},
-    }
-    response = patch_price_group(api_client, price_group.pk, data)
+    response = patch_price_group(api_client, price_group.pk, default_price_group_data)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     price_group.refresh_from_db()
     assert price_group.publisher_id == organization.pk
-    assert price_group.description != data["description"]
+    assert price_group.description != default_price_group_data["description"]
 
 
-@pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
+@pytest.mark.parametrize(
+    "user_role, expected_status_code",
+    [
+        ("superuser", status.HTTP_400_BAD_REQUEST),
+        ("financial_admin", status.HTTP_403_FORBIDDEN),
+    ],
+)
 @pytest.mark.django_db
-def test_cannot_patch_default_price_group(api_client, organization, user_role):
+def test_cannot_patch_default_price_group(
+    api_client, organization, user_role, expected_status_code
+):
     price_group = PriceGroup.objects.filter(publisher=None).first()
 
     user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
-    data = {
-        "description": {"en": "Test Price Group"},
-    }
-    response = patch_price_group(api_client, price_group.pk, data)
-    if user.is_superuser:
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-    else:
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+    response = patch_price_group(api_client, price_group.pk, default_price_group_data)
+    assert response.status_code == expected_status_code
 
 
 @pytest.mark.django_db
@@ -339,10 +341,7 @@ def test_price_group_id_is_audit_logged_on_patch(api_client, organization):
     user = create_user_by_role("superuser", organization)
     api_client.force_authenticate(user)
 
-    data = {
-        "description": {"en": "Test Price Group"},
-    }
-    assert_patch_price_group(api_client, price_group.pk, data)
+    assert_patch_price_group(api_client, price_group.pk, default_price_group_data)
 
     audit_log_entry = AuditLogEntry.objects.first()
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
@@ -381,17 +380,8 @@ def test_can_patch_description_for_different_languages(
     assert getattr(price_group, description_lang_key) == description
 
 
-@pytest.mark.parametrize(
-    "description,lang",
-    [
-        ("", "fi"),
-        (None, "fi"),
-        ("", "sv"),
-        (None, "sv"),
-        ("", "en"),
-        (None, "en"),
-    ],
-)
+@pytest.mark.parametrize("description", ["", None])
+@pytest.mark.parametrize("lang", ["fi", "sv", "en"])
 @pytest.mark.django_db
 def test_cannot_patch_description_with_empty_value(
     api_client, organization, description, lang
