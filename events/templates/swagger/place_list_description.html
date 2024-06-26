@@ -1,0 +1,38 @@
+<h2 id="using-place-endpoint">Using the place endpoint</h2>
+<p>Here, locations for events are listed. Events in each location can be found at the <code>event</code> endpoint using the query parameter <code>location</code>. Most locations use the id format <code>tprek:28473</code>. An easy way to locate service points is to browse our <a href="https://servicemap.hel.fi">Service Map</a>, which uses the same location ids, e.g. <code>servicemap.hel.fi/unit/28473</code>. Default ordering is decreasing order by the number of events found.</p>
+
+<h4 id="place-text">Place text</h4>
+<p>To find places that contain a specific string, use the query parameter <code>text</code> or <code>filter</code>. Both <code>text</code> and <code>filter</code> work the same way, but the latter can be used, for example, with typeahead.js.</p></p>
+<p>Example:</p>
+<pre><code>place/?text=tuomiokirkko</code></pre>
+
+<h4 id="district">District</h4>
+<p>To restrict the retrieved places to city district(s), use the query parameter <code>division</code>, separating values by commas if you wish to query for several divisions.</p>
+<p>City of Helsinki neighborhoods (kaupunginosa), districts (peruspiiri) and subdistricts (osa-alue) are supported. <a href="http://kartta.hel.fi/?setlanguage=en&e=25498873&n=6674660&r=16&w=***&l=Karttasarja%2Ckaupunginosat%2Cosaalueet_WFS%2Cperuspiiri_WFS&o=100%2C100%2C100%2C100&swtab=kaikki"> Check the divisions on the Helsinki map service.</a></p>
+<p>You may query either by specific OCD division type <code>peruspiiri:malmi</code>, or by division name <code>malmi</code>. The latter query checks all divisions with the name, regardless of division type.</p>
+<p>Example:</p>
+<pre><code>place/?division=malmi</code></pre>
+
+<h4 id="place-source">Place source</h4>
+<p>Will restrict places to a specific data source.</p>
+<p>Example:</p>
+<pre><code>place/?data_source=tprek</code></pre>
+
+<h4 id="show-places-with-upcoming-events">Show only places with the upcoming events</h4>
+<p>To show only the places which are used in the upcoming events supply the <code>has_upcoming_events</code> query parameter.</p>
+<p>Example:</p>
+<pre><code>place/?has_upcoming_events=true</code></pre>
+
+<h4 id="showing-all-places">Showing all places</h4>
+<p>By default, only those locations which have listed events are displayed. You may display locations with zero <code>n_events</code> with the query parameter <code>show_all_places</code>.</p>
+<p>Example:</p>
+
+<h4 id="showing-deleted-places">Showing deleted places</h4>
+<p>By default, deleted places are not displayed. You may also display deleted places with the query parameter <code>show_deleted</code>.</p>
+<p>For example:</p>
+<pre><code>place/?show_deleted=true</code></pre>
+
+<h4 id="ordering">Ordering</h4>
+<p>Default ordering is decreasing order by the number of events found. You may also order results by <code>name</code>, <code>street_address</code> or <code>postal_code</code>.</p>
+<p>For example:</p>
+<pre><code>place/?sort=name</code></pre>

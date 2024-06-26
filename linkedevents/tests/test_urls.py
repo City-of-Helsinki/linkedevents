@@ -17,3 +17,10 @@ def test_readiness(client, settings):
     assert data["packageVersion"] == __version__
     assert data["commitHash"] == settings.COMMIT_HASH
     assert "buildTime" in data
+
+
+def test_swagger_ui(client):
+    response = client.get("/docs/swagger-ui/")
+
+    assert response.status_code == 200
+    assert "Linked Events information API" in str(response.content)

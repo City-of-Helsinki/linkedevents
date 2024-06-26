@@ -2,7 +2,7 @@ from django_orghierarchy.models import Organization
 from munigeo.api import GeoModelSerializer
 from rest_framework import serializers
 
-from events.api import DivisionSerializer, EnumChoiceField
+from events.fields import EnumChoiceField
 from events.models import (
     DataSource,
     Event,
@@ -12,6 +12,7 @@ from events.models import (
     Place,
     PUBLICATION_STATUSES,
 )
+from events.serializers import DivisionSerializer
 from linkedevents.serializers import TranslatedModelSerializer
 from registrations.models import Registration, SignUp
 

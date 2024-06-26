@@ -2,6 +2,7 @@ import copy
 from collections import OrderedDict
 
 from django.urls import NoReverseMatch
+from drf_spectacular.views import SpectacularSwaggerView
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.routers import APIRootView, DefaultRouter, SimpleRouter
@@ -73,3 +74,7 @@ class LinkedEventsAPIRouter(DefaultRouter):
 
         for view in all_views:
             self._register_view(view)
+
+
+class CustomSpectacularSwaggerView(SpectacularSwaggerView):
+    template_name = "swagger_ui.html"
