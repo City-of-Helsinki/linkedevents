@@ -1854,3 +1854,55 @@ def test_web_store_cancellation_already_exists(api_client, price_group):
     assert SignUpPaymentCancellation.objects.count() == 1
 
     assert len(mail.outbox) == 0
+
+
+@freeze_time("2024-06-26 11:00:00+03:00")
+@pytest.mark.parametrize("user_role", ["regular_user", "admin"])
+@pytest.mark.django_db
+def test_regular_user_or_non_created_admin_cannot_delete_signup_group_if_event_has_started(
+    api_client, organization, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(
+        registration__event__publisher=organization,
+        registration__event__start_time=localtime() - timedelta(hours=1),
+        created_by=user,
+    )
+
+    response = delete_signup_group(api_client, signup_group.pk)
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.data["detail"] == (
+        "Only an admin can delete a signup after an event has started."
+    )
+
+
+@freeze_time("2024-06-26 11:00:00+03:00")
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "admin", "regular_user"]
+)
+@pytest.mark.django_db
+def test_allowed_user_roles_can_delete_signup_group_if_event_has_started(
+    api_client, organization, user_role
+):
+    user = create_user_by_role(user_role, organization)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(
+        registration__event__publisher=organization,
+        registration__event__start_time=localtime() - timedelta(hours=1),
+        registration__created_by=user if user_role == "admin" else None,
+    )
+
+    if user_role == "regular_user":
+        user.email = hel_email
+        user.save(update_fields=["email"])
+
+        RegistrationUserAccessFactory(
+            registration=signup_group.registration,
+            email=user.email,
+            is_substitute_user=True,
+        )
+
+    assert_delete_signup_group(api_client, signup_group.pk)

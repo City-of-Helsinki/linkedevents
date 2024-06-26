@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.http import HttpResponse
 from django.utils import translation
+from django.utils.timezone import localtime
 from django.utils.translation import gettext as _
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
@@ -116,13 +117,34 @@ class SignUpAccessCodeMixin:
 class SignUpPaymentRefundMixin:
     @transaction.atomic
     def perform_destroy(self, instance):
-        if getattr(instance, "payment_refund", None) or getattr(
-            instance, "payment_cancellation", None
+        if settings.WEB_STORE_INTEGRATION_ENABLED and (
+            getattr(instance, "payment_refund", None)
+            or getattr(instance, "payment_cancellation", None)
         ):
             raise ConflictException(
                 _(
-                    "Refund or cancellation already exists. Please wait for the process to complete."
+                    "Refund or cancellation already exists. Please wait for the process "
+                    "to complete."
                 )
+            )
+
+        if (
+            not (
+                self.request.user.is_superuser
+                or self.request.user.is_registration_admin_of(instance.publisher)
+                or (
+                    self.request.user.is_admin_of(instance.publisher)
+                    and instance.registration.created_by_id == self.request.user.id
+                )
+                or self.request.user.is_substitute_user_of(
+                    instance.registration.registration_user_accesses
+                )
+            )
+            and instance.registration.event.start_time
+            and localtime() > instance.registration.event.start_time
+        ):
+            raise ConflictException(
+                _("Only an admin can delete a signup after an event has started.")
             )
 
         try:
