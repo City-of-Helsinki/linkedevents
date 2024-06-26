@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.7.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.7.0...linkedevents-v3.7.1) (2024-06-26)
+
+
+### Bug Fixes
+
+* Changes to Enkora place_map and error logging ([bb4328d](https://github.com/City-of-Helsinki/linkedevents/commit/bb4328d9eff713417cd7406de0d9dab32c13e744))
+* Handle uncaught expection while processing Enkora event timestamps ([430522b](https://github.com/City-of-Helsinki/linkedevents/commit/430522b328bd7bcf06526b84ef6fad141d28f93d))
+* **registration:** Allow large remaining capacities ([4a841e3](https://github.com/City-of-Helsinki/linkedevents/commit/4a841e399c8ff9a95c38d58174b0b71f10c05b03))
+
 ## [3.7.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.6.0...linkedevents-v3.7.0) (2024-06-24)
 
 
