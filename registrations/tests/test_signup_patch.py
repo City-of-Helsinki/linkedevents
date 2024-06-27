@@ -356,6 +356,37 @@ def test_registration_user_access_who_created_signup_can_patch_presence_status(
     assert signup.presence_status == SignUp.PresenceStatus.PRESENT
 
 
+@pytest.mark.django_db
+def test_can_patch_presence_status_with_registration_price_groups(
+    api_client, registration
+):
+    user = UserFactory()
+    api_client.force_authenticate(user)
+
+    RegistrationPriceGroupFactory(
+        registration=registration, price_group__publisher=registration.publisher
+    )
+
+    RegistrationUserAccessFactory(registration=registration, email=user.email)
+
+    signup = SignUpFactory(registration=registration, created_by=user)
+    assert signup.presence_status == SignUp.PresenceStatus.NOT_PRESENT
+
+    signup_data = {
+        "presence_status": SignUp.PresenceStatus.PRESENT,
+    }
+    with patch(
+        "helevents.models.UserModelPermissionMixin.token_amr_claim",
+        new_callable=PropertyMock,
+        return_value=["suomi_fi"],
+    ) as mocked:
+        assert_patch_signup(api_client, signup.id, signup_data)
+        assert mocked.called is True
+
+    signup.refresh_from_db()
+    assert signup.presence_status == SignUp.PresenceStatus.PRESENT
+
+
 @pytest.mark.parametrize(
     "identification_method",
     [
@@ -659,4 +690,33 @@ def test_cannot_patch_signup_with_another_signups_price_group(
     )
     assert response.data["price_group"][0] == (
         "Price group is already assigned to another participant."
+    )
+
+
+@pytest.mark.parametrize(
+    "user_role", ["superuser", "registration_admin", "regular_user"]
+)
+@pytest.mark.parametrize("price_group_data", [None, {}])
+@pytest.mark.django_db
+def test_patch_signup_price_group_is_required(
+    api_client, registration, user_role, price_group_data
+):
+    user = create_user_by_role(user_role, registration.publisher)
+    api_client.force_authenticate(user)
+
+    RegistrationPriceGroupFactory(
+        registration=registration, price_group__publisher=registration.publisher
+    )
+
+    signup = SignUpFactory(
+        registration=registration,
+        created_by=user if user_role == "regular_user" else None,
+    )
+
+    signup_data = {
+        "price_group": price_group_data,
+    }
+    response = patch_signup(api_client, signup.id, signup_data)
+    assert response.data["price_group"][0] == (
+        "Price group selection is mandatory for this registration."
     )

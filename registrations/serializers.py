@@ -257,12 +257,10 @@ class SignUpBaseSerializer(CreatedModifiedBaseSerializer):
         ) + CreatedModifiedBaseSerializer.Meta.fields
 
 
-class SignUpPriceGroupSerializer(
-    TranslatedModelSerializer, serializers.ModelSerializer
-):
+class SignUpPriceGroupSerializer(TranslatedModelSerializer):
     id = serializers.IntegerField(required=False)
     registration_price_group = serializers.PrimaryKeyRelatedField(
-        queryset=RegistrationPriceGroup.objects.all(),
+        queryset=RegistrationPriceGroup.objects.all()
     )
     price = serializers.DecimalField(
         required=False, read_only=True, max_digits=19, decimal_places=2
@@ -283,17 +281,16 @@ class SignUpPriceGroupSerializer(
     def validate(self, data):
         validated_data = super().validate(data)
 
-        for lang_field in ("description_fi", "description_sv", "description_en"):
-            validated_data[lang_field] = getattr(
-                validated_data["registration_price_group"].price_group, lang_field, None
-            )
+        if registration_price_group := validated_data.get("registration_price_group"):
+            for lang_field in ("description_fi", "description_sv", "description_en"):
+                validated_data[lang_field] = getattr(
+                    registration_price_group.price_group, lang_field, None
+                )
 
-        for field in ("price", "price_without_vat", "vat", "vat_percentage"):
-            validated_data[field] = getattr(
-                validated_data["registration_price_group"], field
-            )
+            for field in ("price", "price_without_vat", "vat", "vat_percentage"):
+                validated_data[field] = getattr(registration_price_group, field)
 
-        return data
+        return validated_data
 
     class Meta:
         model = SignUpPriceGroup
@@ -393,7 +390,8 @@ class SignUpSerializer(
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             fields["price_group"] = SignUpPriceGroupSerializer(
-                required=False, allow_null=True
+                required=False,
+                allow_null=True,
             )
 
         return fields
@@ -588,7 +586,11 @@ class SignUpSerializer(
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             price_group = validated_data.get("price_group") or {}
-            if not price_group and registration.registration_price_groups.exists():
+            if (
+                not price_group
+                and registration.registration_price_groups.exists()
+                and (not self.partial or "price_group" in data.keys())
+            ):
                 errors["price_group"] = _(
                     "Price group selection is mandatory for this registration."
                 )
