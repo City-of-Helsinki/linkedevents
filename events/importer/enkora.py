@@ -129,14 +129,14 @@ class EnkoraImporter(Importer):
         99: {
             "enkora-name": "Ryhmäliikunta",
             "keywords": {SPORT_GROUP_EXERCISE, COURSES},
-            "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2023/09/"
-            "90b78d1a-jpg-1_senioriliikuntaa_2016_kuva_aki_rask_8.jpg",
+            "image": "https://liikunta.hel.fi/shared-assets/images/"
+            "event_placeholder_D.jpg",
         },
         100: {
             "enkora-name": "Uimakoulut",
             "keywords": {SPORT_SWIMMING_CLASSES, SPORT_SWIMMING_SCHOOL, COURSES},
-            "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2023/08/"
-            "ff500094-uimakoulu_pirkkolassa_2016_kuva_aki_rask_7.jpg-muokattu.jpg",
+            "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2024/06/"
+            "a1ed6f25-enkora-alapoista-uimakoulut.jpg",
         },
         101: {
             "enkora-name": "EasySport",
@@ -146,8 +146,8 @@ class EnkoraImporter(Importer):
         102: {
             "enkora-name": "Vesiliikunta",
             "keywords": {"yso:p6433", COURSES},
-            "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2023/08/"
-            "10440c10-medium_vesiliikunta_pirkkolan_uimahalli_2022_kuva_maarit_hohteri_160.jpg",
+            "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2024/06/"
+            "6fac6902-enkora-alapoista-vesiliikunta.jpg",
         },
         125: {
             "enkora-name": "EasySport, kausi",
@@ -157,8 +157,8 @@ class EnkoraImporter(Importer):
         132: {
             "enkora-name": "Kuntosalikurssit",
             "keywords": {SPORT_GYM, COURSES},
-            "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2023/01/"
-            "db2c5be9-soveltava_liikunta_kuntosali_2021_kuva_maarit_hohteri_2-2.jpg-muokattu.jpg",
+            "image": "https://liikunta2.content.api.hel.fi/uploads/sites/9/2024/06/"
+            "4826efdc-enkora-alapoista-kuntosalikurssit.jpg",
         },
         133: {
             "enkora-name": "Sovellettu liikunta",
@@ -1201,31 +1201,27 @@ class EnkoraImporter(Importer):
 
     @staticmethod
     def _is_course_expired(course: dict, now_is: datetime) -> bool:
-        if "public_visibility_end" not in course:
-            raise ValueError(
-                "Expected to have 'public_visibility_end' field in course with ID {}! Missing.".format(
+        """
+        Checks based on Enkora course public visiblity dates that a course isn't expired.
+        :param: course, dict containing data for a course
+        :param: now_is, datetime.datetime current
+        :return: bool, true if now isn't between public_visibility_start and public_visibility_end
+        """
+        if not course["public_visibility_start"] or not course["public_visibility_end"]:
+            logger.warning(
+                "Course with ID {} lacks public_visibility_start or public_visibility_end information.".format(
                     course["reservation_event_group_id"]
                 )
             )
+            return True  # True, indicating that course shouldn't be processed before source data is valid
 
-        visibility_expiry_timestamp = None
-        if course["public_visibility_end"]:
-            # This is the primary attempt: course has a proper public visibility end date
-            visibility_expiry_timestamp = course["public_visibility_end"]
-        elif course["public_reservation_end"]:
-            # Secondary attempt: when public reservation ends
-            visibility_expiry_timestamp = course["public_reservation_end"]
-        elif course["first_event_date"]:
-            # Tertiary attempt: when course begins, we'll assume it isn't visible anymore
-            visibility_expiry_timestamp = course["first_event_date"]
-        else:
-            raise ValueError(
-                "Expected to have something for expiry date in course data for course with ID {}! Missing.".format(
-                    course["reservation_event_group_id"]
-                )
-            )
+        is_expired = not (
+            course["public_visibility_start"]
+            <= now_is
+            <= course["public_visibility_end"]
+        )
 
-        return visibility_expiry_timestamp < now_is
+        return is_expired
 
     @staticmethod
     def generate_documentation_md() -> str:  # noqa: C901
