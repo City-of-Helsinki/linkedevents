@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.8.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.7.1...linkedevents-v3.8.0) (2024-06-28)
+
+
+### Features
+
+* **registration:** Only admins can delete signup after event start_time ([9d2cdcd](https://github.com/City-of-Helsinki/linkedevents/commit/9d2cdcd39e87eb343b32422f9abeba74fc558b4b))
+
+
+### Bug Fixes
+
+* Allow to patch presence_status regardless of price groups ([0d7a4c0](https://github.com/City-of-Helsinki/linkedevents/commit/0d7a4c02a70563acf04d05d5474edd3e6cf993bb))
+* Enkora course expiry check and service image urls ([4155efe](https://github.com/City-of-Helsinki/linkedevents/commit/4155efeabacf236ed9001cb78c5ca61c44610312))
+
 ## [3.7.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.7.0...linkedevents-v3.7.1) (2024-06-26)
 
 
