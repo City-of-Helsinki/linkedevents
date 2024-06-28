@@ -160,6 +160,8 @@ def get_webhook_data(
 
 
 def post_webhook(api_client, data: dict, webhook_type: str, action_endpoint: str):
+    api_client.credentials(HTTP_WEBHOOK_API_KEY=settings.WEB_STORE_WEBHOOK_API_KEY)
+
     url = reverse(f"{webhook_type}_webhooks-{action_endpoint}")
     response = api_client.post(url, data, format="json")
 
@@ -291,15 +293,42 @@ def assert_payment_or_refund_id_audit_logged(
     "http_method", ["get", "put", "patch", "delete", "options", "head"]
 )
 @pytest.mark.django_db
-def test_payment_webhook_method_not_allowed(
-    api_client, data_source, view_name, http_method
-):
+def test_webhook_method_not_allowed(api_client, view_name, http_method):
     url = reverse(view_name)
 
-    api_client.credentials(apikey=data_source.api_key)
+    api_client.credentials(HTTP_WEBHOOK_API_KEY=settings.WEB_STORE_WEBHOOK_API_KEY)
 
     response = getattr(api_client, http_method)(url)
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+    assert len(mail.outbox) == 0
+
+    assert AuditLogEntry.objects.count() == 0
+
+
+@pytest.mark.parametrize(
+    "credentials",
+    [
+        {},
+        {"HTTP_WEBHOOK_API_KEY": "wrong"},
+    ],
+)
+@pytest.mark.parametrize(
+    "view_name",
+    [
+        "payment_webhooks-payment",
+        "payment_webhooks-order",
+        "refund_webhooks-refund",
+    ],
+)
+@pytest.mark.django_db
+def test_webhook_unauthorized(api_client, credentials, view_name):
+    api_client.credentials(**credentials)
+
+    url = reverse(view_name)
+
+    response = api_client.post(url, {}, format="json")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     assert len(mail.outbox) == 0
 
