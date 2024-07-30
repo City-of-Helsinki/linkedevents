@@ -197,6 +197,70 @@ def test_get_event_detail_check_fields_exist(api_client, event):
     assert_event_fields_exist(response.data)
 
 
+@pytest.mark.xfail(reason="_terms_to_regex doesn't work with OR operator")
+@pytest.mark.django_db
+def test_get_event_list_returns_events_from_cache_with_local_ongoing_or_set(
+    django_cache, api_client
+):
+    event1 = EventFactory()
+    event2 = EventFactory()
+    EventFactory.create_batch(10)
+    django_cache.set("local_ids", {event1.id: "keyword", event2.id: "avainsana"})
+
+    get_list_and_assert_events("local_ongoing_OR_set1=keyword", [event1])
+
+
+@pytest.mark.xfail(reason="_terms_to_regex doesn't work with OR operator")
+@pytest.mark.django_db
+def test_get_event_list_returns_events_from_cache_with_internet_ongoing_or_set(
+    django_cache, api_client
+):
+    event1 = EventFactory()
+    event2 = EventFactory()
+    EventFactory.create_batch(10)
+    django_cache.set("internet_ids", {event1.id: "keyword", event2.id: "avainsana"})
+
+    get_list_and_assert_events("internet_ongoing_OR_set1=keyword", [event1])
+
+
+@pytest.mark.xfail(reason="_terms_to_regex doesn't work with OR operator")
+@pytest.mark.django_db
+def test_get_event_list_returns_events_from_cache_with_all_ongoing_or_set(
+    django_cache, api_client
+):
+    event1 = EventFactory()
+    event2 = EventFactory()
+    event3 = EventFactory()
+    event4 = EventFactory()
+    EventFactory.create_batch(10)
+    django_cache.set("local_ids", {event1.id: "keyword", event2.id: "avainsana"})
+    django_cache.set("internet_ids", {event3.id: "keyword", event4.id: "avainsana"})
+
+    get_list_and_assert_events("all_ongoing_OR_set1=keyword", [event1, event3])
+
+
+@pytest.mark.xfail(reason="_terms_to_regex doesn't work with OR operator")
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "query",
+    [
+        "local_ongoing_OR_set1=xxxxxxxxx",
+        "all_ongoing_OR_set1=xxxxxxxxx",
+        "internet_ongoing_OR_set1=xxxxxxxxx",
+    ],
+)
+def test_get_event_list_returns_empty_list_on_invalid_ongoing_or_set_value(
+    django_cache, api_client, query
+):
+    event1 = EventFactory()
+    event2 = EventFactory()
+    EventFactory.create_batch(10)
+    django_cache.set("local_ids", {event1.id: "keyword", event2.id: "keyword2"})
+    django_cache.set("internet_ids", {event1.id: "keyword", event2.id: "keyword2"})
+
+    get_list_and_assert_events(query, [])
+
+
 @pytest.mark.django_db
 def test_get_unknown_event_detail_check_404(api_client):
     response = api_client.get(reverse("event-detail", kwargs={"pk": "möö"}))

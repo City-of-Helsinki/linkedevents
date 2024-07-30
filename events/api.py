@@ -2946,7 +2946,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         )
         queryset = queryset.filter(Exists(kw_qs) | Exists(audience_qs))
 
-    if "local_ongoing_OR_set" in "".join(params):
+    if "local_ongoing_OR_set1" in "".join(params):
         count = 1
         all_ids = []
         while f"local_ongoing_OR_set{count}" in params:
@@ -2961,10 +2961,10 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                     }
                 )
             count += 1
-        ids = set.intersection(*all_ids)
+        ids = set.intersection(*all_ids) if all_ids else set()
         queryset = queryset.filter(id__in=ids)
 
-    if "internet_ongoing_OR_set" in "".join(params):
+    if "internet_ongoing_OR_set1" in "".join(params):
         count = 1
         all_ids = []
         while f"internet_ongoing_OR_set{count}" in params:
@@ -2979,10 +2979,10 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                     }
                 )
             count += 1
-        ids = set.intersection(*all_ids)
+        ids = set.intersection(*all_ids) if all_ids else set()
         queryset = queryset.filter(id__in=ids)
 
-    if "all_ongoing_OR_set" in "".join(params):
+    if "all_ongoing_OR_set1" in "".join(params):
         count = 1
         all_ids = []
         while f"all_ongoing_OR_set{count}" in params:
@@ -2998,7 +2998,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
                     {k for k, v in cached_ids.items() if rc.search(v, concurrent=True)}
                 )
             count += 1
-        ids = set.intersection(*all_ids)
+        ids = set.intersection(*all_ids) if all_ids else set()
         queryset = queryset.filter(id__in=ids)
 
     if "keyword_OR_set" in "".join(params):
