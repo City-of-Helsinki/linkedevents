@@ -119,7 +119,6 @@ def other_data_source():
     return DataSource.objects.create(id=OTHER_DATA_SOURCE_ID, api_key="test_api_key2")
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def organization_class():
     return OrganizationClass.objects.create(
@@ -127,7 +126,6 @@ def organization_class():
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def organization(data_source, user):
     """Organization with a single admin user (user)."""
@@ -142,7 +140,6 @@ def organization(data_source, user):
     return org
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def organization2(other_data_source, user2):
     """Organization with a single admin user (user2)."""
@@ -157,7 +154,6 @@ def organization2(other_data_source, user2):
     return org
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def organization3(other_data_source, user2):
     """Organization with a single admin user (user2)."""
