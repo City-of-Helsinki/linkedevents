@@ -100,13 +100,11 @@ def kw_name_set_2():
     return "known_keywordset"
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def offer(event2):
     return Offer.objects.create(event=event2, is_free=True)
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_minimal_event_dict(make_keyword_id):
     def _make_minimal_event_dict(data_source, organization, location_id):
@@ -140,13 +138,11 @@ def make_minimal_event_dict(make_keyword_id):
     return _make_minimal_event_dict
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def minimal_event_dict(data_source, organization, location_id, make_minimal_event_dict):
     return make_minimal_event_dict(data_source, organization, location_id)
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_minimal_event_dict_class(request, make_minimal_event_dict):
     def _make_minimal_event_dict(self, *args):
@@ -209,7 +205,6 @@ def administrative_division2(administrative_division_type):
     return division
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def place_dict(data_source, organization):
     return {
@@ -229,7 +224,6 @@ def place_dict(data_source, organization):
     }
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def place(data_source, organization, administrative_division):
     return Place.objects.create(
@@ -241,7 +235,6 @@ def place(data_source, organization, administrative_division):
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def make_event(data_source, organization, place, user):
     def _make_event(origin_id, start_time=None, end_time=None):
@@ -268,7 +261,6 @@ def make_event(data_source, organization, place, user):
     return _make_event
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def event(data_source, organization, place, user):
     return Event.objects.create(
@@ -285,7 +277,6 @@ def event(data_source, organization, place, user):
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def past_event(data_source, organization, place, user):
     return Event.objects.create(
@@ -302,7 +293,6 @@ def past_event(data_source, organization, place, user):
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def place2(other_data_source, organization2):
     return Place.objects.create(
@@ -324,7 +314,6 @@ def place3(data_source, organization):
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def event2(other_data_source, organization2, place2, user2, keyword):
     return Event.objects.create(
@@ -373,7 +362,6 @@ def event4(place3, user):
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def draft_event(place, user):
     return Event.objects.create(
@@ -388,14 +376,12 @@ def draft_event(place, user):
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def location_id(place):
     obj_id = reverse(PlaceSerializer.view_name, kwargs={"pk": place.id})
     return obj_id
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def make_location_id():
     def _make_location_id(place):
@@ -405,7 +391,6 @@ def make_location_id():
     return _make_location_id
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def keyword_dict(data_source, organization):
     return {
@@ -419,7 +404,6 @@ def keyword_dict(data_source, organization):
     }
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_image():
     def _make_image(data_source, organization, image_name, image_url):
@@ -433,7 +417,6 @@ def make_image():
     return _make_image
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_keyword():
     def _make_keyword(data_source, organization, kw_name):
@@ -465,43 +448,36 @@ def make_keyword():
     return _make_keyword
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def image(data_source, organization, image_name, image_url, make_image):
     return make_image(data_source, organization, image_name, image_url)
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def image2(data_source, organization, image_name_2, image_url_2, make_image):
     return make_image(data_source, organization, image_name_2, image_url_2)
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def image3(data_source, organization, image_name_3, image_url_3, make_image):
     return make_image(data_source, organization, image_name_3, image_url_3)
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def keyword(data_source, organization, kw_name, make_keyword):
     return make_keyword(data_source, organization, kw_name)
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def keyword2(data_source, organization, kw_name_2, make_keyword):
     return make_keyword(data_source, organization, kw_name_2)
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def keyword3(data_source, organization, kw_name_3, make_keyword):
     return make_keyword(data_source, organization, kw_name_3)
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_keyword_id(make_keyword):
     def _make_keyword_id(data_source, organization, kw_name):
@@ -512,13 +488,11 @@ def make_keyword_id(make_keyword):
     return _make_keyword_id
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def keyword_id(data_source, organization, kw_name, make_keyword_id):
     return make_keyword_id(data_source, organization, kw_name)
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_keyword_set():
     def _make_keyword_set(data_source, organization, kw_set_name):
@@ -532,7 +506,6 @@ def make_keyword_set():
     return _make_keyword_set
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def keyword_set_dict(data_source, organization):
     return {
@@ -547,7 +520,6 @@ def keyword_set_dict(data_source, organization):
     }
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def keyword_set(
     make_keyword_set, data_source, keyword, keyword2, organization, kw_name_set
@@ -557,7 +529,6 @@ def keyword_set(
     return kw_set
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def keyword_set2(
     make_keyword_set, other_data_source, keyword3, organization, kw_name_set_2
@@ -567,7 +538,6 @@ def keyword_set2(
     return kw_set
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def languages():
     lang_objs = [
@@ -580,13 +550,11 @@ def languages():
     return lang_objs
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def keywordlabel(kw_name, languages):
     return KeywordLabel.objects.create(name=kw_name, language=languages[0])
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def languages_class(request):
     lang_objs = [
@@ -600,7 +568,6 @@ def language_id(language):
     return obj_id
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_complex_event_dict(make_keyword_id):
     def _make_complex_event_dict(data_source, organization, location_id, languages):
@@ -661,7 +628,6 @@ def make_complex_event_dict(make_keyword_id):
     return _make_complex_event_dict
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def complex_event_dict(
     data_source, organization, location_id, languages, make_complex_event_dict
@@ -669,7 +635,6 @@ def complex_event_dict(
     return make_complex_event_dict(data_source, organization, location_id, languages)
 
 
-@pytest.mark.django_db
 @pytest.fixture(scope="class")
 def make_complex_event_dict_class(request, make_complex_event_dict):
     def _make_complex_event_dict(self, *args):
@@ -708,7 +673,6 @@ def all_api_get_list(request, event, api_client):
     return f
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def registration(event, user):
     return Registration.objects.create(
@@ -722,7 +686,6 @@ def registration(event, user):
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def registration2(event2, user2):
     return Registration.objects.create(
@@ -736,7 +699,6 @@ def registration2(event2, user2):
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def registration3(event3, user):
     return Registration.objects.create(
@@ -747,7 +709,6 @@ def registration3(event3, user):
     )
 
 
-@pytest.mark.django_db
 @pytest.fixture
 def registration4(event4, user):
     return Registration.objects.create(
