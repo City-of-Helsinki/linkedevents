@@ -197,7 +197,6 @@ def test_get_event_detail_check_fields_exist(api_client, event):
     assert_event_fields_exist(response.data)
 
 
-@pytest.mark.xfail(reason="_terms_to_regex doesn't work with OR operator")
 @pytest.mark.django_db
 def test_get_event_list_returns_events_from_cache_with_local_ongoing_or_set(
     django_cache, api_client
@@ -210,7 +209,6 @@ def test_get_event_list_returns_events_from_cache_with_local_ongoing_or_set(
     get_list_and_assert_events("local_ongoing_OR_set1=keyword", [event1])
 
 
-@pytest.mark.xfail(reason="_terms_to_regex doesn't work with OR operator")
 @pytest.mark.django_db
 def test_get_event_list_returns_events_from_cache_with_internet_ongoing_or_set(
     django_cache, api_client
@@ -223,7 +221,6 @@ def test_get_event_list_returns_events_from_cache_with_internet_ongoing_or_set(
     get_list_and_assert_events("internet_ongoing_OR_set1=keyword", [event1])
 
 
-@pytest.mark.xfail(reason="_terms_to_regex doesn't work with OR operator")
 @pytest.mark.django_db
 def test_get_event_list_returns_events_from_cache_with_all_ongoing_or_set(
     django_cache, api_client
@@ -239,7 +236,6 @@ def test_get_event_list_returns_events_from_cache_with_all_ongoing_or_set(
     get_list_and_assert_events("all_ongoing_OR_set1=keyword", [event1, event3])
 
 
-@pytest.mark.xfail(reason="_terms_to_regex doesn't work with OR operator")
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "query",
