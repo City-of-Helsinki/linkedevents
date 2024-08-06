@@ -402,18 +402,13 @@ class TestImageAPI(APITestCase):
     "val,operator,expected_regex",
     [
         ("1234567", "AND", r"(\b(1234567){e<1})"),
-        pytest.param("1234567", "OR", r"(\b(1234567){e<1})", marks=pytest.mark.xfail),
+        ("1234567", "OR", r"(\b(1234567){e<1})"),
         # >=8 chars
         ("12345678", "AND", r"(\b(12345678){e<2})"),
-        pytest.param("12345678", "OR", r"(\b(12345678){e<2})", marks=pytest.mark.xfail),
+        ("12345678", "OR", r"(\b(12345678){e<2})"),
         # Multiple terms, different lengths
         ("1234567,12345678", "AND", r"(\b(1234567){e<1})(\b(12345678){e<2})"),
-        pytest.param(
-            "1234567,12345678",
-            "OR",
-            r"(\b(1234567){e<1})|(\b(12345678){e<2})",
-            marks=pytest.mark.xfail,
-        ),
+        ("1234567,12345678", "OR", r"(\b(1234567){e<1})|(\b(12345678){e<2})"),
         # Sanitization
         ("(foo", "AND", r"(\b(\(foo){e<1})"),
         ("(.*)", "AND", r"(\b(\(\.\*\)){e<1})"),

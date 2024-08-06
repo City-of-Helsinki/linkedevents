@@ -2732,7 +2732,7 @@ def _terms_to_regex(terms, operator):
             e = 2
         escaped_val = regex.escape(val)
         expr = r"(\b" + f"({escaped_val}){{e<{e}}})"
-        valexprs.extend(expr)
+        valexprs.append(expr)
     if operator == "AND":
         regex_join = ""
     elif operator == "OR":
