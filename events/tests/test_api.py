@@ -416,3 +416,8 @@ class TestImageAPI(APITestCase):
 )
 def test__terms_to_regex(val, operator, expected_regex):
     assert _terms_to_regex(val, operator).pattern == expected_regex
+
+
+def test__terms_to_regex_raises_value_error_on_invalid_operator():
+    with pytest.raises(ValueError):
+        _terms_to_regex("1234567", "FOO")
