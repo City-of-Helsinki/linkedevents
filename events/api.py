@@ -11,7 +11,7 @@ from datetime import timedelta
 from datetime import timezone as datetime_timezone
 from functools import partial, reduce
 from operator import or_
-from typing import Iterable, Optional
+from typing import Iterable, Literal, Optional
 
 import django.forms
 import django_filters
@@ -2717,12 +2717,19 @@ def parse_duration_string(duration):
     return int(val) * mul
 
 
-def _terms_to_regex(terms, operator):
+def _terms_to_regex(terms, operator: Literal["AND", "OR"]):
     """
     Create a compiled regex from of the provided terms of the form
     r'(\b(term1){e<2}')|(\b(term2){e<2})" This would match a string
     with terms aligned in any order allowing two edits per term.
     """
+    if operator == "AND":
+        regex_join = ""
+    elif operator == "OR":
+        regex_join = "|"
+    else:
+        raise ValueError("Invalid operator")
+
     vals = terms.split(",")
     valexprs = []
     for val in vals:
@@ -2733,10 +2740,6 @@ def _terms_to_regex(terms, operator):
         escaped_val = regex.escape(val)
         expr = r"(\b" + f"({escaped_val}){{e<{e}}})"
         valexprs.append(expr)
-    if operator == "AND":
-        regex_join = ""
-    elif operator == "OR":
-        regex_join = "|"
     expr = f"{regex_join.join(valexprs)}"
     return regex.compile(expr, regex.IGNORECASE)
 
