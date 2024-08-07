@@ -28,6 +28,7 @@ from events.api import (
 from events.models import Event
 from events.permissions import OrganizationUserEditPermission
 from linkedevents.registry import register_view
+from registrations.auth import WebStoreWebhookAuthentication
 from registrations.exceptions import (
     ConflictException,
     PriceGroupValidationError,
@@ -597,7 +598,8 @@ if settings.WEB_STORE_INTEGRATION_ENABLED:
 class WebStoreWebhookBaseViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
     serializer_class = None
     http_method_names = ["post"]
-    permission_classes = []
+    authentication_classes = [WebStoreWebhookAuthentication]
+    permission_classes = [IsAuthenticated]
 
 
 class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
