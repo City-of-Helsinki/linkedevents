@@ -30,7 +30,7 @@ click==8.1.7
     #   pip-tools
 coverage[toml]==7.5.1
     # via pytest-cov
-django==4.2.13
+django==4.2.15
     # via
     #   -c requirements.txt
     #   django-anymail
