@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.8.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.7.1...linkedevents-v3.8.0) (2024-08-09)
+
+
+### Features
+
+* **registration:** Only admins can delete signup after event start_time ([9d2cdcd](https://github.com/City-of-Helsinki/linkedevents/commit/9d2cdcd39e87eb343b32422f9abeba74fc558b4b))
+
+
+### Bug Fixes
+
+* Allow to patch presence_status regardless of price groups ([0d7a4c0](https://github.com/City-of-Helsinki/linkedevents/commit/0d7a4c02a70563acf04d05d5474edd3e6cf993bb))
+* Change logger error to info ([bacec67](https://github.com/City-of-Helsinki/linkedevents/commit/bacec67dd46cb7c765eaf855607d42de1431c422))
+* Enkora course expiry check and service image urls ([4155efe](https://github.com/City-of-Helsinki/linkedevents/commit/4155efeabacf236ed9001cb78c5ca61c44610312))
+* **events:** Fix error with x_ongoing_OR_set ([1453144](https://github.com/City-of-Helsinki/linkedevents/commit/14531444d9ffd3922a06219b844914e98dc3b5c3))
+* Terms_to_regex outputs correct regex for OR operator ([4e39021](https://github.com/City-of-Helsinki/linkedevents/commit/4e390218f46eb505ecd430a5acf51d3d0c90c6ef))
+
 ## [3.7.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.7.0...linkedevents-v3.7.1) (2024-06-26)
 
 
