@@ -92,7 +92,7 @@ def test_signup_create_with_price_group(registration):
         registration=registration,
         price_group__publisher=registration.publisher,
         price=Decimal("100"),
-        vat_percentage=VatPercentage.VAT_24.value,
+        vat_percentage=VatPercentage.VAT_25_5.value,
     )
 
     signup_payload = {

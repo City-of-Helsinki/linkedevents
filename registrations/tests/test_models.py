@@ -1368,7 +1368,7 @@ class TestRegistrationPriceGroup(TestCase):
 
     def test_calculate_vat_and_price_without_vat(self):
         self.registration_price_group.price = Decimal("324")
-        self.registration_price_group.vat_percentage = VatPercentage.VAT_24.value
+        self.registration_price_group.vat_percentage = VatPercentage.VAT_25_5.value
 
         self.assertEqual(self.registration_price_group.price_without_vat, Decimal("0"))
         self.assertEqual(self.registration_price_group.vat, Decimal("0"))
@@ -1376,9 +1376,9 @@ class TestRegistrationPriceGroup(TestCase):
         self.registration_price_group.calculate_vat_and_price_without_vat()
 
         self.assertEqual(
-            self.registration_price_group.price_without_vat, Decimal("261.29")
+            self.registration_price_group.price_without_vat, Decimal("258.17")
         )
-        self.assertEqual(self.registration_price_group.vat, Decimal("62.71"))
+        self.assertEqual(self.registration_price_group.vat, Decimal("65.83"))
 
 
 class TestSignUpPriceGroup(TestCase):

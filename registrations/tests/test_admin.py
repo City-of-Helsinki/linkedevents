@@ -379,7 +379,7 @@ class TestRegistrationAdmin(RegistrationAdminTestCaseMixin, TestCase):
             update_data={
                 "id": self.registration.id,
                 "event": self.registration.event_id,
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             }
         )
         data.pop("maximum_attendee_capacity")
@@ -419,7 +419,7 @@ class RegistrationPriceGroupTestCase(RegistrationAdminTestCaseMixin, TestCase):
             self._get_request_data(
                 update_data={
                     "event": event2.id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_price_groups-TOTAL_FORMS": 2,
                     "registration_price_groups-0-price_group": self.price_group.pk,
                     "registration_price_groups-0-price": Decimal("10"),
@@ -445,20 +445,20 @@ class RegistrationPriceGroupTestCase(RegistrationAdminTestCaseMixin, TestCase):
         self.assertEqual(registration_price_group.price, Decimal("10"))
         self.assertEqual(
             registration_price_group.vat_percentage,
-            VatPercentage.VAT_24.value,
+            VatPercentage.VAT_25_5.value,
         )
-        self.assertEqual(registration_price_group.price_without_vat, Decimal("8.06"))
-        self.assertEqual(registration_price_group.vat, Decimal("1.94"))
+        self.assertEqual(registration_price_group.price_without_vat, Decimal("7.97"))
+        self.assertEqual(registration_price_group.vat, Decimal("2.03"))
 
         registration_price_group2 = RegistrationPriceGroup.objects.last()
         self.assertEqual(registration_price_group2.price_group_id, price_group2.pk)
         self.assertEqual(registration_price_group2.price, Decimal("5"))
         self.assertEqual(
             registration_price_group2.vat_percentage,
-            VatPercentage.VAT_24.value,
+            VatPercentage.VAT_25_5.value,
         )
-        self.assertEqual(registration_price_group2.price_without_vat, Decimal("4.03"))
-        self.assertEqual(registration_price_group2.vat, Decimal("0.97"))
+        self.assertEqual(registration_price_group2.price_without_vat, Decimal("3.98"))
+        self.assertEqual(registration_price_group2.vat, Decimal("1.02"))
 
     def test_add_price_groups_to_existing_registration(self):
         price_group2 = PriceGroupFactory(description="Children")
@@ -522,7 +522,7 @@ class RegistrationPriceGroupTestCase(RegistrationAdminTestCaseMixin, TestCase):
             self._get_request_data(
                 update_data={
                     "event": self.registration.event.id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_price_groups-TOTAL_FORMS": 2,
                     "registration_price_groups-0-registration": self.registration.id,
                     "registration_price_groups-0-price_group": self.price_group.pk,
@@ -547,7 +547,7 @@ class RegistrationPriceGroupTestCase(RegistrationAdminTestCaseMixin, TestCase):
             self._get_request_data(
                 update_data={
                     "event": self.registration.event_id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_price_groups-TOTAL_FORMS": 2,
                     "registration_price_groups-0-registration": self.registration.id,
                     "registration_price_groups-0-price_group": self.price_group.pk,
@@ -575,7 +575,7 @@ class RegistrationPriceGroupTestCase(RegistrationAdminTestCaseMixin, TestCase):
             self._get_request_data(
                 update_data={
                     "event": self.registration.event_id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_price_groups-TOTAL_FORMS": 1,
                     "registration_price_groups-INITIAL_FORMS": 1,
                     "registration_price_groups-0-id": registration_price_group.id,
@@ -589,6 +589,70 @@ class RegistrationPriceGroupTestCase(RegistrationAdminTestCaseMixin, TestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
 
         self.assertEqual(RegistrationPriceGroup.objects.count(), 0)
+
+    def test_vat_percentages(self):
+        data_source = self.registration.event.data_source
+        publisher = self.registration.event.publisher
+        event2 = Event.objects.create(
+            id="event-2", data_source=data_source, publisher=publisher
+        )
+
+        price_with_vat = Decimal("10")
+        data = self._get_request_data(
+            update_data={
+                "event": event2.id,
+                "registration_price_groups-TOTAL_FORMS": 1,
+                "registration_price_groups-0-price_group": self.price_group.pk,
+                "registration_price_groups-0-price": price_with_vat,
+            }
+        )
+
+        expected_values = [
+            (VatPercentage.VAT_0.value, Decimal("10"), Decimal("0")),
+            (
+                VatPercentage.VAT_10.value,
+                Decimal("9.09"),
+                Decimal("0.91"),
+            ),
+            (
+                VatPercentage.VAT_14.value,
+                Decimal("8.77"),
+                Decimal("1.23"),
+            ),
+            (
+                VatPercentage.VAT_25_5.value,
+                Decimal("7.97"),
+                Decimal("2.03"),
+            ),
+        ]
+        for vat_percentage, price_without_vat, vat_amount in expected_values:
+            with self.subTest():
+                self.assertEqual(Registration.objects.count(), 1)
+                self.assertEqual(RegistrationPriceGroup.objects.count(), 0)
+
+                data["vat_percentage"] = vat_percentage
+                response = self.client.post(
+                    self.registration_add_url,
+                    data,
+                )
+                self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+
+                self.assertEqual(Registration.objects.count(), 2)
+                self.assertEqual(RegistrationPriceGroup.objects.count(), 1)
+
+                registration_price_group = RegistrationPriceGroup.objects.first()
+                self.assertEqual(
+                    registration_price_group.vat_percentage,
+                    vat_percentage,
+                )
+                self.assertEqual(registration_price_group.price, price_with_vat)
+                self.assertEqual(
+                    registration_price_group.price_without_vat, price_without_vat
+                )
+                self.assertEqual(registration_price_group.vat, vat_amount)
+
+                Registration.objects.last().delete()
+                RegistrationPriceGroup.objects.all().delete()
 
 
 class RegistrationWebStoreProductMappingBaseTestCase(RegistrationAdminTestCaseMixin):
@@ -642,7 +706,7 @@ class RegistrationWebStoreProductMappingTestCase(
                 self._get_request_data(
                     update_data={
                         "event": event2.id,
-                        "vat_percentage": VatPercentage.VAT_24.value,
+                        "vat_percentage": VatPercentage.VAT_25_5.value,
                         "registration_price_groups-TOTAL_FORMS": 2,
                         "registration_price_groups-0-price_group": price_group.pk,
                         "registration_price_groups-0-price": Decimal("10"),
@@ -879,7 +943,7 @@ class RegistrationWebStoreProductMappingTestCase(
             self._get_request_data(
                 update_data={
                     "event": event2.id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_user_accesses-TOTAL_FORMS": 1,
                     "registration_price_groups-TOTAL_FORMS": 1,
                     "registration_price_groups-0-price_group": price_group.pk,
@@ -923,7 +987,7 @@ class RegistrationWebStoreProductMappingTestCase(
             self._get_request_data(
                 update_data={
                     "event": event2.id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_price_groups-TOTAL_FORMS": 1,
                     "registration_price_groups-0-price_group": price_group.pk,
                     "registration_price_groups-0-price": Decimal("10"),
@@ -960,7 +1024,7 @@ class RegistrationWebStoreProductMappingTestCase(
             self._get_request_data(
                 update_data={
                     "event": event2.id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_user_accesses-TOTAL_FORMS": 1,
                     "registration_price_groups-TOTAL_FORMS": 1,
                     "registration_price_groups-0-price_group": price_group.pk,
@@ -1011,7 +1075,7 @@ class RegistrationWebStoreProductMappingTestCase(
                 self._get_request_data(
                     update_data={
                         "event": event2.id,
-                        "vat_percentage": VatPercentage.VAT_24.value,
+                        "vat_percentage": VatPercentage.VAT_25_5.value,
                         "registration_price_groups-TOTAL_FORMS": 1,
                         "registration_price_groups-0-price_group": price_group.pk,
                         "registration_price_groups-0-price": Decimal("10"),
@@ -1069,7 +1133,7 @@ class RegistrationWebStoreProductMappingTestCase(
                 self._get_request_data(
                     update_data={
                         "event": self.registration.event_id,
-                        "vat_percentage": VatPercentage.VAT_24.value,
+                        "vat_percentage": VatPercentage.VAT_25_5.value,
                         "registration_price_groups-INITIAL_FORMS": 1,
                         "registration_price_groups-TOTAL_FORMS": 1,
                         "registration_price_groups-0-id": registration_price_group.pk,
@@ -1143,7 +1207,7 @@ class RegistrationWebStoreMerchantTestCase(
                 self._get_request_data(
                     update_data={
                         "event": self.registration.event_id,
-                        "vat_percentage": VatPercentage.VAT_24.value,
+                        "vat_percentage": VatPercentage.VAT_25_5.value,
                         "registration_price_groups-INITIAL_FORMS": 1,
                         "registration_price_groups-TOTAL_FORMS": 1,
                         "registration_price_groups-0-id": registration_price_group.pk,
@@ -1212,7 +1276,7 @@ class RegistrationWebStoreAccountTestCase(
             self._get_request_data(
                 update_data={
                     "event": self.registration.event_id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_account-INITIAL_FORMS": 0,
                     "registration_account-TOTAL_FORMS": 1,
                     **{
@@ -1256,7 +1320,7 @@ class RegistrationWebStoreAccountTestCase(
             self._get_request_data(
                 update_data={
                     "event": self.registration.event_id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_account-INITIAL_FORMS": 0,
                     "registration_account-TOTAL_FORMS": 1,
                     "registration_account-0-account": account.pk,
@@ -1299,7 +1363,7 @@ class RegistrationWebStoreAccountTestCase(
             self._get_request_data(
                 update_data={
                     "event": self.registration.event_id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_account-INITIAL_FORMS": 0,
                     "registration_account-TOTAL_FORMS": 1,
                     "registration_account-0-account": new_account.pk,
@@ -1385,7 +1449,7 @@ class RegistrationWebStoreAccountTestCase(
             self._get_request_data(
                 update_data={
                     "event": self.registration.event_id,
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                     "registration_account-INITIAL_FORMS": 1,
                     "registration_account-TOTAL_FORMS": 1,
                     "registration_account-0-registration": self.registration.pk,
@@ -1458,7 +1522,7 @@ class RegistrationWebStoreAccountTestCase(
                 self._get_request_data(
                     update_data={
                         "event": self.registration.event_id,
-                        "vat_percentage": VatPercentage.VAT_24.value,
+                        "vat_percentage": VatPercentage.VAT_25_5.value,
                         "registration_price_groups-INITIAL_FORMS": 1,
                         "registration_price_groups-TOTAL_FORMS": 1,
                         "registration_price_groups-0-id": registration_price_group.pk,
