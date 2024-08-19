@@ -123,15 +123,15 @@ def test_patch_registration_price_group(api_client, user, registration):
         registration=registration,
         price_group=default_price_group,
         price=Decimal("10"),
-        vat_percentage=VatPercentage.VAT_24.value,
-        price_without_vat=Decimal("8.06"),
-        vat=Decimal("1.94"),
+        vat_percentage=VatPercentage.VAT_25_5.value,
+        price_without_vat=Decimal("7.97"),
+        vat=Decimal("2.03"),
     )
     assert registration_price_group.price_group_id == default_price_group.pk
     assert registration_price_group.price == Decimal("10")
-    assert registration_price_group.vat_percentage == VatPercentage.VAT_24.value
-    assert registration_price_group.price_without_vat == Decimal("8.06")
-    assert registration_price_group.vat == Decimal("1.94")
+    assert registration_price_group.vat_percentage == VatPercentage.VAT_25_5.value
+    assert registration_price_group.price_without_vat == Decimal("7.97")
+    assert registration_price_group.vat == Decimal("2.03")
 
     registration_data = {
         "registration_price_groups": [
@@ -362,7 +362,7 @@ def test_patch_registration_with_product_mapping_merchant_missing(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         "registration_merchant": {},
@@ -392,7 +392,7 @@ def test_patch_registration_with_product_mapping_account_missing(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         "registration_account": {},

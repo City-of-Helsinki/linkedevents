@@ -40,6 +40,8 @@ from registrations.tests.utils import (
 )
 from registrations.utils import get_signup_create_url
 from web_store.tests.product.test_web_store_product_api_client import (
+    DEFAULT_CREATE_PRODUCT_ACCOUNTING_DATA,
+    DEFAULT_GET_PRODUCT_ACCOUNTING_DATA,
     DEFAULT_GET_PRODUCT_MAPPING_DATA,
     DEFAULT_PRODUCT_ID,
 )
@@ -62,6 +64,7 @@ def create_registration(api_client, registration_data, data_source=None):
 
 def assert_create_registration(api_client, registration_data, data_source=None):
     response = create_registration(api_client, registration_data, data_source)
+    print(response.json())
     assert response.status_code == status.HTTP_201_CREATED
     assert response.data["event"] == registration_data["event"]
 
@@ -524,12 +527,12 @@ def test_create_registration_with_price_groups_and_product_mapping(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("15.55"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_and_account_data(merchant, account),
@@ -557,8 +560,8 @@ def test_create_registration_with_price_groups_and_product_mapping(
             vat_percentage=registration_data["registration_price_groups"][0][
                 "vat_percentage"
             ],
-            price_without_vat=Decimal("8.06"),
-            vat=Decimal("1.94"),
+            price_without_vat=Decimal("7.97"),
+            vat=Decimal("2.03"),
         ).count()
         == 1
     )
@@ -569,8 +572,8 @@ def test_create_registration_with_price_groups_and_product_mapping(
             vat_percentage=registration_data["registration_price_groups"][1][
                 "vat_percentage"
             ],
-            price_without_vat=Decimal("12.54"),
-            vat=Decimal("3.01"),
+            price_without_vat=Decimal("12.39"),
+            vat=Decimal("3.16"),
         ).count()
         == 1
     )
@@ -605,9 +608,9 @@ def test_create_registration_with_price_groups_and_product_mapping(
 @pytest.mark.parametrize(
     "price,vat_percentage",
     [
-        (Decimal("10"), VatPercentage.VAT_24.value),
+        (Decimal("10"), VatPercentage.VAT_25_5.value),
         (Decimal("10"), VatPercentage.VAT_0.value),
-        (None, VatPercentage.VAT_24.value),
+        (None, VatPercentage.VAT_25_5.value),
     ],
 )
 @pytest.mark.django_db
@@ -686,7 +689,7 @@ def test_cannot_create_registration_price_groups_with_different_vat_percentages(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
             {
                 "price_group": custom_price_group.pk,
@@ -707,12 +710,12 @@ def test_cannot_create_registration_price_groups_with_different_vat_percentages(
 @pytest.mark.parametrize(
     "price,vat_percentage",
     [
-        (-10, VatPercentage.VAT_24.value),
-        (Decimal("-10"), VatPercentage.VAT_24.value),
+        (-10, VatPercentage.VAT_25_5.value),
+        (Decimal("-10"), VatPercentage.VAT_25_5.value),
         (Decimal("-10"), VatPercentage.VAT_0.value),
-        (Decimal("10.123"), VatPercentage.VAT_24.value),
-        (Decimal("10.1234"), VatPercentage.VAT_24.value),
-        (None, VatPercentage.VAT_24.value),
+        (Decimal("10.123"), VatPercentage.VAT_25_5.value),
+        (Decimal("10.1234"), VatPercentage.VAT_25_5.value),
+        (None, VatPercentage.VAT_25_5.value),
     ],
 )
 @pytest.mark.django_db
@@ -802,7 +805,7 @@ def test_cannot_create_registration_with_duplicate_price_groups(
     price_group_data = {
         "price_group": default_price_group.pk,
         "price": Decimal("10"),
-        "vat_percentage": VatPercentage.VAT_24.value,
+        "vat_percentage": VatPercentage.VAT_25_5.value,
     }
     registration_data = {
         **get_minimal_required_registration_data(event.id),
@@ -856,7 +859,7 @@ def test_create_registration_with_optional_product_mapping_accounting_fields(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_data(merchant),
@@ -911,7 +914,7 @@ def test_create_registration_with_product_mapping_merchant_missing(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_account_data(account),
@@ -944,7 +947,7 @@ def test_create_registration_with_product_mapping_account_missing(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_data(merchant),
@@ -1004,7 +1007,7 @@ def test_create_registration_with_product_mapping_api_exception(user_api_client,
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_and_account_data(merchant, account),
@@ -1049,7 +1052,7 @@ def test_create_registration_with_product_accounting_api_exception(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_and_account_data(merchant, account),
@@ -1196,3 +1199,88 @@ def test_create_registration_minimum_attendee_capacity(
     assert Registration.objects.count() == 1
     registration = Registration.objects.first()
     assert registration.minimum_attendee_capacity == expected_minimum_attendee_capacity
+
+
+@pytest.mark.parametrize(
+    "vat_percentage, expected_price_without_vat, expected_vat_amount",
+    [
+        (
+            VatPercentage.VAT_0.value,
+            Decimal("10"),
+            Decimal("0"),
+        ),
+        (
+            VatPercentage.VAT_10.value,
+            Decimal("9.09"),
+            Decimal("0.91"),
+        ),
+        (
+            VatPercentage.VAT_14.value,
+            Decimal("8.77"),
+            Decimal("1.23"),
+        ),
+        (
+            VatPercentage.VAT_25_5.value,
+            Decimal("7.97"),
+            Decimal("2.03"),
+        ),
+    ],
+)
+@pytest.mark.django_db
+def test_create_registration_and_price_group_with_different_vat_percentages(
+    user,
+    api_client,
+    event,
+    vat_percentage,
+    expected_price_without_vat,
+    expected_vat_amount,
+):
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    default_price_group = PriceGroup.objects.filter(
+        publisher=None, is_free=False
+    ).first()
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(organization=event.publisher)
+    account = WebStoreAccountFactory(organization=event.publisher)
+
+    assert Registration.objects.count() == 0
+    assert RegistrationPriceGroup.objects.count() == 0
+
+    price_with_vat = Decimal("10")
+    registration_data = {
+        **get_minimal_required_registration_data(event.id),
+        **get_registration_merchant_and_account_data(merchant, account),
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": price_with_vat,
+                "vat_percentage": vat_percentage,
+            },
+        ],
+    }
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+
+        req_mock.post(
+            base_url,
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        assert_create_registration(api_client, registration_data)
+
+    assert Registration.objects.count() == 1
+    assert RegistrationPriceGroup.objects.count() == 1
+
+    registration_price_group = RegistrationPriceGroup.objects.first()
+    assert registration_price_group.vat_percentage == vat_percentage
+    assert registration_price_group.price == price_with_vat
+    assert registration_price_group.price_without_vat == expected_price_without_vat
+    assert registration_price_group.vat == expected_vat_amount

@@ -880,7 +880,7 @@ def test_create_event_with_offer_price_groups(
                 {
                     "price_group": default_price_group.pk,
                     "price": Decimal("10"),
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                 },
                 {
                     "price_group": custom_price_group.pk,
@@ -904,8 +904,8 @@ def test_create_event_with_offer_price_groups(
             vat_percentage=minimal_event_dict["offers"][0]["offer_price_groups"][0][
                 "vat_percentage"
             ],
-            price_without_vat=Decimal("8.06"),
-            vat=Decimal("1.94"),
+            price_without_vat=Decimal("7.97"),
+            vat=Decimal("2.03"),
         ).count()
         == 1
     )
@@ -926,9 +926,9 @@ def test_create_event_with_offer_price_groups(
 @pytest.mark.parametrize(
     "price,vat_percentage",
     [
-        (Decimal("10"), VatPercentage.VAT_24.value),
+        (Decimal("10"), VatPercentage.VAT_25_5.value),
         (Decimal("10"), VatPercentage.VAT_0.value),
-        (None, VatPercentage.VAT_24.value),
+        (None, VatPercentage.VAT_25_5.value),
     ],
 )
 @pytest.mark.django_db
@@ -973,12 +973,12 @@ def test_create_event_with_a_free_offer_price_group(
 @pytest.mark.parametrize(
     "price,vat_percentage",
     [
-        (-10, VatPercentage.VAT_24.value),
-        (Decimal("-10"), VatPercentage.VAT_24.value),
+        (-10, VatPercentage.VAT_25_5.value),
+        (Decimal("-10"), VatPercentage.VAT_25_5.value),
         (Decimal("-10"), VatPercentage.VAT_0.value),
-        (Decimal("10.123"), VatPercentage.VAT_24.value),
-        (Decimal("10.1234"), VatPercentage.VAT_24.value),
-        (None, VatPercentage.VAT_24.value),
+        (Decimal("10.123"), VatPercentage.VAT_25_5.value),
+        (Decimal("10.1234"), VatPercentage.VAT_25_5.value),
+        (None, VatPercentage.VAT_25_5.value),
     ],
 )
 @pytest.mark.django_db
@@ -1072,7 +1072,7 @@ def test_cannot_create_event_with_duplicate_offer_price_groups(
     price_group_data = {
         "price_group": default_price_group.pk,
         "price": Decimal("10"),
-        "vat_percentage": VatPercentage.VAT_24.value,
+        "vat_percentage": VatPercentage.VAT_25_5.value,
     }
     minimal_event_dict["offers"] = [
         {

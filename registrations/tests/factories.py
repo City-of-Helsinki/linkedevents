@@ -101,7 +101,7 @@ class RegistrationPriceGroupFactory(factory.django.DjangoModelFactory):
     registration = factory.SubFactory(RegistrationFactory)
     price_group = factory.SubFactory(PriceGroupFactory)
     price = Decimal("10")
-    vat_percentage = VatPercentage.VAT_24.value
+    vat_percentage = VatPercentage.VAT_25_5.value
 
     class Meta:
         model = RegistrationPriceGroup
@@ -111,7 +111,7 @@ class OfferPriceGroupFactory(factory.django.DjangoModelFactory):
     offer = factory.SubFactory(OfferFactory)
     price_group = factory.SubFactory(PriceGroupFactory)
     price = Decimal("10")
-    vat_percentage = VatPercentage.VAT_24.value
+    vat_percentage = VatPercentage.VAT_25_5.value
 
     class Meta:
         model = OfferPriceGroup
@@ -215,7 +215,7 @@ class WebStoreAccountFactory(factory.django.DjangoModelFactory):
 class RegistrationWebStoreProductMappingFactory(factory.django.DjangoModelFactory):
     registration = factory.SubFactory(RegistrationFactory)
     external_product_id = DEFAULT_PRODUCT_ID
-    vat_code = VAT_CODE_MAPPING[VatPercentage.VAT_24.value]
+    vat_code = VAT_CODE_MAPPING[VatPercentage.VAT_25_5.value]
 
     class Meta:
         model = RegistrationWebStoreProductMapping

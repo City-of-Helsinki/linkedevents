@@ -33,6 +33,7 @@ class Migration(migrations.Migration):
                 default="44",
                 max_length=2,
                 choices=[
+                    ("47", "25.5 %"),
                     ("44", "24 %"),
                     ("45", "14 %"),
                     ("46", "10 %"),

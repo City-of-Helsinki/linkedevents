@@ -639,12 +639,12 @@ def test_update_price_groups_with_product_mapping_for_registration(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
             {
                 "price_group": custom_price_group.pk,
                 "price": Decimal("15.55"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_and_account_data(merchant, account),
@@ -676,8 +676,8 @@ def test_update_price_groups_with_product_mapping_for_registration(
             vat_percentage=registration_data["registration_price_groups"][0][
                 "vat_percentage"
             ],
-            price_without_vat=Decimal("8.06"),
-            vat=Decimal("1.94"),
+            price_without_vat=Decimal("7.97"),
+            vat=Decimal("2.03"),
         ).count()
         == 1
     )
@@ -688,8 +688,8 @@ def test_update_price_groups_with_product_mapping_for_registration(
             vat_percentage=registration_data["registration_price_groups"][1][
                 "vat_percentage"
             ],
-            price_without_vat=Decimal("12.54"),
-            vat=Decimal("3.01"),
+            price_without_vat=Decimal("12.39"),
+            vat=Decimal("3.16"),
         ).count()
         == 1
     )
@@ -733,9 +733,9 @@ def test_update_existing_registration_price_group(api_client, event, user):
         registration=registration,
         price_group=default_price_group,
         price=Decimal("10"),
-        vat_percentage=VatPercentage.VAT_24.value,
-        price_without_vat=Decimal("8.06"),
-        vat=Decimal("1.94"),
+        vat_percentage=VatPercentage.VAT_25_5.value,
+        price_without_vat=Decimal("7.97"),
+        vat=Decimal("2.03"),
     )
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
@@ -804,9 +804,9 @@ def test_update_registration_price_groups_excluded_is_deleted(api_client, event,
         registration=registration,
         price_group=default_price_group,
         price=Decimal("10"),
-        vat_percentage=VatPercentage.VAT_24.value,
-        price_without_vat=Decimal("8.06"),
-        vat=Decimal("1.94"),
+        vat_percentage=VatPercentage.VAT_25_5.value,
+        price_without_vat=Decimal("7.97"),
+        vat=Decimal("2.03"),
     )
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
@@ -880,7 +880,7 @@ def test_cannot_update_price_groups_to_registration_with_different_vat_percentag
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
             {
                 "price_group": custom_price_group.pk,
@@ -980,7 +980,7 @@ def test_update_registration_with_with_optional_product_mapping_accounting_field
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_data(merchant),
@@ -1044,7 +1044,7 @@ def test_update_registration_product_mapping_merchant_changed(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_and_account_data(
@@ -1104,7 +1104,7 @@ def test_update_registration_product_mapping_account_changed(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_and_account_data(
@@ -1206,7 +1206,7 @@ def test_update_registration_with_product_mapping_merchant_missing(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_account_data(account),
@@ -1237,7 +1237,7 @@ def test_update_registration_with_product_mapping_account_missing(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_data(merchant),
@@ -1297,7 +1297,7 @@ def test_update_registration_with_product_mapping_api_exception(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_and_account_data(merchant, account),
@@ -1338,7 +1338,7 @@ def test_update_registration_with_product_accounting_api_exception(
             {
                 "price_group": default_price_group.pk,
                 "price": Decimal("10"),
-                "vat_percentage": VatPercentage.VAT_24.value,
+                "vat_percentage": VatPercentage.VAT_25_5.value,
             },
         ],
         **get_registration_merchant_and_account_data(merchant, account),

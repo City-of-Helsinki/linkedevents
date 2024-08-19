@@ -103,7 +103,7 @@ class RegistrationWebStoreAccountAdminForm(forms.ModelForm):
 class RegistrationAdminForm(forms.ModelForm):
     vat_percentage = forms.TypedChoiceField(
         choices=VAT_PERCENTAGES,
-        initial=VatPercentage.VAT_24.value,
+        initial=VatPercentage.VAT_25_5.value,
         coerce=Decimal,
         label=_("VAT percentage for price groups"),
     )

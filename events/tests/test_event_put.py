@@ -1081,7 +1081,7 @@ def test_update_price_groups_to_event_offer(user_api_client, event, minimal_even
                 {
                     "price_group": default_price_group.pk,
                     "price": Decimal("10"),
-                    "vat_percentage": VatPercentage.VAT_24.value,
+                    "vat_percentage": VatPercentage.VAT_25_5.value,
                 },
                 {
                     "price_group": custom_price_group.pk,
@@ -1111,8 +1111,8 @@ def test_update_price_groups_to_event_offer(user_api_client, event, minimal_even
             vat_percentage=minimal_event_dict["offers"][0]["offer_price_groups"][0][
                 "vat_percentage"
             ],
-            price_without_vat=Decimal("8.06"),
-            vat=Decimal("1.94"),
+            price_without_vat=Decimal("7.97"),
+            vat=Decimal("2.03"),
         ).count()
         == 1
     )
@@ -1143,9 +1143,9 @@ def test_update_existing_event_offer_price_group(
         offer=offer,
         price_group=default_price_group,
         price=Decimal("10"),
-        vat_percentage=VatPercentage.VAT_24.value,
-        price_without_vat=Decimal("8.06"),
-        vat=Decimal("1.94"),
+        vat_percentage=VatPercentage.VAT_25_5.value,
+        price_without_vat=Decimal("7.97"),
+        vat=Decimal("2.03"),
     )
 
     assert OfferPriceGroup.objects.count() == 1
@@ -1208,9 +1208,9 @@ def test_update_event_offer_price_groups_excluded_is_deleted(
         offer=offer,
         price_group=default_price_group,
         price=Decimal("10"),
-        vat_percentage=VatPercentage.VAT_24.value,
-        price_without_vat=Decimal("8.06"),
-        vat=Decimal("1.94"),
+        vat_percentage=VatPercentage.VAT_25_5.value,
+        price_without_vat=Decimal("7.97"),
+        vat=Decimal("2.03"),
     )
 
     assert OfferPriceGroup.objects.count() == 1

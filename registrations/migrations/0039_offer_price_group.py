@@ -40,6 +40,7 @@ class Migration(migrations.Migration):
                     "vat_percentage",
                     models.DecimalField(
                         choices=[
+                            (Decimal("25.50"), "25.5 %"),
                             (Decimal("24.00"), "24 %"),
                             (Decimal("14.00"), "14 %"),
                             (Decimal("10.00"), "10 %"),
