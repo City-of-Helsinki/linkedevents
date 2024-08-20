@@ -336,11 +336,11 @@ def get_web_store_payment(order_id: str) -> dict:
         _raise_web_store_chained_api_exception(request_exc)
 
 
-def get_web_store_refund_payment(order_id: str) -> dict:
+def get_web_store_refund_payments(refund_id: str) -> list[dict]:
     client = WebStorePaymentAPIClient()
 
     try:
-        return client.get_refund_payment(order_id=order_id)
+        return client.get_refund_payments(refund_id=refund_id)
     except RequestException as request_exc:
         _raise_web_store_chained_api_exception(request_exc)
 
@@ -355,6 +355,11 @@ def get_web_store_payment_status(order_id: str) -> Optional[str]:
     return payment_json.get("status")
 
 
-def get_web_store_refund_payment_status(order_id: str) -> Optional[str]:
-    payment_json = get_web_store_refund_payment(order_id)
-    return payment_json.get("status")
+def get_web_store_refund_payment_status(refund_id: str) -> Optional[str]:
+    payments_list = get_web_store_refund_payments(refund_id)
+    if payments_list:
+        # Even though the API returns a list, it will contain only one payment in our case since
+        # we create a new refund each time and it will have a single payment created in Talpa.
+        return payments_list[0].get("status")
+
+    return None

@@ -18,9 +18,9 @@ class WebStorePaymentAPIClient(WebStoreAPIBaseClient):
             headers=self.headers,
         )
 
-    def get_refund_payment(self, order_id: str) -> dict:
+    def get_refund_payments(self, refund_id: str) -> list[dict]:
         return self._make_request(
-            f"{self.payment_api_base_url}admin/refund-payment/{order_id}",
+            f"{self.payment_api_base_url}admin/refunds/{refund_id}/payment",
             "get",
             headers=self.headers,
         )

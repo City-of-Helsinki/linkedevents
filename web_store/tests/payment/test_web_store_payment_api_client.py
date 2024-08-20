@@ -34,21 +34,23 @@ DEFAULT_GET_PAYMENT_DATA = {
     "paymentMethodLabel": "string",
 }
 
-DEFAULT_GET_REFUND_PAYMENT_DATA = {
-    "refundPaymentId": "string",
-    "orderId": DEFAULT_ORDER_ID,
-    "namespace": settings.WEB_STORE_API_NAMESPACE,
-    "userId": "string",
-    "status": WebStoreOrderRefundStatus.PAID_ONLINE.value,
-    "refundMethod": "string",
-    "refundType": "string",
-    "refundGateway": "string",
-    "totalExclTax": DEFAULT_ITEM["rowPriceNet"],
-    "total": DEFAULT_ITEM["rowPriceTotal"],
-    "taxAmount": DEFAULT_ITEM["rowPriceVat"],
-    "refundTransactionId": "string",
-    "timestamp": "string",
-}
+DEFAULT_GET_REFUND_PAYMENTS_DATA = [
+    {
+        "refundPaymentId": "string",
+        "orderId": DEFAULT_ORDER_ID,
+        "namespace": settings.WEB_STORE_API_NAMESPACE,
+        "userId": "string",
+        "status": WebStoreOrderRefundStatus.PAID_ONLINE.value,
+        "refundMethod": "string",
+        "refundType": "string",
+        "refundGateway": "string",
+        "totalExclTax": DEFAULT_ITEM["rowPriceNet"],
+        "total": DEFAULT_ITEM["rowPriceTotal"],
+        "taxAmount": DEFAULT_ITEM["rowPriceVat"],
+        "refundTransactionId": "string",
+        "timestamp": "string",
+    },
+]
 
 DEFAULT_GET_REFUND_DATA = {
     "refunds": [
@@ -77,7 +79,9 @@ DEFAULT_GET_REFUND_DATA["refunds"][0]["items"][0].update(
         "originalPriceGross": DEFAULT_ITEM["rowPriceTotal"],
     }
 )
-DEFAULT_GET_REFUND_DATA["refunds"][0]["payment"].update(DEFAULT_GET_REFUND_PAYMENT_DATA)
+DEFAULT_GET_REFUND_DATA["refunds"][0]["payment"].update(
+    DEFAULT_GET_REFUND_PAYMENTS_DATA[0]
+)
 
 
 @pytest.mark.parametrize(
@@ -133,31 +137,31 @@ def test_get_payment_exception(status_code):
         assert req_mock.call_count == 1
 
 
-def test_get_refund_payment_success():
+def test_get_refund_payments_success():
     client = WebStorePaymentAPIClient()
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
-            f"{client.payment_api_base_url}admin/refund-payment/{DEFAULT_ORDER_ID}",
-            json=DEFAULT_GET_REFUND_PAYMENT_DATA,
+            f"{client.payment_api_base_url}admin/refunds/{DEFAULT_REFUND_ID}/payment",
+            json=DEFAULT_GET_REFUND_PAYMENTS_DATA,
         )
-        response_json = client.get_refund_payment(order_id=DEFAULT_ORDER_ID)
+        response_json = client.get_refund_payments(refund_id=DEFAULT_REFUND_ID)
 
-    assert response_json == DEFAULT_GET_REFUND_PAYMENT_DATA
+    assert response_json == DEFAULT_GET_REFUND_PAYMENTS_DATA
 
 
 @pytest.mark.parametrize(
     "status_code", [status.HTTP_404_NOT_FOUND, status.HTTP_500_INTERNAL_SERVER_ERROR]
 )
-def test_get_refund_payment_exception(status_code):
+def test_get_refund_payments_exception(status_code):
     client = WebStorePaymentAPIClient()
 
     with requests_mock.Mocker() as req_mock, pytest.raises(RequestException):
         req_mock.get(
-            f"{client.payment_api_base_url}admin/refund-payment/{DEFAULT_ORDER_ID}",
+            f"{client.payment_api_base_url}admin/refunds/{DEFAULT_REFUND_ID}/payment",
             status_code=status_code,
         )
 
-        client.get_refund_payment(order_id=DEFAULT_ORDER_ID)
+        client.get_refund_payments(refund_id=DEFAULT_REFUND_ID)
 
         assert req_mock.call_count == 1

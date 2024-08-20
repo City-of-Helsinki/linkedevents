@@ -1252,9 +1252,9 @@ class WebStoreRefundWebhookViewSet(WebStoreWebhookBaseViewSet):
         return refund
 
     @staticmethod
-    def _get_refund_status_from_web_store_api(order_id: str) -> Optional[str]:
+    def _get_refund_status_from_web_store_api(refund_id: str) -> Optional[str]:
         try:
-            return get_web_store_refund_payment_status(order_id=order_id)
+            return get_web_store_refund_payment_status(refund_id=refund_id)
         except WebStoreAPIError:
             raise ConflictException(_("Could not check refund status from Talpa API."))
 
@@ -1291,7 +1291,7 @@ class WebStoreRefundWebhookViewSet(WebStoreWebhookBaseViewSet):
             serializer.validated_data["event_type"]
             == WebStoreRefundWebhookEventType.REFUND_PAID.value
         ):
-            refund_status = self._get_refund_status_from_web_store_api(order_id)
+            refund_status = self._get_refund_status_from_web_store_api(refund_id)
             if refund_status != WebStoreOrderRefundStatus.PAID_ONLINE.value:
                 return Response(
                     _(
@@ -1306,7 +1306,7 @@ class WebStoreRefundWebhookViewSet(WebStoreWebhookBaseViewSet):
             serializer.validated_data["event_type"]
             == WebStoreRefundWebhookEventType.REFUND_FAILED.value
         ):
-            refund_status = self._get_refund_status_from_web_store_api(order_id)
+            refund_status = self._get_refund_status_from_web_store_api(refund_id)
             if refund_status != WebStoreOrderRefundStatus.CANCELLED.value:
                 return Response(
                     _(

@@ -48,7 +48,7 @@ from web_store.tests.order.test_web_store_order_api_client import (
 )
 from web_store.tests.payment.test_web_store_payment_api_client import (
     DEFAULT_GET_PAYMENT_DATA,
-    DEFAULT_GET_REFUND_PAYMENT_DATA,
+    DEFAULT_GET_REFUND_PAYMENTS_DATA,
     DEFAULT_PAYMENT_ID,
 )
 
@@ -58,9 +58,7 @@ _DEFAULT_GET_ORDER_URL = (
 _DEFAULT_GET_PAYMENT_URL = (
     f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}"
 )
-_DEFAULT_GET_REFUND_URL = (
-    f"{settings.WEB_STORE_API_BASE_URL}payment/admin/refund-payment/{DEFAULT_ORDER_ID}"
-)
+_DEFAULT_GET_REFUND_URL = f"{settings.WEB_STORE_API_BASE_URL}payment/admin/refunds/{DEFAULT_REFUND_ID}/payment"
 
 
 # === util methods ===
@@ -469,7 +467,7 @@ def test_refund_paid_webhook_for_signup_payment(
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
             _DEFAULT_GET_REFUND_URL,
-            json=DEFAULT_GET_REFUND_PAYMENT_DATA,
+            json=DEFAULT_GET_REFUND_PAYMENTS_DATA,
         )
 
         assert_payment_refunded(api_client, data, payment)
@@ -534,7 +532,7 @@ def test_refund_paid_webhook_for_signup_group_payment(
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
             _DEFAULT_GET_REFUND_URL,
-            json=DEFAULT_GET_REFUND_PAYMENT_DATA,
+            json=DEFAULT_GET_REFUND_PAYMENTS_DATA,
         )
 
         assert_payment_refunded(api_client, data, payment)
@@ -605,7 +603,7 @@ def test_refund_paid_webhook_for_recurring_event_signup_payment(
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
             _DEFAULT_GET_REFUND_URL,
-            json=DEFAULT_GET_REFUND_PAYMENT_DATA,
+            json=DEFAULT_GET_REFUND_PAYMENTS_DATA,
         )
 
         assert_payment_refunded(api_client, data, payment)
@@ -676,7 +674,7 @@ def test_refund_paid_webhook_for_recurring_event_signup_group_payment(
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
             _DEFAULT_GET_REFUND_URL,
-            json=DEFAULT_GET_REFUND_PAYMENT_DATA,
+            json=DEFAULT_GET_REFUND_PAYMENTS_DATA,
         )
 
         assert_payment_refunded(api_client, data, payment)
@@ -747,7 +745,7 @@ def test_partial_refund_paid_webhook_for_signup_group_payment(
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
             _DEFAULT_GET_REFUND_URL,
-            json=DEFAULT_GET_REFUND_PAYMENT_DATA,
+            json=DEFAULT_GET_REFUND_PAYMENTS_DATA,
         )
 
         assert_payment_refunded(api_client, data, payment, partial_refund=True)
@@ -781,8 +779,8 @@ def test_refund_failed_webhook_for_signup_payment(api_client):
         {"refundId": DEFAULT_REFUND_ID},
     )
 
-    refund_payment_data = DEFAULT_GET_REFUND_PAYMENT_DATA.copy()
-    refund_payment_data["status"] = WebStoreOrderRefundStatus.CANCELLED.value
+    refund_payment_data = [DEFAULT_GET_REFUND_PAYMENTS_DATA[0].copy()]
+    refund_payment_data[0]["status"] = WebStoreOrderRefundStatus.CANCELLED.value
 
     assert AuditLogEntry.objects.count() == 0
 
@@ -818,8 +816,8 @@ def test_refund_failed_webhook_for_signup_group_payment(api_client):
         {"refundId": DEFAULT_REFUND_ID},
     )
 
-    refund_payment_data = DEFAULT_GET_REFUND_PAYMENT_DATA.copy()
-    refund_payment_data["status"] = WebStoreOrderRefundStatus.CANCELLED.value
+    refund_payment_data = [DEFAULT_GET_REFUND_PAYMENTS_DATA[0].copy()]
+    refund_payment_data[0]["status"] = WebStoreOrderRefundStatus.CANCELLED.value
 
     assert AuditLogEntry.objects.count() == 0
 
@@ -857,8 +855,8 @@ def test_partial_refund_failed_webhook_for_signup_group_payment(api_client):
         {"refundId": DEFAULT_REFUND_ID},
     )
 
-    refund_payment_data = DEFAULT_GET_REFUND_PAYMENT_DATA.copy()
-    refund_payment_data["status"] = WebStoreOrderRefundStatus.CANCELLED.value
+    refund_payment_data = [DEFAULT_GET_REFUND_PAYMENTS_DATA[0].copy()]
+    refund_payment_data[0]["status"] = WebStoreOrderRefundStatus.CANCELLED.value
 
     assert AuditLogEntry.objects.count() == 0
 
@@ -1463,8 +1461,8 @@ def test_webhook_and_web_store_refund_status_mismatch(
         {"refundId": DEFAULT_REFUND_ID},
     )
 
-    refund_payment_data = DEFAULT_GET_REFUND_PAYMENT_DATA.copy()
-    refund_payment_data["status"] = refund_payment_status
+    refund_payment_data = [DEFAULT_GET_REFUND_PAYMENTS_DATA[0].copy()]
+    refund_payment_data[0]["status"] = refund_payment_status
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
