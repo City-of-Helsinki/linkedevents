@@ -115,9 +115,6 @@ class EnumChoiceField(serializers.Field):
     """
     Database value of tinyint is converted to and from a string representation
     of choice field.
-
-    TODO: Find if there's standardized way to render Schema.org enumeration
-    instances in JSON-LD.
     """
 
     def __init__(self, choices, prefix="", **kwargs):

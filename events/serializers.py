@@ -808,7 +808,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         allow_null=True,
         view_name="place-detail",
     )
-    # provider = OrganizationSerializer(hide_ld_context=True)
     keywords = KeywordsJSONLDRelatedField(
         serializer=KeywordSerializer,
         many=True,
