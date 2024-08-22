@@ -278,7 +278,7 @@ class Importer(object):
     def _update_fields(self, obj, info, skip_fields):
         # all non-place importers use this method, automatically takes care of translated fields
         obj_fields = list(obj._meta.fields)
-        trans_fields = translator.get_options_for_model(type(obj)).fields
+        trans_fields = translator.get_options_for_model(type(obj)).all_fields
         for field_name, lang_fields in trans_fields.items():
             lang_fields = list(lang_fields)
             for lf in lang_fields:

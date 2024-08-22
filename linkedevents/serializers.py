@@ -34,16 +34,16 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             meta_fields := getattr(self.Meta, "fields", None)
         ) and meta_fields != serializers.ALL_FIELDS:
             self.translated_fields = [
-                field for field in trans_opts.fields.keys() if field in meta_fields
+                field for field in trans_opts.all_fields.keys() if field in meta_fields
             ]
         elif meta_excluded_fields := getattr(self.Meta, "exclude", None):
             self.translated_fields = [
                 field
-                for field in trans_opts.fields.keys()
+                for field in trans_opts.all_fields.keys()
                 if field not in meta_excluded_fields
             ]
         else:
-            self.translated_fields = trans_opts.fields.keys()
+            self.translated_fields = trans_opts.all_fields.keys()
 
         lang_codes = utils.get_fixed_lang_codes()
         # Remove the pre-existing data in the bundle.
