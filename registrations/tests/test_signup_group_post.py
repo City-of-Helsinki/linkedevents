@@ -20,7 +20,6 @@ from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import (
     MandatoryFields,
-    PriceGroup,
     SeatReservationCode,
     SignUp,
     SignUpContactPerson,
@@ -250,10 +249,8 @@ def test_registration_substitute_user_can_create_signup_group(api_client, regist
         "regular_user_without_organization",
     ],
 )
-@pytest.mark.django_db(reset_sequences=True)
+@pytest.mark.django_db
 def test_allowed_user_roles_can_create_signup_group_with_payment(api_client, user_role):
-    PriceGroup.objects.all().delete()  # Delete default price groups due to reset_sequences=True
-
     registration = RegistrationFactory(event__name="Foo")
 
     with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
@@ -322,7 +319,6 @@ def test_allowed_user_roles_can_create_signup_group_with_payment(api_client, use
             "meta": [
                 {
                     "key": web_store_price_group_meta_key,
-                    "value": "1",
                 }
             ],
         },
@@ -331,17 +327,25 @@ def test_allowed_user_roles_can_create_signup_group_with_payment(api_client, use
             "meta": [
                 {
                     "key": web_store_price_group_meta_key,
-                    "value": "2",
                 }
             ],
         },
     ]
 
+    def get_response(request, context):
+        price_group = SignUpPriceGroup.objects.first()
+        mocked_web_store_json["items"][0]["meta"][0]["value"] = price_group.pk
+
+        price_group2 = SignUpPriceGroup.objects.last()
+        mocked_web_store_json["items"][1]["meta"][0]["value"] = price_group2.pk
+
+        return mocked_web_store_json
+
     with requests_mock.Mocker() as req_mock:
         req_mock.post(
             f"{settings.WEB_STORE_API_BASE_URL}order/",
             status_code=status.HTTP_201_CREATED,
-            json=mocked_web_store_json,
+            json=get_response,
         )
 
         response = assert_create_signup_group(api_client, signup_group_data)
