@@ -6,7 +6,7 @@ from modeltranslation.translator import translator
 def expand_model_fields(model, field_names):
     model_class = type(model)
     try:
-        trans_field_mapping = translator.get_options_for_model(model_class).fields
+        trans_field_mapping = translator.get_options_for_model(model_class).all_fields
     except modeltranslation.translator.NotRegistered:
         return field_names
 
@@ -32,7 +32,7 @@ class TranslatableSerializableMixin(SerializableMixin):
             return super()._resolve_field(model, field_description)
 
         if field_name in options.get_field_names():
-            fields = sorted([f.name for f in options.fields.get(field_name)])
+            fields = sorted([f.name for f in options.all_fields.get(field_name)])
             children = [
                 {
                     "key": f"{translated_field}".upper(),
