@@ -19,7 +19,6 @@ from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import (
     MandatoryFields,
-    PriceGroup,
     SeatReservationCode,
     SignUp,
     SignUpContactPerson,
@@ -204,10 +203,8 @@ def test_authenticated_users_can_create_signups(registration, api_client, user_r
         "regular_user_without_organization",
     ],
 )
-@pytest.mark.django_db(reset_sequences=True)
+@pytest.mark.django_db
 def test_authenticated_user_can_create_signups_with_payments(api_client, user_role):
-    PriceGroup.objects.all().delete()  # Delete default price groups due to reset_sequences=True
-
     language = LanguageFactory(pk="fi", service_language=True)
 
     with translation.override(language.pk):
@@ -270,17 +267,22 @@ def test_authenticated_user_can_create_signups_with_payments(api_client, user_ro
             "meta": [
                 {
                     "key": web_store_price_group_meta_key,
-                    "value": "1",
                 }
             ],
         },
     ]
 
+    def get_response(request, context):
+        price_group = SignUpPriceGroup.objects.first()
+        mocked_web_store_json["items"][0]["meta"][0]["value"] = price_group.pk
+
+        return mocked_web_store_json
+
     with translation.override(language.pk), requests_mock.Mocker() as req_mock:
         req_mock.post(
             f"{settings.WEB_STORE_API_BASE_URL}order/",
             status_code=status.HTTP_201_CREATED,
-            json=mocked_web_store_json,
+            json=get_response,
         )
 
         response = assert_create_signups(api_client, signups_data)
