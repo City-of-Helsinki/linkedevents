@@ -2,10 +2,10 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from knox import crypto
 
-from data_analytics.models import DataAnalyticsAuthToken
+from data_analytics.models import DataAnalyticsApiToken
 
 
-class DataAnalyticsAuthTokenAdminForm(forms.ModelForm):
+class DataAnalyticsApiTokenAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -25,7 +25,7 @@ class DataAnalyticsAuthTokenAdminForm(forms.ModelForm):
                 )
 
     class Meta:
-        model = DataAnalyticsAuthToken
+        model = DataAnalyticsApiToken
         fields = (
             "name",
             "digest",
