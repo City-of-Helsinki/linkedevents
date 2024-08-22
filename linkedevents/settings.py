@@ -732,7 +732,7 @@ SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS = env("SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAI
 
 REST_KNOX = {
     "AUTO_REFRESH": True,
-    "TOKEN_MODEL": "data_analytics.DataAnalyticsAuthToken",
+    "TOKEN_MODEL": "data_analytics.DataAnalyticsApiToken",
     "TOKEN_PREFIX": "",
     "TOKEN_TTL": timedelta(days=30),
 }

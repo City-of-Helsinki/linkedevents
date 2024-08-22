@@ -14,7 +14,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from audit_log.models import AuditLogEntry
-from data_analytics.tests.factories import DataAnalyticsAuthTokenFactory
+from data_analytics.tests.factories import DataAnalyticsApiTokenFactory
 from data_analytics.tests.utils import (
     get_detail_and_assert_object_in_response,
     get_list_and_assert_objects_in_response,
@@ -172,7 +172,7 @@ def test_expired_token_cannot_get_registrations(
     else:
         expiry = timezone.now() + timedelta(days=1)
     token = crypto.create_token_string()
-    DataAnalyticsAuthTokenFactory(
+    DataAnalyticsApiTokenFactory(
         user=user,
         digest=crypto.hash_token(token),
         token_key=token[: CONSTANTS.TOKEN_KEY_LENGTH],

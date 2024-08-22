@@ -2,18 +2,17 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from knox import crypto
-from knox.models import AuthToken
 from knox.settings import CONSTANTS, knox_settings
 
-from data_analytics.forms import DataAnalyticsAuthTokenAdminForm
-from data_analytics.models import DataAnalyticsAuthToken
+from data_analytics.forms import DataAnalyticsApiTokenAdminForm
+from data_analytics.models import DataAnalyticsApiToken
 
 user_model = get_user_model()
 
 
-class DataAnalyticsAuthTokenAdmin(admin.ModelAdmin):
+class DataAnalyticsApiTokenAdmin(admin.ModelAdmin):
     list_display = ("name", "username", "created", "expiry")
-    form = DataAnalyticsAuthTokenAdminForm
+    form = DataAnalyticsApiTokenAdminForm
 
     def username(self, obj):
         return obj.user.username
@@ -44,5 +43,4 @@ class DataAnalyticsAuthTokenAdmin(admin.ModelAdmin):
         obj.save()
 
 
-admin.site.unregister(AuthToken)
-admin.site.register(DataAnalyticsAuthToken, DataAnalyticsAuthTokenAdmin)
+admin.site.register(DataAnalyticsApiToken, DataAnalyticsApiTokenAdmin)
