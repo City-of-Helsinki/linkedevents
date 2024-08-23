@@ -15,16 +15,23 @@ from rest_framework import status
 from events.models import Event, PublicationStatus
 from events.tests.factories import EventFactory, LanguageFactory, PlaceFactory
 from helevents.tests.factories import UserFactory
-from registrations.exceptions import WebStoreAPIError
+from registrations.exceptions import WebStoreAPIError, WebStoreRefundValidationError
 from registrations.tests.factories import (
     RegistrationWebStoreProductMappingFactory,
     SignUpContactPersonFactory,
     SignUpFactory,
+    SignUpPaymentFactory,
     SignUpPriceGroupFactory,
+    WebStoreMerchantFactory,
 )
 from registrations.utils import (
+    cancel_web_store_order,
     create_events_ics_file_content,
+    create_or_update_web_store_merchant,
     create_web_store_api_order,
+    create_web_store_product_accounting,
+    create_web_store_product_mapping,
+    create_web_store_refunds,
     get_access_code_for_contact_person,
     get_checkout_url_with_lang_param,
     get_web_store_order,
@@ -35,7 +42,13 @@ from registrations.utils import (
 )
 from web_store.order.enums import WebStoreOrderRefundStatus, WebStoreOrderStatus
 from web_store.payment.enums import WebStorePaymentStatus
+from web_store.tests.merchant.test_web_store_merchant_api_client import (
+    DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+    DEFAULT_MERCHANT_ID,
+)
 from web_store.tests.order.test_web_store_order_api_client import (
+    DEFAULT_CANCEL_ORDER_DATA,
+    DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
     DEFAULT_GET_ORDER_DATA,
     DEFAULT_ORDER_ID,
 )
@@ -43,6 +56,19 @@ from web_store.tests.payment.test_web_store_payment_api_client import (
     DEFAULT_GET_PAYMENT_DATA,
     DEFAULT_GET_REFUND_PAYMENT_DATA,
 )
+from web_store.tests.product.test_web_store_product_api_client import (
+    DEFAULT_GET_PRODUCT_ACCOUNTING_DATA,
+    DEFAULT_GET_PRODUCT_MAPPING_DATA,
+    DEFAULT_PRODUCT_ID,
+)
+
+_COMMON_WEB_STORE_EXCEPTION_STATUS_CODES = [
+    status.HTTP_400_BAD_REQUEST,
+    status.HTTP_401_UNAUTHORIZED,
+    status.HTTP_403_FORBIDDEN,
+    status.HTTP_404_NOT_FOUND,
+    status.HTTP_500_INTERNAL_SERVER_ERROR,
+]
 
 
 def _get_checkout_url_and_language_code_test_params():
@@ -409,13 +435,7 @@ def test_get_web_store_order(order_id):
 
 @pytest.mark.parametrize(
     "status_code",
-    [
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-    ],
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
 )
 def test_get_web_store_order_request_exception(status_code):
     with (
@@ -454,13 +474,7 @@ def test_get_web_store_payment(order_id):
 
 @pytest.mark.parametrize(
     "status_code",
-    [
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-    ],
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
 )
 def test_get_web_store_payment_request_exception(status_code):
     with (
@@ -502,13 +516,7 @@ def test_get_web_store_order_status(order_id, order_status):
 
 @pytest.mark.parametrize(
     "status_code",
-    [
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-    ],
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
 )
 def test_get_web_store_order_status_request_exception(status_code):
     with (
@@ -550,13 +558,7 @@ def test_get_web_store_order_status(order_id, payment_status):
 
 @pytest.mark.parametrize(
     "status_code",
-    [
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-    ],
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
 )
 def test_get_web_store_payment_status_request_exception(status_code):
     with (
@@ -599,13 +601,7 @@ def test_get_web_store_refund_payment_status(order_id, payment_status):
 
 @pytest.mark.parametrize(
     "status_code",
-    [
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-    ],
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
 )
 def test_get_web_store_refund_payment_status_request_exception(status_code):
     with (
@@ -759,13 +755,7 @@ def test_create_web_store_api_order_expiration_datetime(
 
 @pytest.mark.parametrize(
     "status_code",
-    [
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_401_UNAUTHORIZED,
-        status.HTTP_403_FORBIDDEN,
-        status.HTTP_404_NOT_FOUND,
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-    ],
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
 )
 @pytest.mark.django_db
 def test_create_web_store_api_order_request_exception(status_code):
@@ -789,5 +779,387 @@ def test_create_web_store_api_order_request_exception(status_code):
         )
 
         create_web_store_api_order(signup, contact_person, localtime())
+
+        assert req_mock.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "account_data",
+    [
+        # Mandatory data
+        {
+            "vatCode": "47",
+            "balanceProfitCenter": "1234567890",
+            "companyCode": "1234",
+            "mainLedgerAccount": "123456",
+        },
+        # With optional data
+        {
+            "vatCode": "47",
+            "balanceProfitCenter": "1234567890",
+            "companyCode": "1234",
+            "mainLedgerAccount": "123456",
+            "internalOrder": "0987654321",
+            "profitCenter": "7654321",
+            "project": "1234560987654321",
+            "operationArea": "654321",
+        },
+    ],
+)
+def test_create_web_store_product_accounting(account_data):
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}product/{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_ACCOUNTING_DATA,
+        )
+
+        resp_json = create_web_store_product_accounting(
+            DEFAULT_PRODUCT_ID, account_data
+        )
+        assert resp_json == DEFAULT_GET_PRODUCT_ACCOUNTING_DATA
+
+        assert req_mock.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
+)
+def test_create_web_store_product_accounting_request_exception(status_code):
+    account_data = {
+        "vatCode": "47",
+        "balanceProfitCenter": "1234567890",
+        "companyCode": "1234",
+        "mainLedgerAccount": "123456",
+    }
+
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError),
+    ):
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}product/{DEFAULT_PRODUCT_ID}/accounting",
+            status_code=status_code,
+        )
+
+        create_web_store_product_accounting(DEFAULT_PRODUCT_ID, account_data)
+
+        assert req_mock.call_count == 1
+
+
+@pytest.mark.django_db
+def test_cancel_web_store_order():
+    payment = SignUpPaymentFactory(
+        external_order_id=DEFAULT_ORDER_ID, created_by=UserFactory()
+    )
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/{DEFAULT_ORDER_ID}/cancel",
+            json=DEFAULT_CANCEL_ORDER_DATA,
+        )
+
+        resp_json = cancel_web_store_order(payment)
+        assert resp_json == DEFAULT_CANCEL_ORDER_DATA
+
+        assert req_mock.call_count == 1
+
+
+@pytest.mark.django_db
+def test_cancel_web_store_order_created_by():
+    payment = SignUpPaymentFactory(
+        external_order_id=DEFAULT_ORDER_ID, created_by=UserFactory()
+    )
+
+    with patch(
+        "web_store.order.clients.WebStoreOrderAPIClient.cancel_order"
+    ) as mocked_cancel_order:
+        cancel_web_store_order(payment)
+
+        assert mocked_cancel_order.call_args[1]["user_uuid"] == str(
+            payment.created_by.uuid
+        )
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
+)
+@pytest.mark.django_db
+def test_cancel_web_store_order_request_exception(status_code):
+    payment = SignUpPaymentFactory(
+        external_order_id=DEFAULT_ORDER_ID, created_by=UserFactory()
+    )
+
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError),
+    ):
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/{DEFAULT_ORDER_ID}/cancel",
+            status_code=status_code,
+        )
+
+        cancel_web_store_order(payment)
+
+        assert req_mock.call_count == 1
+
+
+def test_create_web_store_product_mapping():
+    product_mapping_data = {
+        "namespace": django_settings.WEB_STORE_API_NAMESPACE,
+        "namespaceEntityId": "1",
+        "merchantId": DEFAULT_MERCHANT_ID,
+    }
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}product/",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        resp_json = create_web_store_product_mapping(product_mapping_data)
+        assert resp_json == DEFAULT_GET_PRODUCT_MAPPING_DATA
+
+        assert req_mock.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
+)
+def test_create_web_store_product_mapping_request_exception(status_code):
+    product_mapping_data = {
+        "namespace": django_settings.WEB_STORE_API_NAMESPACE,
+        "namespaceEntityId": "1",
+        "merchantId": DEFAULT_MERCHANT_ID,
+    }
+
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError),
+    ):
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}product/",
+            status_code=status_code,
+        )
+
+        create_web_store_product_mapping(product_mapping_data)
+
+        assert req_mock.call_count == 1
+
+
+def test_create_web_store_refunds():
+    orders_data = [
+        {
+            "orderId": DEFAULT_ORDER_ID,
+            "items": [
+                {
+                    "orderItemId": "a30328ca-a756-4ecc-a4c4-59af874a2c8a",
+                    "quantity": 1,
+                },
+            ],
+        }
+    ]
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+            json=DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE,
+        )
+
+        resp_json = create_web_store_refunds(orders_data)
+        assert resp_json == DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE
+
+        assert req_mock.call_count == 1
+
+
+def test_create_web_store_refunds_with_errors():
+    orders_data = [
+        {
+            "orderId": DEFAULT_ORDER_ID,
+            "items": [
+                {
+                    "orderItemId": "a30328ca-a756-4ecc-a4c4-59af874a2c8a",
+                    "quantity": 1,
+                },
+            ],
+        }
+    ]
+
+    response_data = DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE.copy()
+    response_data["errors"] = [
+        {"code": "validation-error", "message": "Refund validation error"},
+    ]
+
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreRefundValidationError),
+    ):
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+            json=response_data,
+        )
+
+        create_web_store_refunds(orders_data)
+
+        assert req_mock.call_count == 1
+
+
+def test_create_web_store_refunds_with_partial_errors():
+    orders_data = [
+        {
+            "orderId": DEFAULT_ORDER_ID,
+            "items": [
+                {
+                    "orderItemId": "a30328ca-a756-4ecc-a4c4-59af874a2c8a",
+                    "quantity": 1,
+                },
+            ],
+        },
+        {
+            "orderId": "e9c7b7e4-12fd-4c39-94b1-5e11b4cbb239",
+            "items": [
+                {
+                    "orderItemId": "56f7d830-13d1-4277-b282-dc61f1f0671a",
+                    "quantity": 1,
+                },
+            ],
+        },
+    ]
+
+    response_data = DEFAULT_CREATE_INSTANT_REFUNDS_RESPONSE.copy()
+    response_data["errors"] = [
+        {"code": "validation-error", "message": "Refund validation error"},
+    ]
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+            json=response_data,
+        )
+
+        resp_json = create_web_store_refunds(orders_data)
+        assert resp_json == response_data
+
+        assert req_mock.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
+)
+def test_create_web_store_refunds_request_exception(status_code):
+    orders_data = [
+        {
+            "orderId": DEFAULT_ORDER_ID,
+            "items": [
+                {
+                    "orderItemId": "a30328ca-a756-4ecc-a4c4-59af874a2c8a",
+                    "quantity": 1,
+                },
+            ],
+        }
+    ]
+
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError),
+    ):
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+            status_code=status_code,
+        )
+
+        create_web_store_refunds(orders_data)
+
+        assert req_mock.call_count == 1
+
+
+@pytest.mark.django_db
+def test_create_or_update_web_store_merchant_create():
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        new_merchant = WebStoreMerchantFactory()
+    assert new_merchant.merchant_id == ""
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/create/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}",
+            json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+        )
+
+        create_or_update_web_store_merchant(new_merchant, True)
+
+        assert req_mock.call_count == 1
+
+    new_merchant.refresh_from_db()
+    assert new_merchant.merchant_id == DEFAULT_MERCHANT_ID
+
+
+@pytest.mark.django_db
+def test_create_or_update_web_store_merchant_update():
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        new_merchant = WebStoreMerchantFactory(merchant_id=DEFAULT_MERCHANT_ID)
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{DEFAULT_MERCHANT_ID}",
+            json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA,
+        )
+
+        create_or_update_web_store_merchant(new_merchant, False)
+
+        assert req_mock.call_count == 1
+
+    new_merchant.refresh_from_db()
+    assert new_merchant.merchant_id == DEFAULT_MERCHANT_ID
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
+)
+@pytest.mark.django_db
+def test_create_or_update_web_store_merchant_create_request_exception(status_code):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        new_merchant = WebStoreMerchantFactory()
+
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError),
+    ):
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/create/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}",
+            status_code=status_code,
+        )
+
+        create_or_update_web_store_merchant(new_merchant, True)
+
+        assert req_mock.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "status_code",
+    _COMMON_WEB_STORE_EXCEPTION_STATUS_CODES,
+)
+@pytest.mark.django_db
+def test_create_or_update_web_store_merchant_update_request_exception(status_code):
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        new_merchant = WebStoreMerchantFactory(merchant_id=DEFAULT_MERCHANT_ID)
+
+    with (
+        requests_mock.Mocker() as req_mock,
+        pytest.raises(WebStoreAPIError),
+    ):
+        req_mock.post(
+            f"{django_settings.WEB_STORE_API_BASE_URL}merchant/update/merchant/"
+            f"{django_settings.WEB_STORE_API_NAMESPACE}/{DEFAULT_MERCHANT_ID}",
+            status_code=status_code,
+        )
+
+        create_or_update_web_store_merchant(new_merchant, False)
 
         assert req_mock.call_count == 1
