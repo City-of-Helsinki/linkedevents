@@ -10,6 +10,7 @@ from rest_framework.exceptions import ParseError
 from events.tests.test_event_get import get_list
 from events.tests.test_event_post import create_with_post
 from events.utils import (
+    clean_text_fields,
     parse_end_time,
     parse_time,
     start_of_day,
@@ -169,3 +170,45 @@ def test_inconsistent_tz_default(api_client, minimal_event_dict, user, settings)
     assert (
         list_with_offset_create_dt.json()["meta"]["count"] == 1
     ), list_with_offset_create_dt.json()
+
+
+@pytest.mark.parametrize(
+    "data, allowed_html_fields, strip, expected_result",
+    [
+        # No allowed_html_fields specified
+        ({"field1": "<p>Text</p>"}, [], False, {"field1": "&lt;p&gt;Text&lt;/p&gt;"}),
+        ({"field1": "<p>Text</p>"}, [], True, {"field1": "Text"}),
+        # allowed_html_fields specified
+        (
+            {"field1": "<p>Text</p>", "field2": "<p>Text</p>"},
+            ["field1"],
+            False,
+            {"field1": "<p>Text</p>", "field2": "&lt;p&gt;Text&lt;/p&gt;"},
+        ),
+        (
+            {"field1": "<p>Text</p>", "field2": "<p>Text</p>"},
+            ["field1"],
+            True,
+            {"field1": "<p>Text</p>", "field2": "Text"},
+        ),
+        # Only <p> should be allowed
+        (
+            {"field1": "<p><b>Text</b></p>"},
+            ["field1"],
+            False,
+            {"field1": "<p>&lt;b&gt;Text&lt;/b&gt;</p>"},
+        ),
+        ({"field1": "<p><b>Text</b></p>"}, ["field1"], True, {"field1": "<p>Text</p>"}),
+        # Ampersands
+        ({"field1": "Text & more text"}, [], False, {"field1": "Text & more text"}),
+        ({"field1": "Text & more text"}, [], True, {"field1": "Text & more text"}),
+        ({"field1": "Text &amp; more text"}, [], False, {"field1": "Text & more text"}),
+        ({"field1": "Text &amp; more text"}, [], True, {"field1": "Text & more text"}),
+    ],
+)
+def test_clean_text_fields_handles_various_inputs(
+    settings, data, allowed_html_fields, strip, expected_result
+):
+    settings.BLEACH_ALLOWED_TAGS = ["p"]
+    result = clean_text_fields(data, allowed_html_fields, strip)
+    assert result == expected_result

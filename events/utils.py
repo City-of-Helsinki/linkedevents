@@ -295,7 +295,7 @@ def clean_text_fields(
                     data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS, strip=strip)
                     break
             else:
-                data[k] = bleach.clean(v, strip=strip)
+                data[k] = bleach.clean(v, [], strip=strip)
                 # for non-html data, ampersands should be bare
                 data[k] = data[k].replace("&amp;", "&")
     return data
