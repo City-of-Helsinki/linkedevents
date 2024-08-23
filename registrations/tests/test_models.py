@@ -595,7 +595,7 @@ class TestSignUpGroup(TestCase):
 
         with self.assertRaises(PriceGroupValidationError) as exc:
             self.signup_group.to_web_store_order_json(self.user.uuid)
-        self.assertEquals(
+        self.assertEqual(
             exc.exception.messages[0], "No price groups exist for signup group."
         )
 
@@ -1023,7 +1023,7 @@ class TestSignUp(TestCase):
         with self.assertRaises(PriceGroupValidationError) as exc:
             self.signup.to_web_store_order_json(self.user.uuid)
 
-        self.assertEquals(
+        self.assertEqual(
             exc.exception.messages[0], "Price group does not exist for signup."
         )
 

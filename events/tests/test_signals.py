@@ -39,12 +39,12 @@ class TestOrganizationPostSave(TestCase):
         self.org_1.save()
 
         qs = self.org_2.admin_users.all()
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs, [repr(self.user_1), repr(self.user_2)], ordered=False, transform=repr
         )
 
         qs = self.org_2.regular_users.all()
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs, [repr(self.user_1), repr(self.user_2)], ordered=False, transform=repr
         )
 
