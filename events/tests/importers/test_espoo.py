@@ -13,9 +13,11 @@ from events.importer.espoo import (
     _build_pre_map_to_id,
     _get_data,
     _get_origin_objs,
+    _import_origin_obj,
     _import_origin_objs,
     _list_data,
     _post_map_to_self_id,
+    _pre_map_translation,
     _split_common_objs,
     EspooImporter,
     EspooImporterError,
@@ -503,3 +505,75 @@ def test_purge_orphans():
     assert purge_orphans(events_data) == [
         {"id": "unrelated", "super_event": None},
     ]
+
+
+@pytest.mark.parametrize(
+    "field_name, field_data, data, expected_result",
+    [
+        # Single language
+        ("name", {"en": "Event"}, {}, {"name_en": "Event"}),
+        # Multiple languages
+        (
+            "name",
+            {"en": "Event", "fi": "Tapahtuma"},
+            {},
+            {"name_en": "Event", "name_fi": "Tapahtuma"},
+        ),
+        # No translations
+        ("name", None, {}, {}),
+        # Unknown language
+        (
+            "name",
+            {
+                "en": "Event",
+                "fi": "Tapahtuma",
+                "iä": "Ph’nglui mglw’nafh Cthulhu R’lyeh wgah’nagl fhtagn",
+            },
+            {},
+            {"name_en": "Event", "name_fi": "Tapahtuma"},
+        ),
+        # Existing data
+        (
+            "name",
+            {"en": "Event"},
+            {"foo": "bar"},
+            {"foo": "bar", "name_en": "Event"},
+        ),
+    ],
+)
+def test_translation_field_mapper(
+    settings, field_name, field_data, data, expected_result
+):
+    settings.LANGUAGES = [("en", "English"), ("fi", "Finnish")]
+    result = _pre_map_translation(field_name, field_data, data)
+    assert result == expected_result
+
+
+@pytest.mark.django_db
+def test__import_obj(settings):
+    settings.LANGUAGES = [("en", "English"), ("fi", "Finnish")]
+    settings.BLEACH_ALLOWED_TAGS = ["p"]
+    data_source = DataSourceFactory(id="origin_ds")
+    publisher = OrganizationFactory(data_source=data_source, origin_id="origin:org1")
+
+    obj_data = {
+        "id": "org1:event1",
+        "data_source": "origin_ds",
+        "publisher": publisher.origin_id,
+        "name": "Event",
+        "description": {"en": "<p><b>Description</b></p>"},
+    }
+    copy_fields = ["name"]
+    pre_field_mappers = {
+        # NOTE: The publisher pre-mapper is required, otherwise this won't work at all.
+        "publisher": _build_pre_map_to_id({publisher.origin_id: publisher.id}),
+        "description": _pre_map_translation,
+    }
+
+    instance = _import_origin_obj(
+        obj_data, Event, data_source, copy_fields, pre_field_mappers
+    )
+
+    assert instance.name == "Event"
+    assert instance.publisher == publisher
+    assert instance.description == "<p>Description</p>"
