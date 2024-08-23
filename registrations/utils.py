@@ -199,7 +199,11 @@ def get_access_code_for_contact_person(contact_person, user):
     return access_code
 
 
-def get_web_store_api_error_message(response):
+def _get_web_store_api_refunds_error_messages(response_json):
+    return [str(error) for error in response_json["errors"]]
+
+
+def _get_web_store_api_error_message(response):
     error_status_code = getattr(response, "status_code", None)
 
     try:
@@ -214,8 +218,12 @@ def get_web_store_api_error_message(response):
     return error
 
 
-def get_web_store_api_refunds_error_messages(response_json):
-    return [str(error) for error in response_json["errors"]]
+def _raise_web_store_chained_api_exception(request_exc):
+    api_error_message = _get_web_store_api_error_message(request_exc.response)
+
+    raise WebStoreAPIError(
+        api_error_message, getattr(request_exc.response, "status_code", None)
+    ) from request_exc
 
 
 def create_web_store_api_order(
@@ -237,12 +245,9 @@ def create_web_store_api_order(
 
     client = WebStoreOrderAPIClient()
     try:
-        resp_json = client.create_order(order_data)
+        return client.create_order(order_data)
     except RequestException as request_exc:
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(api_error_message)
-
-    return resp_json
+        _raise_web_store_chained_api_exception(request_exc)
 
 
 def create_or_update_web_store_merchant(merchant, created: bool):
@@ -258,8 +263,7 @@ def create_or_update_web_store_merchant(merchant, created: bool):
                 merchant.merchant_id, merchant.to_web_store_merchant_json()
             )
     except RequestException as request_exc:
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(api_error_message)
+        _raise_web_store_chained_api_exception(request_exc)
 
 
 def create_web_store_refunds(orders_data):
@@ -268,29 +272,23 @@ def create_web_store_refunds(orders_data):
     try:
         resp_json = client.create_instant_refunds(orders_data)
     except RequestException as request_exc:
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(
-            api_error_message, getattr(request_exc.response, "status_code", None)
-        ) from request_exc
+        _raise_web_store_chained_api_exception(request_exc)
+    else:
+        if orders_data and len(resp_json.get("errors", [])) == len(orders_data):
+            # All refunds have errors => raise exception.
+            refund_error_messages = _get_web_store_api_refunds_error_messages(resp_json)
+            raise WebStoreRefundValidationError(refund_error_messages)
 
-    if orders_data and len(resp_json.get("errors", [])) == len(orders_data):
-        # All refunds have errors => raise exception.
-        refund_error_messages = get_web_store_api_refunds_error_messages(resp_json)
-        raise WebStoreRefundValidationError(refund_error_messages)
-
-    return resp_json
+        return resp_json
 
 
 def create_web_store_product_mapping(product_mapping_data: dict):
     client = WebStoreProductAPIClient()
 
     try:
-        resp_json = client.create_product_mapping(product_mapping_data)
+        return client.create_product_mapping(product_mapping_data)
     except RequestException as request_exc:
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(api_error_message)
-
-    return resp_json
+        _raise_web_store_chained_api_exception(request_exc)
 
 
 def cancel_web_store_order(payment):
@@ -298,72 +296,47 @@ def cancel_web_store_order(payment):
     user = getattr(payment, "created_by", None)
 
     try:
-        resp_json = client.cancel_order(
+        return client.cancel_order(
             payment.external_order_id, user_uuid=str(getattr(user, "uuid", ""))
         )
     except RequestException as request_exc:
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(
-            api_error_message, getattr(request_exc.response, "status_code", None)
-        ) from request_exc
-
-    return resp_json
+        _raise_web_store_chained_api_exception(request_exc)
 
 
 def create_web_store_product_accounting(product_id: str, product_accounting_data: dict):
     client = WebStoreProductAPIClient()
 
     try:
-        resp_json = client.create_product_accounting(
-            product_id, product_accounting_data
-        )
+        return client.create_product_accounting(product_id, product_accounting_data)
     except RequestException as request_exc:
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(api_error_message)
-
-    return resp_json
+        _raise_web_store_chained_api_exception(request_exc)
 
 
 def get_web_store_order(order_id: str) -> dict:
     order_api_client = WebStoreOrderAPIClient()
 
     try:
-        resp_json = order_api_client.get_order(order_id=order_id)
+        return order_api_client.get_order(order_id=order_id)
     except RequestException as request_exc:
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(
-            api_error_message, getattr(request_exc.response, "status_code", None)
-        ) from request_exc
-
-    return resp_json
+        _raise_web_store_chained_api_exception(request_exc)
 
 
 def get_web_store_payment(order_id: str) -> dict:
     client = WebStorePaymentAPIClient()
 
     try:
-        resp_json = client.get_payment(order_id=order_id)
+        return client.get_payment(order_id=order_id)
     except RequestException as request_exc:
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(
-            api_error_message, getattr(request_exc.response, "status_code", None)
-        ) from request_exc
-
-    return resp_json
+        _raise_web_store_chained_api_exception(request_exc)
 
 
 def get_web_store_refund_payment(order_id: str) -> dict:
     client = WebStorePaymentAPIClient()
 
     try:
-        resp_json = client.get_refund_payment(order_id=order_id)
+        return client.get_refund_payment(order_id=order_id)
     except RequestException as request_exc:
-        api_error_message = get_web_store_api_error_message(request_exc.response)
-        raise WebStoreAPIError(
-            api_error_message, getattr(request_exc.response, "status_code", None)
-        ) from request_exc
-
-    return resp_json
+        _raise_web_store_chained_api_exception(request_exc)
 
 
 def get_web_store_order_status(order_id: str) -> Optional[str]:
