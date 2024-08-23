@@ -180,7 +180,7 @@ class TestUserModelPermissions(TestCase):
         # magicmock cannot be used for object properties
         self.instance.admin_organizations.add(self.org)
         qs = self.instance.get_editable_events(total_qs)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs,
             [repr(event_1), repr(event_2), repr(event_3)],
             ordered=False,
@@ -191,12 +191,12 @@ class TestUserModelPermissions(TestCase):
         self.instance.admin_organizations.remove(self.org)
         self.instance.organization_memberships.add(self.org)
         qs = self.instance.get_editable_events(total_qs)
-        self.assertQuerysetEqual(qs, [repr(event_2)], transform=repr)
+        self.assertQuerySetEqual(qs, [repr(event_2)], transform=repr)
 
         # test for other users
         self.instance.organization_memberships.remove(self.org)
         qs = self.instance.get_editable_events(total_qs)
-        self.assertQuerysetEqual(qs, [], transform=repr)
+        self.assertQuerySetEqual(qs, [], transform=repr)
 
     def test_admin_get_editable_events_for_registration(self):
         # this test requires the whole User model, as admin organizations are dependent on org hierarchy
@@ -228,7 +228,7 @@ class TestUserModelPermissions(TestCase):
         # test for registration admin user
         self.instance.registration_admin_organizations.add(self.org)
         qs = self.instance.get_editable_events_for_registration(total_qs)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs, [repr(event_1), repr(event_2), repr(event_3)], transform=repr
         )
 
@@ -236,14 +236,14 @@ class TestUserModelPermissions(TestCase):
         self.instance.registration_admin_organizations.remove(self.org)
         self.instance.admin_organizations.add(self.org)
         qs = self.instance.get_editable_events_for_registration(total_qs)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs, [repr(event_1), repr(event_2), repr(event_3)], transform=repr
         )
 
         # test for other users
         self.instance.admin_organizations.remove(self.org)
         qs = self.instance.get_editable_events_for_registration(total_qs)
-        self.assertQuerysetEqual(qs, [], transform=repr)
+        self.assertQuerySetEqual(qs, [], transform=repr)
 
     def test_substitute_user_get_editable_events_for_registration(self):
         event_1 = EventFactory(
@@ -294,11 +294,11 @@ class TestUserModelPermissions(TestCase):
             is_substitute_user=True,
         )
         qs = self.instance.get_editable_events_for_registration(total_qs)
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             qs, [repr(event_1), repr(event_2), repr(event_3)], transform=repr
         )
 
         # test for other users
         RegistrationUserAccess.objects.all().delete()
         qs = self.instance.get_editable_events_for_registration(total_qs)
-        self.assertQuerysetEqual(qs, [], transform=repr)
+        self.assertQuerySetEqual(qs, [], transform=repr)
