@@ -14,7 +14,6 @@ from registrations.tests.factories import (
 )
 
 
-@pytest.mark.no_test_audit_log
 @pytest.mark.parametrize(
     "maximum_attendee_capacity,waiting_list_capacity,expected_signups_count,"
     "expected_attending,expected_waitlisted",
