@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 import factory
 import pytest
 import pytz
-from django.conf import settings
+from django.conf import settings as django_settings
 from django_orghierarchy.models import Organization
 from faker import Faker
 
@@ -84,7 +84,7 @@ def test_get_data(requests_mock):
     assert mock.call_count == 1
 
 
-def test_get_max_retries(sleep):
+def test_get_max_retries(sleep, settings):
     def build_response(status_code):
         response = HTTPResponse(Mock())
         response.msg = HTTPMessage()
@@ -128,7 +128,7 @@ def test_list_data(requests_mock, sleep):
     assert sleep.call_count == 2
 
 
-def test_list_max_pages(requests_mock, sleep):
+def test_list_max_pages(requests_mock, sleep, settings):
     url = "http://localhost/"
     mock = requests_mock.get(url, json={"meta": {"next": url}, "data": []})
     with pytest.raises(EspooImporterError):
@@ -275,6 +275,7 @@ def event_mock_data(
     audience=None,
     offers=None,
     external_links=None,
+    **kwargs,
 ):
     keywords = keywords or []
     audience = audience or []
@@ -328,6 +329,7 @@ def event_mock_data(
                 "publisher": "espoo:sito",
             }
         ],
+        **kwargs,
     }
 
 
@@ -351,7 +353,7 @@ def place_mock_data(_id: str, publisher: str):
 
 def mock_org_list_response(requests_mock, pks=(1, 2, 3)):
     requests_mock.get(
-        f"{settings.ESPOO_API_URL}v1/organization/",
+        f"{django_settings.ESPOO_API_URL}v1/organization/",
         json={
             "meta": {"count": len(pks), "next": None, "previous": None},
             "data": [org_mock_data(pk) for pk in pks],
@@ -405,6 +407,9 @@ def test_importer(settings, requests_mock, sleep, api_client):
         common_place1_data,
         [kw1_data],
         external_links=[{"name": "Foo", "language": "fi", "link": "https://localhost"}],
+        description={
+            "en": '<h1>h1 tags should disappear</h1><p>Hello world! <a href="https://google.com">Google</a></p>'
+        },
     )
 
     requests_mock.get(
@@ -456,6 +461,11 @@ def test_importer(settings, requests_mock, sleep, api_client):
 
     # Check that link text matches
     assert event3.external_links.first().link == "https://localhost"
+
+    assert (
+        event3.description
+        == 'h1 tags should disappear<p>Hello world! <a href="https://google.com">Google</a></p>'
+    )
 
     # Finally lets make sure the importer can delete everything
     event_data["data"] = []
