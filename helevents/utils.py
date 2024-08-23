@@ -1,7 +1,8 @@
+from typing import Optional
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from rest_framework import status
-from rest_framework.response import Response
+from helsinki_gdpr.types import Error, ErrorResponse
 
 
 def get_user_for_gdpr_api(user: get_user_model()) -> get_user_model():
@@ -16,7 +17,9 @@ def get_user_for_gdpr_api(user: get_user_model()) -> get_user_model():
     return user
 
 
-def delete_user_and_gdpr_data(user: get_user_model(), dry_run: bool) -> None:
+def delete_user_and_gdpr_data(
+    user: get_user_model(), dry_run: bool
+) -> Optional[ErrorResponse]:
     """
     Function used by the Helsinki Profile GDPR API to delete all GDPR data collected of the user.
     The GDPR API package will run this within a transaction.
@@ -29,7 +32,18 @@ def delete_user_and_gdpr_data(user: get_user_model(), dry_run: bool) -> None:
 
     if settings.GDPR_DISABLE_API_DELETION:
         # Delete user is disabled. Returns 403 FORBIDDEN so that the GDPR view handles it correctly.
-        return Response(status=status.HTTP_403_FORBIDDEN)
+        return ErrorResponse(
+            [
+                Error(
+                    "GDPR_DISABLE_API_DELETION=1",
+                    {
+                        "fi": "GDPR poistopyynnöt on estetty toistaiseksi Linked Events -palvelussa",
+                        "en": "GDPR removal requests are temporarily unavailable in Linked Events",
+                        "sv": "GDPR-borttagning begäran är tillfälligt inte tillgänglig i Linked Events",
+                    },
+                )
+            ]
+        )
 
     for signup in user.signup_created_by.filter(signup_group_id__isnull=True):
         signup._individually_deleted = (
