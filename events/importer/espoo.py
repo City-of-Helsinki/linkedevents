@@ -111,11 +111,29 @@ def _get_origin_objs(detail_url: str, origin_obj_ids: list) -> list:
 
 
 def _build_pre_map(mapping: dict[str, str]) -> PreMapper:
+    """
+    Build a pre field mapper that maps the origin object field value to a value from a mapping.
+
+    :param mapping: a map of origin object values to target object values
+
+    :return: a pre field mapper function
+    """
+
     def pre_map(
         field_name, field_data: Optional[Union[str, dict]], data: dict
     ) -> dict[str, Any]:
+        """
+        Map a single field from origin object to target object
+
+        :param field_name: name of the field in the target object, e.g. "name"
+        :param field_data: data from the field in the origin object, e.g. origin_obj["name"]
+        :param data: target object data
+
+        :return: updated target object data with the field mapped
+        """
         if field_data is None:
             return {**data}
+        # If the field is a dict, we map the id field to the target field
         elif isinstance(field_data, dict):
             if "id" not in field_data and "@id" not in field_data:
                 raise EspooImporterError(f"Unable to parse id from data: {field_data}")
@@ -125,6 +143,7 @@ def _build_pre_map(mapping: dict[str, str]) -> PreMapper:
             else:
                 return {**data, field_name: mapping[parse_jsonld_id(field_data)]}
 
+        # If the field is a string, we map the string to the target field
         return {**data, field_name: mapping[field_data]}
 
     return pre_map
@@ -132,7 +151,9 @@ def _build_pre_map(mapping: dict[str, str]) -> PreMapper:
 
 def _build_pre_map_to_id(mapping: dict[str, str]) -> PreMapper:
     """
-    Pre mapper for ForeignKey fields
+    Build a pre field mapper that maps the origin object field value to a target object id.
+
+    :param mapping: a map of origin object ids to target (local) object ids
     """
     pre_mapper = _build_pre_map(mapping)
 
@@ -263,14 +284,14 @@ def _post_recreate_external_links(
 
 def _import_origin_obj(
     obj_data,
-    model,
+    model: Type[M],
     data_source,
     copy_fields,
     pre_field_mappers,
     auto_pk=False,
     origin_id_field="id",
     instance_id_field="origin_id",
-):
+) -> M:
     obj_data = deepcopy(obj_data)
     origin_id = obj_data.pop(origin_id_field)
     obj_data.pop("data_source")
@@ -325,8 +346,8 @@ def _import_origin_objs(
 
     common_objs: list of common model instances that are used only for mapping
     copy_fields: list of field names to be copied as is from origin to target
-    pre_field_mappers: fields that are mapped before saving the model instance
-    post_field_mappers: fields that are mapped after saving all the model instances
+    pre_field_mappers: fields that are mapped before saving the model instance (source -> target)
+    post_field_mappers: fields that are mapped after saving all the model instances (source -> target)
     auto_id: set True for models that use AutoField pk
     syncher_key:
     """
