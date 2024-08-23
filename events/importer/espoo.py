@@ -19,6 +19,7 @@ from events.models import DataSource, Event, Image, Keyword, Language, Place
 from events.translation import EventTranslationOptions
 
 from ..api import generate_id
+from ..utils import clean_text_fields
 from .base import Importer, register_importer
 from .sync import ModelSyncher
 
@@ -277,6 +278,7 @@ def _import_origin_obj(
     data = {k: v for k, v in obj_data.items() if k in copy_fields}
     for field_name, mapper in pre_field_mappers.items():
         data = mapper(field_name, obj_data.get(field_name), data)
+    data = clean_text_fields(data, ["description"], strip=True)
 
     qs = model.objects.filter(data_source=data_source, **{instance_id_field: origin_id})
     qs_count = qs.count()
