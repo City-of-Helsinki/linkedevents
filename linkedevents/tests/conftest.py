@@ -190,10 +190,9 @@ def sentry_init(request):
     """Copied from https://github.com/getsentry/sentry-python/blob/master/tests/conftest.py."""
 
     def inner(*a, **kw):
-        hub = sentry_sdk.Hub.current
         kw.setdefault("transport", TestTransport())
         client = sentry_sdk.Client(*a, **kw)
-        hub.bind_client(client)
+        sentry_sdk.get_global_scope().set_client(client)
 
     if request.node.get_closest_marker("forked"):
         # Do not run isolation if the test is already running in
@@ -201,8 +200,12 @@ def sentry_init(request):
         # fork)
         yield inner
     else:
-        with sentry_sdk.Hub(None):
+        old_client = sentry_sdk.get_global_scope().client
+        try:
+            sentry_sdk.get_current_scope().set_client(None)
             yield inner
+        finally:
+            sentry_sdk.get_global_scope().set_client(old_client)
 
 
 @pytest.fixture
@@ -211,7 +214,7 @@ def sentry_capture_events(monkeypatch):
 
     def inner():
         events = []
-        test_client = sentry_sdk.Hub.current.client
+        test_client = sentry_sdk.get_client()
         old_capture_envelope = test_client.transport.capture_envelope
 
         def append_event(envelope):
