@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
+from zoneinfo import ZoneInfo
 
-import pytz
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
@@ -143,7 +143,7 @@ def create_events_ics_file_content(events, language="fi"):
     cal.add("prodid", "-//linkedevents.hel.fi//NONSGML API//EN")
     cal.add("version", "2.0")
 
-    local_tz = pytz.timezone(settings.TIME_ZONE)
+    local_tz = ZoneInfo(settings.TIME_ZONE)
     with translation.override(language):
         for event in events:
             calendar_event = _create_calendar_event_from_event(event, local_tz)
@@ -240,7 +240,7 @@ def create_web_store_api_order(
         )
 
     order_data["lastValidPurchaseDateTime"] = localized_expiration_datetime.astimezone(
-        pytz.timezone("Europe/Helsinki")
+        ZoneInfo("Europe/Helsinki")
     ).strftime("%Y-%m-%dT%H:%M:%S")
 
     client = WebStoreOrderAPIClient()

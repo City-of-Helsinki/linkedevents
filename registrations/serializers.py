@@ -1,7 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
-import pytz
 from django.conf import settings
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
@@ -170,11 +170,17 @@ def _validate_signups_for_payment(
 
 class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
     created_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True, read_only=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        read_only=True,
     )
 
     last_modified_time = DateTimeField(
-        default_timezone=pytz.UTC, required=False, allow_null=True, read_only=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        read_only=True,
     )
 
     created_by = serializers.StringRelatedField(required=False, allow_null=True)
@@ -1394,7 +1400,9 @@ class SignUpGroupSerializer(
 class SeatReservationCodeSerializer(serializers.ModelSerializer):
     seats = serializers.IntegerField(required=True)
 
-    timestamp = DateTimeField(default_timezone=pytz.UTC, required=False, read_only=True)
+    timestamp = DateTimeField(
+        default_timezone=ZoneInfo("UTC"), required=False, read_only=True
+    )
 
     expiration = serializers.SerializerMethodField()
 

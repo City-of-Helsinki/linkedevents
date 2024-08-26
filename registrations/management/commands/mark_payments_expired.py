@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
-import pytz
 from django.conf import settings
 from django.core.management import BaseCommand
 from django.db import transaction
@@ -91,7 +91,8 @@ class Command(BaseCommand):
         payment_api_client = WebStorePaymentAPIClient()
         order_api_client = WebStoreOrderAPIClient()
         datetime_now = localtime()
-        local_tz = pytz.timezone(settings.TIME_ZONE)
+        local_tz = ZoneInfo(settings.TIME_ZONE)
+        utc_tz = ZoneInfo("UTC")
 
         expired_payments = SignUpPayment.objects.select_for_update().filter(
             status=SignUpPayment.PaymentStatus.CREATED,
@@ -129,9 +130,11 @@ class Command(BaseCommand):
                 elif (
                     resp_json.get("status") == WebStorePaymentStatus.CREATED.value
                     and resp_json.get("timestamp")
-                    and pytz.utc.localize(
+                    and (
                         datetime.strptime(resp_json["timestamp"], "%Y%m%d-%H%M%S")
-                    ).astimezone(local_tz)
+                        .replace(tzinfo=utc_tz)
+                        .astimezone(local_tz)
+                    )
                     > payment.expires_at
                 ):
                     # Payer has entered the payment phase after expiry datetime and might make a
