@@ -527,6 +527,84 @@ class SignUpSerializer(
 
         return instance
 
+    def _validate_mandatory_fields(self, registration, validated_data, errors):
+        for field in registration.mandatory_fields:
+            if self.partial and field not in validated_data.keys():
+                # Don't validate field if request method is PATCH and field is missing from the payload.
+                continue
+            elif not validated_data.get(field):
+                errors[field] = _("This field must be specified.")
+
+    def _validate_date_of_birth(self, registration, validated_data, errors):
+        if (
+            registration.audience_min_age is None
+            and registration.audience_max_age is None
+            or self.partial
+            and "date_of_birth" not in validated_data.keys()
+        ):
+            # Don't validate date_of_birth if one of the following is true:
+            # - audience_min_age and registration.audience_max_age are not defined
+            # - request method is PATCH and field "date_of_birth" is missing from the payload
+            return
+
+        date_of_birth = validated_data.get("date_of_birth")
+
+        if not date_of_birth:
+            errors["date_of_birth"] = _("This field must be specified.")
+        else:
+            today = localdate()
+            comparison_date = (
+                max([today, registration.event.start_time.date()])
+                if registration.event.start_time
+                else today
+            )
+
+            age = (
+                comparison_date.year
+                - date_of_birth.year
+                - (
+                    (comparison_date.month, comparison_date.day)
+                    < (date_of_birth.month, date_of_birth.day)
+                )
+            )
+
+            if registration.audience_min_age and age < registration.audience_min_age:
+                errors["date_of_birth"] = _("The participant is too young.")
+            elif registration.audience_max_age and age > registration.audience_max_age:
+                errors["date_of_birth"] = _("The participant is too old.")
+
+    def _validate_price_group(self, registration, data, validated_data, errors):
+        price_group = validated_data.get("price_group") or {}
+
+        if (
+            not price_group
+            and registration.registration_price_groups.exists()
+            and (not self.partial or "price_group" in data.keys())
+        ):
+            errors["price_group"] = _(
+                "Price group selection is mandatory for this registration."
+            )
+        elif (
+            (
+                instance_id := validated_data.get(
+                    "id", getattr(self.instance, "pk", None)
+                )
+            )
+            and price_group.get("id")
+            and registration.signups.exclude(pk=instance_id)
+            .filter(price_group=price_group["id"])
+            .exists()
+        ):
+            errors["price_group"] = _(
+                "Price group is already assigned to another participant."
+            )
+        elif (
+            registration_price_group := price_group.get("registration_price_group")
+        ) and registration_price_group.registration_id != registration.pk:
+            errors["price_group"] = _(
+                "Price group is not one of the allowed price groups for this registration."
+            )
+
     def validate(self, data):
         # Clean html tags from the text fields
         data = clean_text_fields(data, strip=True)
@@ -535,91 +613,16 @@ class SignUpSerializer(
 
         errors = {}
 
-        instance_id = validated_data.get("id", getattr(self.instance, "pk", None))
-
         if isinstance(self.instance, SignUp):
             registration = self.instance.registration
         else:
             registration = validated_data["registration"]
 
-        falsy_values = ("", None)
-
-        # Validate mandatory fields
-        for field in registration.mandatory_fields:
-            # Don't validate field if request method is PATCH and field is missing from the payload
-            if self.partial and field not in validated_data.keys():
-                continue
-            elif validated_data.get(field) in falsy_values:
-                errors[field] = _("This field must be specified.")
-
-        # Validate date_of_birth if audience_min_age or registration.audience_max_age is defined
-        # Don't validate date_of_birth if request method is PATCH and field is missing from the payload
-        if (
-            registration.audience_min_age not in falsy_values
-            or registration.audience_max_age not in falsy_values
-        ) and not (self.partial and "date_of_birth" not in validated_data.keys()):
-            date_of_birth = validated_data.get("date_of_birth")
-
-            if date_of_birth in falsy_values:
-                errors["date_of_birth"] = _("This field must be specified.")
-            else:
-                today = localdate()
-                comparison_date = (
-                    max([today, registration.event.start_time.date()])
-                    if registration.event.start_time
-                    else today
-                )
-
-                age = (
-                    comparison_date.year
-                    - date_of_birth.year
-                    - (
-                        (comparison_date.month, comparison_date.day)
-                        < (date_of_birth.month, date_of_birth.day)
-                    )
-                )
-
-                if (
-                    registration.audience_min_age
-                    and age < registration.audience_min_age
-                ):
-                    errors["date_of_birth"] = _("The participant is too young.")
-                elif (
-                    registration.audience_max_age
-                    and age > registration.audience_max_age
-                ):
-                    errors["date_of_birth"] = _("The participant is too old.")
+        self._validate_mandatory_fields(registration, validated_data, errors)
+        self._validate_date_of_birth(registration, validated_data, errors)
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
-            price_group = validated_data.get("price_group") or {}
-            if (
-                not price_group
-                and registration.registration_price_groups.exists()
-                and (not self.partial or "price_group" in data.keys())
-            ):
-                errors["price_group"] = _(
-                    "Price group selection is mandatory for this registration."
-                )
-
-            if (
-                price_group.get("id")
-                and instance_id
-                and registration.signups.exclude(pk=instance_id)
-                .filter(price_group=price_group["id"])
-                .exists()
-            ):
-                errors["price_group"] = _(
-                    "Price group is already assigned to another participant."
-                )
-
-            if (
-                price_group
-                and price_group["registration_price_group"].registration_id
-                != registration.pk
-            ):
-                errors["price_group"] = _(
-                    "Price group is not one of the allowed price groups for this registration."
-                )
+            self._validate_price_group(registration, data, validated_data, errors)
 
             if validated_data.get("create_payment"):
                 _validate_signups_for_payment([validated_data], errors, "price_group")
