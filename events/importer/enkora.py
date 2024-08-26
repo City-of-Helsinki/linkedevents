@@ -4,8 +4,8 @@ import re
 from copy import deepcopy
 from datetime import date, datetime, timedelta
 from typing import Generator, Optional
+from zoneinfo import ZoneInfo
 
-import pytz
 import requests
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class EnkoraImporter(Importer):
     name = "enkora"
     supported_languages = ["fi", "sv", "en"]
-    EEST = pytz.timezone("Europe/Helsinki")
+    EEST = ZoneInfo("Europe/Helsinki")
 
     ERRORS_ALLOWED_BEFORE_STOP = 20
 
