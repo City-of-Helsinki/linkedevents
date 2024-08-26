@@ -7,7 +7,6 @@ from rest_framework import status
 from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from registrations.tests.factories import SeatReservationCodeFactory
-from registrations.tests.test_seatsreservation_post import assert_reserve_seats
 from registrations.tests.utils import create_user_by_role
 
 
@@ -113,12 +112,14 @@ def test_code_value_is_required(user_api_client, registration):
 
 @pytest.mark.django_db
 def test_code_value_must_match(user_api_client, registration):
-    reservation = SeatReservationCodeFactory(seats=1, registration=registration)
+    reservation = SeatReservationCodeFactory(
+        seats=1, registration=registration, code="86e5f626-c9d0-4759-8a7a-9146d24c280d"
+    )
 
     reservation_data = {
         "seats": 1,
         "registration": registration.id,
-        "code": "invalid_code",
+        "code": "d76449af-49d9-4016-ad79-27faa147f461",
     }
     response = update_seats_reservation(
         user_api_client, reservation.id, reservation_data
@@ -153,7 +154,6 @@ def test_cannot_update_expired_reservation(user_api_client, registration):
         "registration": registration.id,
         "code": reservation.code,
     }
-    assert_reserve_seats(user_api_client, reservation_data)
 
     response = update_seats_reservation(
         user_api_client, reservation.id, reservation_data

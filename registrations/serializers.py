@@ -1408,6 +1408,16 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
 
     in_waitlist = serializers.SerializerMethodField()
 
+    def get_fields(self):
+        fields = super().get_fields()
+
+        if not self.instance:
+            fields["code"] = serializers.UUIDField(required=False, read_only=True)
+        else:
+            fields["code"] = serializers.UUIDField(required=True)
+
+        return fields
+
     def get_expiration(self, obj):
         return obj.expiration
 
@@ -1429,34 +1439,20 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
             data["registration"] = self.instance.registration.id
         return super().to_internal_value(data)
 
-    def validate(self, data):
-        instance = self.instance
-        errors = {}
+    def validate_code(self, value):
+        if self.instance and value != self.instance.code:
+            raise serializers.ValidationError(
+                ErrorDetail(_("The value doesn't match."), code="mismatch")
+            )
 
-        if instance:
-            # The code must be defined and match instance code when updating existing seats reservation
-            if self.initial_data.get("code") is None:
-                errors["code"] = ErrorDetail(
-                    _("This field must be specified."), code="required"
-                )
-            elif str(instance.code) != self.initial_data["code"]:
-                errors["code"] = _("The value doesn't match.")
+        return value
 
-            # Raise validation error if reservation code doesn't match
-            if errors:
-                raise serializers.ValidationError(errors)
-
-        registration = data["registration"]
-        user = self.context["request"].user
-
-        # Prevent to reserve seats if enrolment is not open.
-        # Raises 409 error if enrolment is not open
-        _validate_registration_enrolment_times(registration, user)
-
+    def _validate_registration_group_size(self, registration, validated_data, errors):
         maximum_group_size = registration.maximum_group_size
+        if maximum_group_size is None:
+            return
 
-        # Validate maximum group size
-        if maximum_group_size is not None and data["seats"] > maximum_group_size:
+        if validated_data["seats"] > maximum_group_size:
             errors["seats"] = ErrorDetail(
                 _(
                     "Amount of seats is greater than maximum group size: {max_group_size}."
@@ -1464,53 +1460,70 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
                 code="max_group_size",
             )
 
+    def _validate_registration_capacities(self, registration, validated_data, errors):
         maximum_attendee_capacity = registration.maximum_attendee_capacity
-        waiting_list_capacity = registration.waiting_list_capacity
+        if maximum_attendee_capacity is None:
+            # Validate attendee capacity only if maximum_attendee_capacity is defined.
+            return
 
-        # Validate attendee capacity only if maximum_attendee_capacity is defined
-        if maximum_attendee_capacity is not None:
-            attendee_count = registration.current_attendee_count
-            attendee_capacity_left = maximum_attendee_capacity - attendee_count
+        if self.instance:
+            reserved_seats_amount = max(
+                registration.reserved_seats_amount - self.instance.seats, 0
+            )
+        else:
+            reserved_seats_amount = registration.reserved_seats_amount
 
-            if instance:
-                reserved_seats_amount = max(
-                    registration.reserved_seats_amount - instance.seats, 0
+        attendee_count = registration.current_attendee_count
+        attendee_capacity_left = maximum_attendee_capacity - attendee_count
+
+        # Only allow to reserve seats to event if there is attendee capacity is not used
+        if attendee_capacity_left > 0:
+            # Prevent to reserve seats if all available seats are already reserved
+            if validated_data["seats"] > attendee_capacity_left - reserved_seats_amount:
+                errors["seats"] = _(
+                    "Not enough seats available. Capacity left: {capacity_left}."
+                ).format(
+                    capacity_left=max(attendee_capacity_left - reserved_seats_amount, 0)
                 )
-            else:
-                reserved_seats_amount = registration.reserved_seats_amount
-
-            # Only allow to reserve seats to event if attendee capacity is not used
-            if attendee_capacity_left > 0:
-                # Prevent to reserve seats if all available seats are already reserved
-                if data["seats"] > attendee_capacity_left - reserved_seats_amount:
-                    errors["seats"] = _(
-                        "Not enough seats available. Capacity left: {capacity_left}."
-                    ).format(
-                        capacity_left=max(
-                            attendee_capacity_left - reserved_seats_amount, 0
-                        )
-                    )
+        elif (waiting_list_capacity := registration.waiting_list_capacity) is not None:
             # Validate waiting list capacity only if waiting_list_capacity is defined and
-            # and all seats in the event are used
-            elif waiting_list_capacity is not None:
-                waiting_list_count = registration.current_waiting_list_count
-                waiting_list_capacity_left = waiting_list_capacity - waiting_list_count
+            # all seats in the event are used.
+            waiting_list_count = registration.current_waiting_list_count
+            waiting_list_capacity_left = waiting_list_capacity - waiting_list_count
 
-                # Prevent to reserve seats to waiting ist if all available seats in waiting list
-                # are already reserved
-                if data["seats"] > waiting_list_capacity_left - reserved_seats_amount:
-                    errors["seats"] = _(
-                        "Not enough capacity in the waiting list. Capacity left: {capacity_left}."
-                    ).format(
-                        capacity_left=max(
-                            waiting_list_capacity_left - reserved_seats_amount, 0
-                        )
+            # Prevent to reserve seats to waiting ist if all available seats in waiting list
+            # are already reserved
+            if (
+                validated_data["seats"]
+                > waiting_list_capacity_left - reserved_seats_amount
+            ):
+                errors["seats"] = _(
+                    "Not enough capacity in the waiting list. Capacity left: {capacity_left}."
+                ).format(
+                    capacity_left=max(
+                        waiting_list_capacity_left - reserved_seats_amount, 0
                     )
+                )
+
+    def validate(self, data):
+        validated_data = super().validate(data)
+
+        errors = {}
+
+        registration = validated_data["registration"]
+        user = self.context["request"].user
+
+        # Prevent to reserve seats if enrolment is not open.
+        # Raises 409 error if enrolment is not open
+        _validate_registration_enrolment_times(registration, user)
+
+        self._validate_registration_group_size(registration, validated_data, errors)
+        self._validate_registration_capacities(registration, validated_data, errors)
 
         if errors:
             raise serializers.ValidationError(errors)
 
-        return super().validate(data)
+        return validated_data
 
     def update(self, instance, validated_data):
         if localtime() > instance.expiration:
