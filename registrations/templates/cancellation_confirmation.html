@@ -1,6 +1,8 @@
 {% extends 'base_email.html' %}
 {% load i18n %}
 
+{% block title %}{{texts.heading}}{% endblock title %}
+
 {% block content %}
   <tr>
     <td class="content-cell" style="padding:0;margin:0;text-align:left;">
@@ -19,7 +21,7 @@
         </div>
         <div style="margin: 24px 0px 40px">
           <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">
-            {% blocktranslate %}More information from our customer service{% endblocktranslate %} 
+            {% blocktranslate %}More information from our customer service{% endblocktranslate %}
             <a href="mailto:linkedevents@hel.fi" class="link" style="color:#0000bf;font-size:16px;font-weight:500;">linkedevents@hel.fi</a>
           </p>
         </div>

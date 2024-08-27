@@ -1,0 +1,8 @@
+{% load i18n %}
+{% if event_type_id == 1 %}
+{% blocktranslate %}A message about the event {{event_name}}.{% endblocktranslate %}
+{% elif event_type_id == 2 %}
+{% blocktranslate %}A message about the course {{event_name}}.{% endblocktranslate %}
+{% elif event_type_id == 3 %}
+{% blocktranslate %}A message about the volunteering {{event_name}}.{% endblocktranslate %}
+{% endif %}

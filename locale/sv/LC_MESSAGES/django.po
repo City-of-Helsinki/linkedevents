@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-04-30 11:55+0000\n"
+"POT-Creation-Date: 2024-08-27 06:40+0000\n"
 "PO-Revision-Date: 2023-06-19 12:05+0300\n"
 "Last-Translator: <harri.rissanen@vincit.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -30,148 +30,179 @@ msgstr "meddelande"
 msgid "created at"
 msgstr "Skapad kl"
 
-#: events/admin.py:197
+#: data_analytics/forms.py:14
+msgid "Unique name"
+msgstr "Unikt namn"
+
+#: data_analytics/forms.py:17
+msgid "API token"
+msgstr ""
+
+#: data_analytics/forms.py:23
+msgid ""
+"NOTE: Copy this to a secure location and use it as the API key in the data "
+"analytics system."
+msgstr ""
+
+#: events/admin.py:116 registrations/forms.py:116
+msgid ""
+"If the attendee capacity for the event is not restricted, please give a "
+"rough estimate of at least the maximum attendee capacity. The information "
+"will be used for statistical purposes. Maximum attendee capacity is a "
+"measure in the city strategy that monitors the volumes of events held in the "
+"city. The estimate may be changed later if it is uncertain at the moment."
+msgstr ""
+
+#: events/admin.py:212
 msgid "Contact info"
 msgstr "Kontaktuppgifter"
 
-#: events/api.py:299
+#: events/api.py:307
 #, python-brace-format
 msgid "Invalid value \"{data}\""
 msgstr ""
 
-#: events/api.py:382
+#: events/api.py:394
 msgid "An object with given id already exists."
 msgstr ""
 
-#: events/api.py:393 events/api.py:644
+#: events/api.py:405 events/api.py:656
 msgid "You may not change the id of an existing object."
 msgstr "Du får inte ändra id för ett befintligt objekt."
 
-#: events/api.py:402
+#: events/api.py:414
 msgid "You may not change the publisher of an existing object."
 msgstr "Du får inte ändra utgivare för ett befintligt objekt."
 
-#: events/api.py:413 events/api.py:664
+#: events/api.py:425 events/api.py:676
 msgid "You may not change the data source of an existing object."
 msgstr "Du får inte ändra datakälla för ett befintligt objekt."
 
-#: events/api.py:449 linkedevents/serializers.py:298
+#: events/api.py:461 linkedevents/serializers.py:312
 #, python-format
 msgid ""
 "Setting id to %(given)s is not allowed for your organization. The id must be "
 "left blank or set to %(data_source)s:desired_id"
 msgstr ""
 
-#: events/api.py:653
+#: events/api.py:665
 msgid "You may not change the organization of an existing object."
 msgstr "Du får inte ändra organisation för ett befintligt objekt."
 
-#: events/api.py:1212
+#: events/api.py:1224
 msgid "User has no rights to this organization"
 msgstr "Användaren har inga rättigheter till denna organisation"
 
-#: events/api.py:1484
+#: events/api.py:1558
 #, python-format
 msgid "Offer price group with price_group %(price_group)s already exists."
 msgstr ""
 
-#: events/api.py:1679 events/api.py:1784
+#: events/api.py:1753 events/api.py:1951
 #, python-format
 msgid "Registration user access with email %(email)s already exists."
 msgstr ""
 
-#: events/api.py:1711 events/permissions.py:145
+#: events/api.py:1839 events/permissions.py:149
 msgid "Object data source does not match user data source"
 msgstr ""
 
-#: events/api.py:1724
+#: events/api.py:1854
 msgid "Event already has a registration."
 msgstr ""
 
-#: events/api.py:1795
+#: events/api.py:1962
 #, python-format
 msgid ""
 "Registration price group with price_group %(price_group)s already exists."
 msgstr ""
 
-#: events/api.py:1814
+#: events/api.py:1981
 msgid "All registration price groups must have the same VAT percentage."
 msgstr ""
 
-#: events/api.py:1995
+#: events/api.py:2004 events/api.py:2011
+msgid "This field is required when registration has customer groups."
+msgstr ""
+
+#: events/api.py:2031
+msgid "This field is required when registration has a merchant or account."
+msgstr ""
+
+#: events/api.py:2215
 msgid "Deprecated keyword not allowed ({})"
 msgstr ""
 
-#: events/api.py:2045
+#: events/api.py:2265
 msgid "You have to set either user_email or user_phone_number."
 msgstr ""
 
-#: events/api.py:2054
+#: events/api.py:2274
 msgid "User consent is required if personal information fields are filled."
 msgstr ""
 
-#: events/api.py:2057
+#: events/api.py:2277
 msgid "This field must be specified before an event is published."
 msgstr "Detta fält måste anges innan ett evenemanget publiceras."
 
-#: events/api.py:2071
+#: events/api.py:2291
 msgid "Short description length must be 160 characters or less"
 msgstr ""
 
-#: events/api.py:2087
+#: events/api.py:2307
 msgid "Price info must be specified before an event is published."
 msgstr ""
 
-#: events/api.py:2121
+#: events/api.py:2341
 msgid "End time cannot be in the past. Please set a future end time."
 msgstr "Sluttiden kan inte ligga i det förflutna. Ange en framtida sluttid."
 
-#: events/api.py:2226
+#: events/api.py:2446
 msgid "Cannot edit a past event."
 msgstr ""
 
-#: events/api.py:2241
+#: events/api.py:2461
 msgid ""
 "POSTPONED and RESCHEDULED statuses cannot be set directly.Changing event "
 "start_time or marking start_time nullwill reschedule or postpone an event."
 msgstr ""
 
-#: events/api.py:2262
+#: events/api.py:2482
 msgid ""
 "Public events cannot be set back to SCHEDULED if theyhave already been "
 "CANCELLED, POSTPONED or RESCHEDULED."
 msgstr ""
 
-#: events/api.py:2872
+#: events/api.py:3104
 #, python-brace-format
 msgid "Event type can be of the following values: {event_types}"
 msgstr ""
 
-#: events/api.py:2900
+#: events/api.py:3132
 msgid "Error while parsing days."
 msgstr ""
 
-#: events/api.py:2902
+#: events/api.py:3134
 msgid "Days must be 1 or more."
 msgstr ""
 
-#: events/api.py:2906
+#: events/api.py:3138
 msgid "Start or end cannot be used with days."
 msgstr ""
 
-#: events/api.py:3379
+#: events/api.py:3611
 msgid "x_full_text supports the following languages: fi, en, sv"
 msgstr ""
 
-#: events/api.py:3806
+#: events/api.py:4049
 msgid "Must specify a location when fetching DOCX file."
 msgstr ""
 
-#: events/api.py:3810
+#: events/api.py:4053
 msgid "No events."
 msgstr "Inga evenemang."
 
-#: events/api.py:3812
+#: events/api.py:4055
 msgid "Only one location allowed."
 msgstr ""
 
@@ -182,10 +213,11 @@ msgid ""
 "for POSTing your events."
 msgstr ""
 
-#: events/models.py:81 events/models.py:210 events/models.py:229
-#: events/models.py:356 events/models.py:428 events/models.py:447
-#: events/models.py:1425 events/models.py:1443 events/models.py:1493
-#: registrations/exports.py:47 registrations/models.py:224
+#: events/models.py:81 events/models.py:212 events/models.py:231
+#: events/models.py:358 events/models.py:430 events/models.py:449
+#: events/models.py:1472 events/models.py:1490 events/models.py:1540
+#: registrations/exports.py:47 registrations/models.py:250
+#: registrations/models.py:2245
 msgid "Name"
 msgstr "Namn"
 
@@ -217,359 +249,365 @@ msgstr "Tidigare evenemang kan skapas med API"
 msgid "Do not show events created by this data_source by default."
 msgstr "Visa inte evenemang som skapats av denna datakälla som standard."
 
-#: events/models.py:211
+#: events/models.py:213
 msgid "Url"
 msgstr "Url"
 
-#: events/models.py:214 events/models.py:274
+#: events/models.py:216 events/models.py:276
 msgid "License"
 msgstr "Licens"
 
-#: events/models.py:215
+#: events/models.py:217
 msgid "Licenses"
 msgstr "Licenser"
 
-#: events/models.py:242 events/models.py:482 events/models.py:670
-#: events/models.py:988 registrations/models.py:327
+#: events/models.py:244 events/models.py:484 events/models.py:672
+#: events/models.py:994 registrations/models.py:370
 msgid "Publisher"
 msgstr "Utgivare"
 
-#: events/models.py:268 events/models.py:337
+#: events/models.py:270 events/models.py:339
 msgid "Image"
 msgstr "Bild"
 
-#: events/models.py:270
+#: events/models.py:272
 msgid "Cropping"
 msgstr "Beskärning"
 
-#: events/models.py:280
+#: events/models.py:282
 msgid "Photographer name"
 msgstr "Fotografens namn"
 
-#: events/models.py:283 events/models.py:1450
+#: events/models.py:285 events/models.py:1497
 msgid "Alt text"
 msgstr "Alt text"
 
-#: events/models.py:294
+#: events/models.py:296
 msgid "You must provide either image or url."
 msgstr ""
 
-#: events/models.py:296
+#: events/models.py:298
 msgid "You can only provide image or url, not both."
 msgstr ""
 
-#: events/models.py:359
+#: events/models.py:361
 msgid "Origin ID"
 msgstr "Ursprungs-ID"
 
-#: events/models.py:430
+#: events/models.py:432
 msgid "Can be used as registration service language"
 msgstr "Kan användas som servicespråk för registrering"
 
-#: events/models.py:437
+#: events/models.py:439
 msgid "language"
 msgstr "språk"
 
-#: events/models.py:438
+#: events/models.py:440
 msgid "languages"
 msgstr "språk"
 
-#: events/models.py:495 events/models.py:725
+#: events/models.py:497 events/models.py:727
 msgid "event count"
 msgstr "antal evenemang"
 
-#: events/models.py:496
+#: events/models.py:498
 msgid "number of events with this keyword"
 msgstr "antal evenemang med detta sökord"
 
-#: events/models.py:538
+#: events/models.py:540
 msgid ""
 "Trying to replace this keyword with a keyword that is replaced by this "
 "keyword. Please refrain from creating circular replacements andremove one of "
 "the replacements."
 msgstr ""
 
-#: events/models.py:587
+#: events/models.py:589
 msgid "keyword"
 msgstr "nyckelord"
 
-#: events/models.py:588
+#: events/models.py:590
 msgid "keywords"
 msgstr "nyckelord"
 
-#: events/models.py:614
+#: events/models.py:616
 msgid "Intended keyword usage"
 msgstr "Avsedd nyckelordsanvändning"
 
-#: events/models.py:619
+#: events/models.py:621
 msgid "Organization which uses this set"
 msgstr "Organisation som använder denna sökordsuppsättning"
 
-#: events/models.py:632
+#: events/models.py:634
 msgid "KeywordSet can't have deprecated keywords"
 msgstr "Sökordsuppsättningen kan inte ha föråldrade sökord"
 
-#: events/models.py:674
+#: events/models.py:676
 msgid "Place home page"
 msgstr "Platsens hemsida"
 
-#: events/models.py:676 events/models.py:957
+#: events/models.py:678 events/models.py:963
 msgid "Description"
 msgstr "Beskrivning"
 
-#: events/models.py:683 events/models.py:1494 registrations/models.py:239
-#: registrations/models.py:1129 registrations/models.py:1534
+#: events/models.py:685 events/models.py:1541 registrations/models.py:265
+#: registrations/models.py:1308 registrations/models.py:1731
 msgid "E-mail"
 msgstr "E-post"
 
-#: events/models.py:685
+#: events/models.py:687
 msgid "Telephone"
 msgstr "Telefon"
 
-#: events/models.py:688
+#: events/models.py:690
 msgid "Contact type"
 msgstr "Kontakt typ"
 
-#: events/models.py:691 registrations/models.py:80 registrations/models.py:228
-#: registrations/models.py:1265
+#: events/models.py:693 registrations/models.py:106 registrations/models.py:254
+#: registrations/models.py:1444
 msgid "Street address"
 msgstr "Gatuadress"
 
-#: events/models.py:694
+#: events/models.py:696
 msgid "Address locality"
 msgstr "Adressort"
 
-#: events/models.py:697
+#: events/models.py:699
 msgid "Address region"
 msgstr "Adressregion"
 
-#: events/models.py:700
+#: events/models.py:702
 msgid "Postal code"
 msgstr "Postnummer"
 
-#: events/models.py:703
+#: events/models.py:705
 msgid "PO BOX"
 msgstr "Postbox"
 
-#: events/models.py:706
+#: events/models.py:708
 msgid "Country"
 msgstr "Land"
 
-#: events/models.py:709
+#: events/models.py:711
 msgid "Deleted"
 msgstr "Raderade"
 
-#: events/models.py:719
+#: events/models.py:721
 msgid "Divisions"
 msgstr ""
 
-#: events/models.py:726
+#: events/models.py:728
 msgid "number of events in this location"
 msgstr "antal evenemang på denna plats"
 
-#: events/models.py:734
+#: events/models.py:736
 msgid "place"
 msgstr "plats"
 
-#: events/models.py:735
+#: events/models.py:737
 msgid "places"
 msgstr "platser"
 
-#: events/models.py:749
+#: events/models.py:751
 msgid ""
 "Trying to replace this place with a place that is replaced by this place. "
 "Please refrain from creating circular replacements and remove one of the "
 "replacements. We don't want homeless events."
 msgstr ""
 
-#: events/models.py:839
+#: events/models.py:841
 msgid "opening hour specification"
 msgstr "specifikation för öppettider"
 
-#: events/models.py:840
+#: events/models.py:842
 msgid "opening hour specifications"
 msgstr "specifikationer för öppettider"
 
-#: events/models.py:910
+#: events/models.py:916
 msgid "Recurring"
 msgstr "Återkommande evenemang"
 
-#: events/models.py:911
+#: events/models.py:917
 msgid "Umbrella event"
 msgstr "Paraplyevenemang"
 
-#: events/models.py:926
+#: events/models.py:932
 msgid "Outdoors"
 msgstr "Utomhus"
 
-#: events/models.py:927
+#: events/models.py:933
 msgid "Indoors"
 msgstr "Inomhus"
 
-#: events/models.py:931
+#: events/models.py:937
 msgid "User name"
 msgstr "Användarens namn"
 
-#: events/models.py:933
+#: events/models.py:939
 msgid "User e-mail"
 msgstr "Användarens e-post"
 
-#: events/models.py:935
+#: events/models.py:941
 msgid "User phone number"
 msgstr "Användarens telefonnummer"
 
-#: events/models.py:941
+#: events/models.py:947
 msgid "User organization"
 msgstr "Användarens organisation"
 
-#: events/models.py:942
+#: events/models.py:948
 msgid "Event organizer information."
 msgstr "Evenemangsarrangörens information."
 
-#: events/models.py:948 registrations/models.py:1287
+#: events/models.py:954 registrations/models.py:1466
 msgid "User consent"
 msgstr "Användarens samtycke"
 
-#: events/models.py:949
+#: events/models.py:955
 msgid "I consent to the processing of my personal data?"
 msgstr "Jag samtycker till behandlingen av mina personuppgifter?"
 
-#: events/models.py:955
+#: events/models.py:961
 msgid "Event home page"
 msgstr "Evenemangets hemsida"
 
-#: events/models.py:959
+#: events/models.py:965
 msgid "Short description"
 msgstr "Kort beskrivning"
 
-#: events/models.py:964
+#: events/models.py:970
 msgid "Date published"
 msgstr "Publiceringsdatum"
 
-#: events/models.py:974
+#: events/models.py:980
 msgid "Headline"
 msgstr "Rubrik"
 
-#: events/models.py:977
+#: events/models.py:983
 msgid "Secondary headline"
 msgstr "Sekundär rubrik"
 
-#: events/models.py:979
+#: events/models.py:985
 msgid "Provider"
 msgstr "Leverantör"
 
-#: events/models.py:981
+#: events/models.py:987
 msgid "Provider's contact info"
 msgstr "Leverantörens kontaktuppgifter"
 
-#: events/models.py:994
+#: events/models.py:1000
 msgid "Environmental certificate"
 msgstr "Miljöcertifikat"
 
-#: events/models.py:1002
+#: events/models.py:1008
 msgid "Event status"
 msgstr "Evenemangstatus"
 
-#: events/models.py:1009
+#: events/models.py:1015
 msgid "Event data publication status"
 msgstr "Publiceringsstatus för evenemangdata"
 
-#: events/models.py:1018
+#: events/models.py:1024
 msgid "Location extra info"
 msgstr "Plats ytterligare info"
 
-#: events/models.py:1021
+#: events/models.py:1027
 msgid "Event environment"
 msgstr "Evenemangmiljö"
 
-#: events/models.py:1022
+#: events/models.py:1028
 msgid "Will the event be held outdoors?"
 msgstr "Kommer evenemanget att hållas utomhus?"
 
-#: events/models.py:1030
+#: events/models.py:1036
 msgid "Start time"
 msgstr "Starttid"
 
-#: events/models.py:1033
+#: events/models.py:1039
 msgid "End time"
 msgstr "Sluttid"
 
-#: events/models.py:1039 registrations/models.py:392
+#: events/models.py:1045 registrations/models.py:435
 msgid "Minimum recommended age"
 msgstr "Rekommenderad lägsta ålder"
 
-#: events/models.py:1042 registrations/models.py:395
+#: events/models.py:1048 registrations/models.py:438
 msgid "Maximum recommended age"
 msgstr "Högsta rekommenderade ålder"
 
-#: events/models.py:1067
+#: events/models.py:1073
 msgid "In language"
 msgstr "språk"
 
-#: events/models.py:1083
+#: events/models.py:1089
 msgid "maximum attendee capacity"
 msgstr "Maximal deltagarekapacitet"
 
-#: events/models.py:1089
+#: events/models.py:1095
 msgid "minimum attendee capacity"
 msgstr "Minsta deltagarekapacitet"
 
-#: events/models.py:1092
+#: events/models.py:1098
 msgid "enrolment start time"
 msgstr "Starttid för anmälan"
 
-#: events/models.py:1095
+#: events/models.py:1101
 msgid "enrolment end time"
 msgstr "Sluttid för anmälan"
 
-#: events/models.py:1111
+#: events/models.py:1117
 msgid "event"
 msgstr "evenemang"
 
-#: events/models.py:1112
+#: events/models.py:1118
 msgid "events"
 msgstr "evenemang"
 
-#: events/models.py:1122
+#: events/models.py:1128
 msgid ""
 "Trying to replace this event with an event that is replaced by this event. "
 "Please refrain from creating circular replacements and remove one of the "
 "replacements."
 msgstr ""
 
-#: events/models.py:1161
+#: events/models.py:1169
 msgid "The event end time cannot be earlier than the start time."
 msgstr "Evenemangs sluttid kan inte vara tidigare än starttiden."
 
-#: events/models.py:1398
+#: events/models.py:1188
+msgid ""
+"Trying to cancel an event with paid signups. Please cancel the signups first "
+"before cancelling the event."
+msgstr ""
+
+#: events/models.py:1445
 msgid "Price"
 msgstr "Pris"
 
-#: events/models.py:1400
+#: events/models.py:1447
 msgid "Web link to offer"
 msgstr "Webblänk att erbjuda"
 
-#: events/models.py:1403
+#: events/models.py:1450
 msgid "Offer description"
 msgstr "Erbjudandebeskrivning"
 
-#: events/models.py:1407
+#: events/models.py:1454
 msgid "Is free"
 msgstr "Är gratis"
 
-#: events/models.py:1495 notifications/models.py:41
+#: events/models.py:1542 notifications/models.py:41
 msgid "Subject"
 msgstr "Ämne"
 
-#: events/models.py:1496 notifications/models.py:47
+#: events/models.py:1543 notifications/models.py:47
 msgid "Body"
 msgstr "Text"
 
-#: events/permissions.py:129 events/permissions.py:153
+#: events/permissions.py:133 events/permissions.py:157
 msgid "Data source is not editable"
 msgstr "Datakällan kan inte redigeras"
 
-#: events/permissions.py:210
+#: events/permissions.py:213
 msgid "Only admins of any organization are allowed to see the content."
 msgstr "Endast administratörer i någon organisation får se innehållet."
 
@@ -577,19 +615,19 @@ msgstr "Endast administratörer i någon organisation får se innehållet."
 msgid "Data source doesn't belong to any organization"
 msgstr "Datakällan tillhör inte någon organisation"
 
-#: helevents/admin.py:20
+#: helevents/admin.py:19 registrations/admin.py:84
 msgid "Merchant"
 msgstr ""
 
-#: helevents/admin.py:21
+#: helevents/admin.py:20 registrations/admin.py:85
 msgid "Merchants"
 msgstr ""
 
-#: helevents/admin.py:37
+#: helevents/admin.py:35 registrations/admin.py:93
 msgid "Account"
 msgstr ""
 
-#: helevents/admin.py:38
+#: helevents/admin.py:36 registrations/admin.py:94
 msgid "Accounts"
 msgstr ""
 
@@ -614,18 +652,18 @@ msgstr ""
 msgid "@id field missing"
 msgstr ""
 
-#: linkedevents/fields.py:69 registrations/serializers.py:1443
+#: linkedevents/fields.py:69 registrations/serializers.py:1604
 msgid "This field is required."
 msgstr "Detta fält måste anges."
 
-#: linkedevents/serializers.py:280
+#: linkedevents/serializers.py:294
 #, python-format
 msgid ""
 "Setting data_source to %(given)s  is not allowed for this user. The "
 "data_source must be left blank or set to %(required)s "
 msgstr ""
 
-#: linkedevents/serializers.py:335
+#: linkedevents/serializers.py:349
 #, python-format
 msgid ""
 "Setting %(field)s to %(given)s is not allowed for this user. The %(field)s "
@@ -633,7 +671,7 @@ msgid ""
 "belongs to."
 msgstr ""
 
-#: linkedevents/serializers.py:377
+#: linkedevents/serializers.py:405
 msgid "The name must be specified."
 msgstr "Namn måste anges."
 
@@ -681,88 +719,118 @@ msgstr "Aviseringsmall"
 msgid "Notification templates"
 msgstr "Aviseringsmallar"
 
-#: registrations/admin.py:31
+#: registrations/admin.py:52
 msgid "Event"
 msgstr "Evenemang"
 
-#: registrations/admin.py:38
+#: registrations/admin.py:59
 msgid "Participant list user"
 msgstr "Deltagarlista användare"
 
-#: registrations/admin.py:39
+#: registrations/admin.py:60
 msgid "Participant list users"
 msgstr "Deltagarlista användare"
 
-#: registrations/admin.py:54
+#: registrations/admin.py:75
 msgid "Registration price group"
 msgstr "Registreringens kundgrupp"
 
-#: registrations/admin.py:55
+#: registrations/admin.py:76
 msgid "Registration price groups"
 msgstr "Registreringens kundgrupper"
 
-#: registrations/admin.py:116 registrations/admin.py:166
+#: registrations/admin.py:185 registrations/admin.py:235
 msgid "Is default"
 msgstr ""
 
-#: registrations/admin.py:120
+#: registrations/admin.py:189
 msgid "All"
 msgstr ""
 
-#: registrations/admin.py:121 registrations/admin.py:168
+#: registrations/admin.py:190 registrations/admin.py:237
 msgid "Yes"
 msgstr ""
 
-#: registrations/admin.py:122 registrations/admin.py:168
+#: registrations/admin.py:191 registrations/admin.py:237
 msgid "No"
 msgstr ""
 
-#: registrations/api.py:169
+#: registrations/api.py:127
+msgid ""
+"Refund or cancellation already exists. Please wait for the process to "
+"complete."
+msgstr ""
+
+#: registrations/api.py:148
+msgid "Only an admin can delete a signup after an event has started."
+msgstr ""
+
+#: registrations/api.py:201
 msgid "Registration with signups cannot be deleted"
 msgstr "Registrering med registreringar kan inte raderas"
 
-#: registrations/api.py:246 registrations/filters.py:114
+#: registrations/api.py:278 registrations/filters.py:114
 msgid "Only the admins of the registration organizations have access rights."
 msgstr ""
 "Endast administratörerna för registreringsorganisationerna har "
 "åtkomsträttigheter."
 
-#: registrations/api.py:279
+#: registrations/api.py:311
 msgid ""
 "No contact persons with email addresses found for the given participants."
 msgstr ""
 
-#: registrations/api.py:441
+#: registrations/api.py:473
 msgid "The signup does not have a price group."
 msgstr ""
 
-#: registrations/api.py:584
+#: registrations/api.py:619
 #, python-format
 msgid "Payment not found with order ID %(order_id)s."
 msgstr "Betalning hittades inte med beställning ID %(order_id)s."
 
-#: registrations/api.py:597
+#: registrations/api.py:630
 msgid "Could not check payment status from Talpa API."
 msgstr "Kunde inte kolla betalningsstatus från Talpa API."
 
-#: registrations/api.py:608
+#: registrations/api.py:637
 msgid "Could not check order status from Talpa API."
 msgstr "Kunde inte kolla beställningsstatus från Talpa API."
 
-#: registrations/api.py:659
+#: registrations/api.py:681
 msgid "Order marked as cancelled in webhook payload, but not in Talpa API."
 msgstr ""
 "Beställning markerad som avbruten i webhook-avisering, men inte i Talpa API."
 
-#: registrations/api.py:690
+#: registrations/api.py:714
 msgid "Payment marked as paid in webhook payload, but not in Talpa API."
 msgstr ""
 "Betalning markerad som betald i webhook-avisering, men inte i Talpa API."
 
-#: registrations/api.py:710
-msgid "Payment marked as cancelled in webhook payload, but not in Talpa API."
+#: registrations/api.py:741
+#, python-format
+msgid ""
+"Refund not found with order ID %(order_id)s and refund ID %(refund_id)s."
 msgstr ""
-"Betalning markerad som avbruten i webhook-avisering, men inte i Talpa API."
+"Återbetalning hittades inte med beställning ID %(order_id)s och återbetalning ID %(refund_id)s."
+
+#: registrations/api.py:753
+msgid "Could not check refund status from Talpa API."
+msgstr "Kunde inte kolla återbetalningsstatus från Talpa API."
+
+#: registrations/api.py:792
+msgid "Refund marked as paid in webhook payload, but not in Talpa API."
+msgstr ""
+"Återbetalning markerad som betald i webhook-avisering, men inte i Talpa API."
+
+#: registrations/api.py:807
+msgid "Refund marked as failed in webhook payload, but not in Talpa API."
+msgstr ""
+"Återbetalning markerad som misslyckad i webhook-avisering, men inte i Talpa API."
+
+#: registrations/auth.py:25
+msgid "Invalid webhook API key."
+msgstr ""
 
 #: registrations/exceptions.py:9
 msgid "Request conflict with the current state of the target resource"
@@ -772,13 +840,13 @@ msgstr "Begärkonflikt med målresursens aktuella tillstånd"
 msgid "Registered persons"
 msgstr "Registrerade personer"
 
-#: registrations/exports.py:49 registrations/models.py:1485
+#: registrations/exports.py:49 registrations/models.py:1682
 msgid "Date of birth"
 msgstr "Födelsedatum"
 
-#: registrations/exports.py:53 registrations/models.py:79
-#: registrations/models.py:241 registrations/models.py:1244
-#: registrations/models.py:1538
+#: registrations/exports.py:53 registrations/models.py:105
+#: registrations/models.py:267 registrations/models.py:1423
+#: registrations/models.py:1735
 msgid "Phone number"
 msgstr "Telefonnummer"
 
@@ -814,79 +882,83 @@ msgstr ""
 msgid "Invalid registration ID(s) given."
 msgstr ""
 
-#: registrations/forms.py:16
+#: registrations/forms.py:91
+msgid "Account values can be overwritten with the fields below."
+msgstr ""
+
+#: registrations/forms.py:108
 msgid "VAT percentage for price groups"
 msgstr "Momsprocent för kundgrupper"
 
-#: registrations/models.py:76 registrations/models.py:236
-#: registrations/models.py:1251
+#: registrations/models.py:102 registrations/models.py:262
+#: registrations/models.py:1430
 msgid "City"
 msgstr "Stad"
 
-#: registrations/models.py:77 registrations/models.py:1230
-#: registrations/models.py:1519
+#: registrations/models.py:103 registrations/models.py:1409
+#: registrations/models.py:1716
 msgid "First name"
 msgstr "Förnamn"
 
-#: registrations/models.py:78 registrations/models.py:1237
-#: registrations/models.py:1526
+#: registrations/models.py:104 registrations/models.py:1416
+#: registrations/models.py:1723
 msgid "Last name"
 msgstr "Efternamn"
 
-#: registrations/models.py:81 registrations/models.py:232
-#: registrations/models.py:1272
+#: registrations/models.py:107 registrations/models.py:258
+#: registrations/models.py:1451
 msgid "ZIP code"
 msgstr "Postnummer"
 
-#: registrations/models.py:118
+#: registrations/models.py:144
 msgid "You must provide either signup_group or signup."
 msgstr ""
 
-#: registrations/models.py:122
+#: registrations/models.py:148
 msgid "You can only provide signup_group or signup, not both."
 msgstr ""
 
-#: registrations/models.py:165 registrations/models.py:1975
+#: registrations/models.py:191 registrations/models.py:2179
 msgid "Created at"
 msgstr "Skapad kl"
 
-#: registrations/models.py:171
+#: registrations/models.py:197
 msgid "Modified at"
 msgstr "Ändrad kl"
 
-#: registrations/models.py:219 registrations/models.py:1992
+#: registrations/models.py:245 registrations/models.py:2309
 msgid "Is active"
 msgstr ""
 
-#: registrations/models.py:244
+#: registrations/models.py:271
 msgid "URL"
 msgstr ""
 
-#: registrations/models.py:245
+#: registrations/models.py:274
 msgid "Terms of Service URL"
 msgstr ""
 
-#: registrations/models.py:247
+#: registrations/models.py:276
 msgid "Business ID"
 msgstr ""
 
-#: registrations/models.py:254
+#: registrations/models.py:283
 msgid "Paytrail merchant ID"
 msgstr ""
 
-#: registrations/models.py:286
+#: registrations/models.py:318
 msgid "Cannot delete a Talpa merchant."
 msgstr ""
 
-#: registrations/models.py:357
+#: registrations/models.py:400
 msgid "You may not delete a default price group."
 msgstr ""
 
-#: registrations/models.py:365
+#: registrations/models.py:408
 msgid "You may not edit a default price group."
 msgstr ""
 
-#: registrations/models.py:371
+#: registrations/models.py:414
 msgid ""
 "You may not change the publisher of a price group that has been used in "
 "registrations."
@@ -894,213 +966,224 @@ msgstr ""
 "Du får inte byta utgivare för en prisgrupp som har använts vid "
 "registreringar."
 
-#: registrations/models.py:399
+#: registrations/models.py:442
 msgid "Enrollment start time"
 msgstr "Starttid för anmälan"
 
-#: registrations/models.py:402
+#: registrations/models.py:445
 msgid "Enrollment end time"
 msgstr "Sluttid för anmälan"
 
-#: registrations/models.py:406
+#: registrations/models.py:449
 msgid "Confirmation message"
 msgstr "Bekräftelsemeddelande"
 
-#: registrations/models.py:409
+#: registrations/models.py:452
 msgid "Instructions"
 msgstr "Instruktioner"
 
-#: registrations/models.py:413
+#: registrations/models.py:456
 msgid "Maximum attendee capacity"
 msgstr "Maximal deltagarekapacitet"
 
-#: registrations/models.py:416
+#: registrations/models.py:459
 msgid "Minimum attendee capacity"
 msgstr "Minsta deltagarekapacitet"
 
-#: registrations/models.py:419
+#: registrations/models.py:462
 msgid "Waiting list capacity"
 msgstr "Väntelistans kapacitet"
 
-#: registrations/models.py:422
+#: registrations/models.py:465
 msgid "Maximum group size"
 msgstr "Maximal gruppstorlek"
 
-#: registrations/models.py:436
+#: registrations/models.py:479
 msgid "Mandatory fields"
 msgstr "Obligatoriska fält"
 
-#: registrations/models.py:622
+#: registrations/models.py:587
+msgid "get_waitlisted: count must be at least 1"
+msgstr ""
+
+#: registrations/models.py:688
 msgid "A WebStoreMerchant is required to create a product mapping in Talpa."
 msgstr ""
 
-#: registrations/models.py:636
+#: registrations/models.py:702
 msgid "A WebStoreAccount is required to create product accounting in Talpa."
 msgstr ""
 
-#: registrations/models.py:952 registrations/models.py:1292
+#: registrations/models.py:899
+#, python-format
+msgid ""
+"Payment refund or cancellation failed for %(class_name)s with ID "
+"%(object_id)s."
+msgstr ""
+
+#: registrations/models.py:979
+msgid "Refund ID not found from the response."
+msgstr ""
+
+#: registrations/models.py:1117 registrations/models.py:1471
 msgid "Anonymization time"
 msgstr ""
 
-#: registrations/models.py:1075
+#: registrations/models.py:1254
 msgid "Group registration to event"
 msgstr "Gruppregistrering till evenemanget"
 
-#: registrations/models.py:1076
+#: registrations/models.py:1255
 msgid "Group registration to course"
 msgstr "Gruppregistrering till kursen"
 
-#: registrations/models.py:1077
+#: registrations/models.py:1256
 msgid "Group registration to volunteering"
 msgstr "Gruppregistrering till volontärarbetet"
 
-#: registrations/models.py:1090
+#: registrations/models.py:1269
 msgid "No price groups exist for signup group."
 msgstr ""
 
-#: registrations/models.py:1104
+#: registrations/models.py:1283
 msgid "Extra info"
 msgstr "Ytterligare info"
 
-#: registrations/models.py:1204
+#: registrations/models.py:1383
 msgid "Waitlisted"
 msgstr "I kö"
 
-#: registrations/models.py:1205
+#: registrations/models.py:1384
 msgid "Attending"
 msgstr "Deltar"
 
-#: registrations/models.py:1213
+#: registrations/models.py:1392
 msgid "Not present"
 msgstr "Inte närvarande"
 
-#: registrations/models.py:1214
+#: registrations/models.py:1393
 msgid "Present"
 msgstr "Närvarande"
 
-#: registrations/models.py:1258
+#: registrations/models.py:1437
 msgid "Attendee status"
 msgstr "Deltagarstatus"
 
-#: registrations/models.py:1280
+#: registrations/models.py:1459
 msgid "Presence status"
 msgstr "Närvarostatus"
 
-#: registrations/models.py:1357
+#: registrations/models.py:1546
 msgid "Cannot cancel payment for a participant that belongs to a group."
 msgstr ""
 
-#: registrations/models.py:1468
+#: registrations/models.py:1665
 msgid "Registration to event"
 msgstr "Registreringen till evenemanget"
 
-#: registrations/models.py:1469
+#: registrations/models.py:1666
 msgid "Registration to course"
 msgstr "Registreringen till kursen"
 
-#: registrations/models.py:1470
+#: registrations/models.py:1667
 msgid "Registration to volunteering"
 msgstr "Registreringen till volontärarbetet"
 
-#: registrations/models.py:1478
+#: registrations/models.py:1675
 msgid "Price group does not exist for signup."
 msgstr ""
 
-#: registrations/models.py:1561
+#: registrations/models.py:1758
 msgid "Membership number"
 msgstr "Medlemsnummer"
 
-#: registrations/models.py:1569
+#: registrations/models.py:1766
 msgid "Notification type"
 msgstr "Aviseringstyp"
 
-#: registrations/models.py:1576
+#: registrations/models.py:1773
 msgid "Access code"
 msgstr ""
 
-#: registrations/models.py:1781
+#: registrations/models.py:1982
 msgid "Number of seats"
 msgstr "Antal platser"
 
-#: registrations/models.py:1787
+#: registrations/models.py:1988
 msgid "Seat reservation code"
 msgstr "Platsreservationskod"
 
-#: registrations/models.py:1790
+#: registrations/models.py:1991
 msgid "Timestamp"
 msgstr "Tidsstämpel"
 
-#: registrations/models.py:1847
+#: registrations/models.py:2047
 msgid ""
 "A RegistrationWebStoreProductMapping is required before a Talpa order can be "
 "created."
 msgstr ""
 
-#: registrations/models.py:1856
+#: registrations/models.py:2056
 msgid "pcs"
 msgstr "st"
 
-#: registrations/models.py:1894
+#: registrations/models.py:2094
 msgid "Created"
 msgstr "Skapad"
 
-#: registrations/models.py:1895
+#: registrations/models.py:2095
 msgid "Paid"
 msgstr "Betalt"
 
-#: registrations/models.py:1896
+#: registrations/models.py:2096
 msgid "Cancelled"
 msgstr "Inställt"
 
-#: registrations/models.py:1897
+#: registrations/models.py:2097
 msgid "Refunded"
 msgstr "Återbetalat"
 
-#: registrations/models.py:1898
+#: registrations/models.py:2098
 msgid "Expired"
 msgstr "Utgått"
 
-#: registrations/models.py:1922
+#: registrations/models.py:2122
 msgid "Payment status"
 msgstr "Betalningens status"
 
-#: registrations/models.py:1936
+#: registrations/models.py:2136
 msgid "Expires at"
 msgstr "Utgår på"
 
-#: registrations/models.py:1997
-msgid "VAT code"
-msgstr "Momskod"
-
-#: registrations/models.py:2002
+#: registrations/models.py:2250
 msgid "SAP company code"
 msgstr ""
 
-#: registrations/models.py:2007
+#: registrations/models.py:2255
 msgid "Main ledger account"
 msgstr ""
 
-#: registrations/models.py:2012
+#: registrations/models.py:2260
 msgid "Balance profit center"
 msgstr ""
 
-#: registrations/models.py:2017
+#: registrations/models.py:2265
 msgid "Internal order"
 msgstr ""
 
-#: registrations/models.py:2024
+#: registrations/models.py:2272
 msgid "Profit center"
 msgstr ""
 
-#: registrations/models.py:2031
+#: registrations/models.py:2279
 msgid "Project"
 msgstr ""
 
-#: registrations/models.py:2038
+#: registrations/models.py:2286
 msgid "SAP functional area"
 msgstr ""
 
-#: registrations/models.py:2050
+#: registrations/models.py:2319
 msgid "Cannot delete a Talpa account."
 msgstr ""
 
@@ -2325,112 +2408,112 @@ msgstr ""
 "ersättningsanvändarrättigheter till registreringen av volontärarbetet "
 "<strong>%(event_name)s</strong>."
 
-#: registrations/serializers.py:111
+#: registrations/serializers.py:122
 msgid "Enrolment is not yet open."
 msgstr "Anmälan är ännu inte öppen."
 
-#: registrations/serializers.py:113
+#: registrations/serializers.py:142
 msgid "Enrolment is already closed."
 msgstr "Anmälan är redan stängd"
 
-#: registrations/serializers.py:121
+#: registrations/serializers.py:150
 msgid "Contact person's first and last name are required to make a payment."
 msgstr ""
 
-#: registrations/serializers.py:137
+#: registrations/serializers.py:166
 msgid ""
 "Participants must have a price group with price greater than 0 selected to "
 "make a payment."
 msgstr ""
 
-#: registrations/serializers.py:417 registrations/serializers.py:951
+#: registrations/serializers.py:481 registrations/serializers.py:1093
 msgid "The waiting list is already full"
 msgstr "Väntelistan är redan full"
 
-#: registrations/serializers.py:427
+#: registrations/serializers.py:491
 msgid "You may not change the attendee_status of an existing object."
 msgstr "Du får inte ändra attendee_status för ett befintligt objekt."
 
-#: registrations/serializers.py:434 registrations/serializers.py:1194
+#: registrations/serializers.py:498 registrations/serializers.py:1338
 msgid "You may not change the registration of an existing object."
 msgstr "Du får inte ändra registration för ett befintligt objekt."
 
-#: registrations/serializers.py:483 registrations/serializers.py:494
-#: registrations/serializers.py:1285
+#: registrations/serializers.py:547 registrations/serializers.py:558
+#: registrations/serializers.py:1432
 msgid "This field must be specified."
 msgstr "Detta fält måste anges."
 
-#: registrations/serializers.py:516
+#: registrations/serializers.py:580
 msgid "The participant is too young."
 msgstr "Deltagaren är för ung."
 
-#: registrations/serializers.py:521
+#: registrations/serializers.py:585
 msgid "The participant is too old."
 msgstr "Deltagaren är för gammal."
 
-#: registrations/serializers.py:527
+#: registrations/serializers.py:595
 msgid "Price group selection is mandatory for this registration."
 msgstr ""
 
-#: registrations/serializers.py:538
+#: registrations/serializers.py:606
 msgid "Price group is already assigned to another participant."
 msgstr ""
 
-#: registrations/serializers.py:547
+#: registrations/serializers.py:615
 msgid ""
 "Price group is not one of the allowed price groups for this registration."
 msgstr ""
 
-#: registrations/serializers.py:613
+#: registrations/serializers.py:739
 msgid ""
 "The user's email domain is not one of the allowed domains for substitute "
 "users."
 msgstr ""
 
-#: registrations/serializers.py:676
+#: registrations/serializers.py:802
 #, python-format
 msgid "%(value)s is not a valid choice."
 msgstr ""
 
-#: registrations/serializers.py:683
+#: registrations/serializers.py:809
 msgid "Price must be greater than or equal to 0."
 msgstr ""
 
-#: registrations/serializers.py:879
+#: registrations/serializers.py:1021
 msgid "Reservation code doesn't exist."
 msgstr "Bokningskoden finns inte."
 
-#: registrations/serializers.py:901
+#: registrations/serializers.py:1043
 #, python-brace-format
 msgid "Amount of signups is greater than maximum group size: {max_group_size}."
 msgstr ""
 "Antalet registreringar är större än den maximala gruppstorleken: "
 "{max_group_size}."
 
-#: registrations/serializers.py:923
+#: registrations/serializers.py:1065
 msgid "Only one signup is supported when creating a Talpa web store payment."
 msgstr ""
 
-#: registrations/serializers.py:1058
+#: registrations/serializers.py:1200
 msgid "Contact person information must be provided for a group."
 msgstr ""
 
-#: registrations/serializers.py:1288
+#: registrations/serializers.py:1435
 msgid "The value doesn't match."
 msgstr "Värdet stämmer inte överens."
 
-#: registrations/serializers.py:1306
+#: registrations/serializers.py:1454
 #, python-brace-format
 msgid "Amount of seats is greater than maximum group size: {max_group_size}."
 msgstr "Antalet platser är större än maximal gruppstorlek: {max_group_size}."
 
-#: registrations/serializers.py:1331
+#: registrations/serializers.py:1479
 #, python-brace-format
 msgid "Not enough seats available. Capacity left: {capacity_left}."
 msgstr ""
 "Inte tillräckligt med platser tillgängliga. Kapacitet kvar: {capacity_left}."
 
-#: registrations/serializers.py:1347
+#: registrations/serializers.py:1495
 #, python-brace-format
 msgid ""
 "Not enough capacity in the waiting list. Capacity left: {capacity_left}."
@@ -2438,9 +2521,29 @@ msgstr ""
 "Inte tillräckligt med kapacitet på väntelistan. Kapacitet kvar: "
 "{capacity_left}."
 
-#: registrations/serializers.py:1361
+#: registrations/serializers.py:1509
 msgid "Cannot update expired seats reservation."
 msgstr "Kan inte uppdatera utgångna platsreservationer."
+
+#: registrations/serializers.py:1607
+#, python-format
+msgid "Description can be at most %(max_length)s characters long."
+msgstr ""
+
+#: registrations/templates/_message_to_signup_heading.html:4
+#, python-format
+msgid "A message about the event %(event_name)s."
+msgstr "Ett meddelande om evenemanget %(event_name)s."
+
+#: registrations/templates/_message_to_signup_heading.html:7
+#, python-format
+msgid "A message about the course %(event_name)s."
+msgstr "Ett meddelande om kursen %(event_name)s."
+
+#: registrations/templates/_message_to_signup_heading.html:10
+#, python-format
+msgid "A message about the volunteering %(event_name)s."
+msgstr "Ett meddelande om volontärarbetet %(event_name)s."
 
 #: registrations/templates/_open_payment_link_button.html:6
 msgid "Open payment link"
@@ -2450,50 +2553,47 @@ msgstr "Öppna betalningslänken"
 msgid "Check your registration here"
 msgstr "Kontrollera din registrering här"
 
-#: registrations/templates/base_email.html:293
+#: registrations/templates/base_email.html:294
 msgid "Contact us"
 msgstr "Ta kontakt"
 
-#: registrations/templates/base_email.html:294
+#: registrations/templates/base_email.html:295
 msgid "Give feedback"
 msgstr "Ge feedback"
 
-#: registrations/templates/base_email.html:299
+#: registrations/templates/base_email.html:300
 msgid "City of Helsinki 2023"
 msgstr "Helsingfors stad 2023"
 
-#: registrations/templates/base_email.html:301
+#: registrations/templates/base_email.html:302
 msgid "All rights reserved."
 msgstr "Alla rättigheter förbehållna."
 
-#: registrations/templates/cancellation_confirmation.html:22
-#: registrations/templates/event_cancellation_confirmation.html:19
+#: registrations/templates/cancellation_confirmation.html:24
+#: registrations/templates/event_cancellation_confirmation.html:21
 msgid "More information from our customer service"
 msgstr "Mer information om vår kundtjänst"
 
-#: registrations/templates/message_to_signup.html:11
-#, python-format
-msgid "A message about the event %(event_name)s."
-msgstr "Ett meddelande om evenemanget %(event_name)s."
+#: registrations/templates/registration_user_access_invitation.html:4
+msgid "User access invitation"
+msgstr "Åtkomstinbjudan"
 
-#: registrations/templates/message_to_signup.html:14
-#, python-format
-msgid "A message about the course %(event_name)s."
-msgstr "Ett meddelande om kursen %(event_name)s."
-
-#: registrations/templates/message_to_signup.html:17
-#, python-format
-msgid "A message about the volunteering %(event_name)s."
-msgstr "Ett meddelande om volontärarbetet %(event_name)s."
-
-#: registrations/templates/registration_user_access_invitation.html:16
+#: registrations/templates/registration_user_access_invitation.html:18
 msgid "View the participants"
 msgstr "Se deltagarna"
 
-#: registrations/utils.py:188
+#: registrations/utils.py:212
 msgid "Unknown Talpa web store API error"
 msgstr ""
 
-#: registrations/utils.py:191
+#: registrations/utils.py:215
 msgid "Talpa web store API error"
 msgstr ""
+
+#~ msgid ""
+#~ "Payment marked as cancelled in webhook payload, but not in Talpa API."
+#~ msgstr ""
+#~ "Betalning markerad som avbruten i webhook-avisering, men inte i Talpa API."
+
+#~ msgid "VAT code"
+#~ msgstr "Momskod"
