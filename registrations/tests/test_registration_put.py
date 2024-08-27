@@ -1364,27 +1364,31 @@ def test_update_registration_with_product_accounting_api_exception(
     assert RegistrationWebStoreProductMapping.objects.count() == 0
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_update_registration_increase_attendee_capacity_move_signups_to_attending(
-    api_client, event
+    api_client, event, django_capture_on_commit_callbacks
 ):
     user = create_user_by_role("registration_admin", event.publisher)
     api_client.force_authenticate(user)
 
     registration = RegistrationFactory(event=event, maximum_attendee_capacity=1)
 
-    signup = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
-    )
-    signup2 = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-    )
-    signup3 = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-    )
-    signup4 = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        signup = SignUpFactory(
+            registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+        )
+        signup2 = SignUpFactory(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        signup3 = SignUpFactory(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        signup4 = SignUpFactory(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
 
     registration.refresh_from_db()
     assert registration.remaining_attendee_capacity == 0
@@ -1393,7 +1397,9 @@ def test_update_registration_increase_attendee_capacity_move_signups_to_attendin
         "event": {"@id": get_event_url(event.id)},
         "maximum_attendee_capacity": 3,
     }
-    assert_update_registration(api_client, registration.pk, registration_data)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        assert_update_registration(api_client, registration.pk, registration_data)
+    assert len(callbacks) == 3
 
     # Since two additional attendee spots were added,
     # two more signups should now be in the "attending" status:
@@ -1413,9 +1419,9 @@ def test_update_registration_increase_attendee_capacity_move_signups_to_attendin
     assert registration.remaining_attendee_capacity == 0
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_update_registration_increase_attendee_capacity_move_signups_to_attending_with_payments(
-    api_client, event
+    api_client, event, django_capture_on_commit_callbacks
 ):
     user = create_user_by_role("registration_admin", event.publisher)
     api_client.force_authenticate(user)
@@ -1430,34 +1436,38 @@ def test_update_registration_increase_attendee_capacity_move_signups_to_attendin
     registration_account = RegistrationWebStoreAccountFactory(registration=registration)
     RegistrationWebStoreProductMappingFactory(registration=registration)
 
-    signup = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
-    )
-    SignUpPaymentFactory(signup=signup)
+    with django_capture_on_commit_callbacks(execute=True):
+        signup = SignUpFactory(
+            registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+        )
+        SignUpPaymentFactory(signup=signup)
 
-    signup2 = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-    )
-    SignUpPriceGroupFactory(
-        signup=signup2, registration_price_group=registration_price_group
-    )
-    SignUpContactPersonFactory(signup=signup2, email="signup2@test.dev")
+        signup2 = SignUpFactory(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        SignUpPriceGroupFactory(
+            signup=signup2, registration_price_group=registration_price_group
+        )
+        SignUpContactPersonFactory(signup=signup2, email="signup2@test.dev")
 
-    signup3 = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-    )
-    SignUpPriceGroupFactory(
-        signup=signup3, registration_price_group=registration_price_group
-    )
-    SignUpContactPersonFactory(signup=signup3, email="signup3@test.dev")
+        signup3 = SignUpFactory(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        SignUpPriceGroupFactory(
+            signup=signup3, registration_price_group=registration_price_group
+        )
+        SignUpContactPersonFactory(signup=signup3, email="signup3@test.dev")
 
-    signup4 = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-    )
-    SignUpPriceGroupFactory(
-        signup=signup4, registration_price_group=registration_price_group
-    )
-    SignUpContactPersonFactory(signup=signup4, email="signup4@test.dev")
+        signup4 = SignUpFactory(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        SignUpPriceGroupFactory(
+            signup=signup4, registration_price_group=registration_price_group
+        )
+        SignUpContactPersonFactory(signup=signup4, email="signup4@test.dev")
 
     registration.refresh_from_db()
     assert registration.remaining_attendee_capacity == 0
@@ -1479,7 +1489,10 @@ def test_update_registration_increase_attendee_capacity_move_signups_to_attendin
             registration_merchant.merchant, registration_account.account
         ),
     }
-    with requests_mock.Mocker() as req_mock:
+    with (
+        requests_mock.Mocker() as req_mock,
+        django_capture_on_commit_callbacks(execute=True) as callbacks,
+    ):
         req_mock.post(
             f"{settings.WEB_STORE_API_BASE_URL}order/",
             status_code=status.HTTP_201_CREATED,
@@ -1488,7 +1501,8 @@ def test_update_registration_increase_attendee_capacity_move_signups_to_attendin
 
         assert_update_registration(api_client, registration.pk, registration_data)
 
-        assert req_mock.call_count == 2
+    assert req_mock.call_count == 2
+    assert len(callbacks) == 3
 
     # Since two additional attendee spots were added,
     # two more signups should now be in the "attending" status with payments:
@@ -1510,9 +1524,9 @@ def test_update_registration_increase_attendee_capacity_move_signups_to_attendin
     assert registration.remaining_attendee_capacity == 0
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_increase_attendee_capacity_move_signups_to_attending_with_payments_api_exception(
-    api_client, event
+    api_client, event, django_capture_on_commit_callbacks
 ):
     user = create_user_by_role("registration_admin", event.publisher)
     api_client.force_authenticate(user)
@@ -1527,34 +1541,38 @@ def test_increase_attendee_capacity_move_signups_to_attending_with_payments_api_
     registration_account = RegistrationWebStoreAccountFactory(registration=registration)
     RegistrationWebStoreProductMappingFactory(registration=registration)
 
-    signup = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
-    )
-    SignUpPaymentFactory(signup=signup)
+    with django_capture_on_commit_callbacks(execute=True):
+        signup = SignUpFactory(
+            registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+        )
+        SignUpPaymentFactory(signup=signup)
 
-    signup2 = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-    )
-    SignUpPriceGroupFactory(
-        signup=signup2, registration_price_group=registration_price_group
-    )
-    SignUpContactPersonFactory(signup=signup2, email="signup2@test.dev")
+        signup2 = SignUpFactory(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        SignUpPriceGroupFactory(
+            signup=signup2, registration_price_group=registration_price_group
+        )
+        SignUpContactPersonFactory(signup=signup2, email="signup2@test.dev")
 
-    signup3 = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-    )
-    price_group3 = SignUpPriceGroupFactory(
-        signup=signup3, registration_price_group=registration_price_group
-    )
-    SignUpContactPersonFactory(signup=signup3, email="signup3@test.dev")
+        signup3 = SignUpFactory(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        price_group3 = SignUpPriceGroupFactory(
+            signup=signup3, registration_price_group=registration_price_group
+        )
+        SignUpContactPersonFactory(signup=signup3, email="signup3@test.dev")
 
-    signup4 = SignUpFactory(
-        registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
-    )
-    SignUpPriceGroupFactory(
-        signup=signup4, registration_price_group=registration_price_group
-    )
-    SignUpContactPersonFactory(signup=signup4, email="signup4@test.dev")
+        signup4 = SignUpFactory(
+            registration=registration,
+            attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
+        )
+        SignUpPriceGroupFactory(
+            signup=signup4, registration_price_group=registration_price_group
+        )
+        SignUpContactPersonFactory(signup=signup4, email="signup4@test.dev")
 
     def web_store_match_signup3(request):
         return request.json()["items"][0]["meta"][0]["value"] == str(price_group3.pk)
@@ -1579,7 +1597,10 @@ def test_increase_attendee_capacity_move_signups_to_attending_with_payments_api_
             registration_merchant.merchant, registration_account.account
         ),
     }
-    with requests_mock.Mocker() as req_mock:
+    with (
+        requests_mock.Mocker() as req_mock,
+        django_capture_on_commit_callbacks(execute=True) as callbacks,
+    ):
         req_mock.post(
             f"{settings.WEB_STORE_API_BASE_URL}order/",
             status_code=status.HTTP_201_CREATED,
@@ -1593,7 +1614,8 @@ def test_increase_attendee_capacity_move_signups_to_attending_with_payments_api_
 
         assert_update_registration(api_client, registration.pk, registration_data)
 
-        assert req_mock.call_count == 2
+    assert req_mock.call_count == 2
+    assert len(callbacks) == 2
 
     # Two additional attendee spots were added, but the second signup experienced an
     # API exception after the first one so only the first one was moved to "attending":

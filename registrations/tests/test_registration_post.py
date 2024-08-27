@@ -1092,10 +1092,11 @@ def test_create_registration_with_product_accounting_api_exception(
         (1000000, 1000000, status.HTTP_201_CREATED),
     ],
 )
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_create_registration_maximum_attendee_capacity(
     api_client,
     event,
+    django_capture_on_commit_callbacks,
     maximum_attendee_capacity,
     expected_maximum_attendee_capacity,
     expected_status_code,
@@ -1110,11 +1111,14 @@ def test_create_registration_maximum_attendee_capacity(
 
     assert Registration.objects.count() == 0
 
-    response = create_registration(api_client, registration_data)
-    assert response.status_code == expected_status_code
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = create_registration(api_client, registration_data)
+        assert response.status_code == expected_status_code
 
     if expected_status_code == status.HTTP_201_CREATED:
         assert Registration.objects.count() == 1
+        assert len(callbacks) == 1
+
         registration = Registration.objects.first()
         assert (
             registration.maximum_attendee_capacity == expected_maximum_attendee_capacity
@@ -1125,6 +1129,7 @@ def test_create_registration_maximum_attendee_capacity(
         )
     else:
         assert Registration.objects.count() == 0
+        assert len(callbacks) == 0
 
 
 @pytest.mark.parametrize(
@@ -1137,10 +1142,11 @@ def test_create_registration_maximum_attendee_capacity(
         (1000000, 1000000, status.HTTP_201_CREATED),
     ],
 )
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_create_registration_waiting_list_capacity(
     api_client,
     event,
+    django_capture_on_commit_callbacks,
     waiting_list_capacity,
     expected_waiting_list_capacity,
     expected_status_code,
@@ -1156,11 +1162,14 @@ def test_create_registration_waiting_list_capacity(
 
     assert Registration.objects.count() == 0
 
-    response = create_registration(api_client, registration_data)
-    assert response.status_code == expected_status_code
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        response = create_registration(api_client, registration_data)
+        assert response.status_code == expected_status_code
 
     if expected_status_code == status.HTTP_201_CREATED:
         assert Registration.objects.count() == 1
+        assert len(callbacks) == 1
+
         registration = Registration.objects.first()
         assert registration.waiting_list_capacity == expected_waiting_list_capacity
         assert (
@@ -1169,6 +1178,7 @@ def test_create_registration_waiting_list_capacity(
         )
     else:
         assert Registration.objects.count() == 0
+        assert len(callbacks) == 0
 
 
 @pytest.mark.parametrize(
@@ -1180,9 +1190,13 @@ def test_create_registration_waiting_list_capacity(
         (1000000, 1000000),
     ],
 )
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_create_registration_minimum_attendee_capacity(
-    api_client, event, minimum_attendee_capacity, expected_minimum_attendee_capacity
+    api_client,
+    event,
+    django_capture_on_commit_callbacks,
+    minimum_attendee_capacity,
+    expected_minimum_attendee_capacity,
 ):
     user = create_user_by_role("registration_admin", event.publisher)
     api_client.force_authenticate(user)
@@ -1194,7 +1208,9 @@ def test_create_registration_minimum_attendee_capacity(
 
     assert Registration.objects.count() == 0
 
-    assert_create_registration(api_client, registration_data)
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        assert_create_registration(api_client, registration_data)
+    assert len(callbacks) == 1
 
     assert Registration.objects.count() == 1
     registration = Registration.objects.first()
