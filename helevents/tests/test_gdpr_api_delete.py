@@ -101,9 +101,11 @@ def _assert_gdpr_delete(
 # === tests ===
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 @override_settings(GDPR_DISABLE_API_DELETION=False)
-def test_authenticated_user_can_delete_own_data(api_client, settings):
+def test_authenticated_user_can_delete_own_data(
+    api_client, settings, django_capture_on_commit_callbacks
+):
     user = UserFactory()
 
     _create_default_data(user)
@@ -121,7 +123,8 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
             )
             api_client.credentials(HTTP_AUTHORIZATION=auth_header)
 
-            response = _delete_gdpr_data(api_client, user.uuid)
+            with django_capture_on_commit_callbacks(execute=True):
+                response = _delete_gdpr_data(api_client, user.uuid)
             assert response.status_code == status.HTTP_204_NO_CONTENT
 
             assert mocked_signup_post_delete.called is True
@@ -135,10 +138,10 @@ def test_authenticated_user_can_delete_own_data(api_client, settings):
     assert event.user_organization is None
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 @override_settings(GDPR_DISABLE_API_DELETION=False)
 def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
-    api_client, settings
+    api_client, settings, django_capture_on_commit_callbacks
 ):
     user = UserFactory()
 
@@ -159,7 +162,8 @@ def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
             )
             api_client.credentials(HTTP_AUTHORIZATION=auth_header)
 
-            response = _delete_gdpr_data(api_client, user.uuid)
+            with django_capture_on_commit_callbacks(execute=True):
+                response = _delete_gdpr_data(api_client, user.uuid)
             assert response.status_code == status.HTTP_204_NO_CONTENT
 
             assert mocked_signup_post_delete.called is True
