@@ -1,21 +1,14 @@
 {% extends 'base_email.html' %}
 {% load i18n %}
 
+{% block title %}{% include "_message_to_signup_heading.html" %}{% endblock title %}
+
 {% block content %}
   <tr>
     <td class="content-cell" style="padding:0;margin:0;text-align:left;">
       <div class="content-container" style="padding:0 16px;">
         <h2 style="color:#1a1a1a;font-size:24px;font-weight:700;line-height:29px;margin:0;">
-          <!-- Event -->
-          {% if event_type_id == 1 %}
-          {% blocktranslate %}A message about the event {{event_name}}.{% endblocktranslate %}
-          <!-- Course -->
-          {% elif event_type_id == 2 %}
-          {% blocktranslate %}A message about the course {{event_name}}.{% endblocktranslate %}
-          <!-- Volunteering -->
-          {% elif event_type_id == 3 %}
-          {% blocktranslate %}A message about the volunteering {{event_name}}.{% endblocktranslate %}
-          {% endif %}
+          {% include "_message_to_signup_heading.html" %}
         </h2>
         <div style="margin: 0px 0px 40px">
           <p style="color:#1a1a1a;font-size:16px;font-weight:normal;line-height:24px;margin:0px;">{{body |safe}}</p>
