@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -17,6 +18,8 @@ from web_store.merchant.clients import WebStoreMerchantAPIClient
 from web_store.order.clients import WebStoreOrderAPIClient
 from web_store.payment.clients import WebStorePaymentAPIClient
 from web_store.product.clients import WebStoreProductAPIClient
+
+logger = logging.getLogger(__name__)
 
 
 def code_validity_duration(seats):
@@ -210,19 +213,21 @@ def _get_web_store_api_error_message(response):
         errors = response.json()["errors"]
     except (AttributeError, ValueError, KeyError):
         error_message = _("Unknown Talpa web store API error")
-        error = f"{error_message} (status_code: {error_status_code})"
+        return f"{error_message} (status_code: {error_status_code})"
     else:
         error_message = _("Talpa web store API error")
-        error = f"{error_message} (status_code: {error_status_code}): {errors}"
-
-    return error
+        return f"{error_message} (status_code: {error_status_code}): {errors}"
 
 
 def _raise_web_store_chained_api_exception(request_exc):
     api_error_message = _get_web_store_api_error_message(request_exc.response)
+    logger.error(api_error_message)
 
+    status_code = getattr(request_exc.response, "status_code", None)
     raise WebStoreAPIError(
-        api_error_message, getattr(request_exc.response, "status_code", None)
+        _("Payment API experienced an error (code: %(status_code)s)")
+        % {"status_code": status_code},
+        status_code,
     ) from request_exc
 
 

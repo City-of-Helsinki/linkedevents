@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-27 06:40+0000\n"
+"POT-Creation-Date: 2024-08-28 10:44+0000\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <harri.rissanen@vincit.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -815,7 +815,7 @@ msgstr ""
 #, python-format
 msgid ""
 "Refund not found with order ID %(order_id)s and refund ID %(refund_id)s."
-msgstr "Maksua ei löytynyt tilauksen ID:llä %(order_id)s ja hyvityksen ID:llä %(refund_id)s."
+msgstr "Hyvitystä ei löytynyt tilauksen ID:llä %(order_id)s ja hyvityksen ID:llä %(refund_id)s."
 
 #: registrations/api.py:753
 msgid "Could not check refund status from Talpa API."
@@ -824,12 +824,14 @@ msgstr "Hyvityksen tilaa ei voitu tarkistaa Talpa-rajapinnasta."
 #: registrations/api.py:792
 msgid "Refund marked as paid in webhook payload, but not in Talpa API."
 msgstr ""
-"Hyvitys on merkitty maksetuksi webhook-notifikaatiossa, mutta ei Talpa-rajapinnassa."
+"Hyvitys on merkitty maksetuksi webhook-notifikaatiossa, mutta ei Talpa-"
+"rajapinnassa."
 
 #: registrations/api.py:807
 msgid "Refund marked as failed in webhook payload, but not in Talpa API."
 msgstr ""
-"Hyvitys on merkitty epäonnistuneeksi webhook-notifikaatiossa, mutta ei Talpa-rajapinnassa."
+"Hyvitys on merkitty epäonnistuneeksi webhook-notifikaatiossa, mutta ei Talpa-"
+"rajapinnassa."
 
 #: registrations/auth.py:25
 msgid "Invalid webhook API key."
@@ -2588,19 +2590,15 @@ msgstr "Käyttöoikeuskutsu"
 msgid "View the participants"
 msgstr "Katso osallistujat"
 
-#: registrations/utils.py:212
-msgid "Unknown Talpa web store API error"
-msgstr ""
-
 #: registrations/utils.py:215
+msgid "Unknown Talpa web store API error"
+msgstr "Talpa-rajapinnassa tapahtui tuntematon virhe"
+
+#: registrations/utils.py:218
 msgid "Talpa web store API error"
-msgstr ""
+msgstr "Talpa-rajapinnassa tapahtui virhe"
 
-#~ msgid ""
-#~ "Payment marked as cancelled in webhook payload, but not in Talpa API."
-#~ msgstr ""
-#~ "Maksu on merkitty perutuksi webhook-notifikaatiossa, mutta ei Talpa-"
-#~ "rajapinnassa."
-
-#~ msgid "VAT code"
-#~ msgstr "ALV-koodi"
+#: registrations/utils.py:230
+#, python-format
+msgid "Payment API experienced an error (code: %(status_code)s)"
+msgstr "Maksurajapinnassa tapahtui virhe (koodi: %(status_code)s)"

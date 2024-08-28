@@ -514,14 +514,12 @@ def test_create_signup_payment_without_pricetotal_in_response(api_client):
         (
             status.HTTP_400_BAD_REQUEST,
             DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
-            f"Talpa web store API error (status_code: {status.HTTP_400_BAD_REQUEST}): "
-            f"{DEFAULT_CREATE_ORDER_ERROR_RESPONSE['errors']}",
+            f"Payment API experienced an error (code: {status.HTTP_400_BAD_REQUEST})",
         ),
         (
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             {},
-            f"Unknown Talpa web store API error "
-            f"(status_code: {status.HTTP_500_INTERNAL_SERVER_ERROR})",
+            f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})",
         ),
     ],
 )
