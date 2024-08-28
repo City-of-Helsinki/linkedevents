@@ -528,11 +528,13 @@ class SignUpSerializer(
         return instance
 
     def _validate_mandatory_fields(self, registration, validated_data, errors):
+        falsy_values = ("", None)
+
         for field in registration.mandatory_fields:
             if self.partial and field not in validated_data.keys():
                 # Don't validate field if request method is PATCH and field is missing from the payload.
                 continue
-            elif not validated_data.get(field):
+            elif validated_data.get(field) in falsy_values:
                 errors[field] = _("This field must be specified.")
 
     def _validate_date_of_birth(self, registration, validated_data, errors):
