@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-08-27 06:40+0000\n"
+"POT-Creation-Date: 2024-08-28 10:44+0000\n"
 "PO-Revision-Date: 2023-06-19 12:05+0300\n"
 "Last-Translator: <harri.rissanen@vincit.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2582,18 +2582,15 @@ msgstr "Åtkomstinbjudan"
 msgid "View the participants"
 msgstr "Se deltagarna"
 
-#: registrations/utils.py:212
-msgid "Unknown Talpa web store API error"
-msgstr ""
-
 #: registrations/utils.py:215
+msgid "Unknown Talpa web store API error"
+msgstr "Okänt Talpa webbshop API-fel"
+
+#: registrations/utils.py:218
 msgid "Talpa web store API error"
-msgstr ""
+msgstr "Talpa webbshop API-fel"
 
-#~ msgid ""
-#~ "Payment marked as cancelled in webhook payload, but not in Talpa API."
-#~ msgstr ""
-#~ "Betalning markerad som avbruten i webhook-avisering, men inte i Talpa API."
-
-#~ msgid "VAT code"
-#~ msgstr "Momskod"
+#: registrations/utils.py:230
+#, python-format
+msgid "Payment API experienced an error (code: %(status_code)s)"
+msgstr "Ett fel uppstod i betalnings-API (kod: %(status_code)s)"

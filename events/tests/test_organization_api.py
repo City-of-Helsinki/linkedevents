@@ -1625,7 +1625,7 @@ def test_create_organization_with_web_store_merchant_api_field_exception(
     json_return_value = {
         "errors": [{"code": "test", "message": "Merchant already exists."}]
     }
-    with requests_mock.Mocker() as req_mock:
+    with translation.override("en"), requests_mock.Mocker() as req_mock:
         req_mock.post(
             merchant_create_url,
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1638,8 +1638,7 @@ def test_create_organization_with_web_store_merchant_api_field_exception(
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data[0] == (
-        f"Talpa web store API error (status_code: {status.HTTP_400_BAD_REQUEST}): "
-        f"{json_return_value['errors']}"
+        f"Payment API experienced an error (code: {status.HTTP_400_BAD_REQUEST})"
     )
 
     assert Organization.objects.count() == 1
@@ -1665,7 +1664,7 @@ def test_create_organization_with_web_store_merchant_api_unknown_exception(
     assert Organization.objects.count() == 1
     assert WebStoreMerchant.objects.count() == 0
 
-    with requests_mock.Mocker() as req_mock:
+    with translation.override("en"), requests_mock.Mocker() as req_mock:
         req_mock.post(
             merchant_create_url, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -1676,7 +1675,7 @@ def test_create_organization_with_web_store_merchant_api_unknown_exception(
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data[0] == (
-        f"Unknown Talpa web store API error (status_code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
+        f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
     )
 
     assert Organization.objects.count() == 1
@@ -1704,7 +1703,7 @@ def test_update_organization_with_web_store_merchant_api_field_exception(
     json_return_value = {
         "errors": [{"code": "test", "message": "Merchant already exists."}]
     }
-    with requests_mock.Mocker() as req_mock:
+    with translation.override("en"), requests_mock.Mocker() as req_mock:
         req_mock.post(
             merchant_create_url,
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1717,8 +1716,7 @@ def test_update_organization_with_web_store_merchant_api_field_exception(
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data[0] == (
-        f"Talpa web store API error (status_code: {status.HTTP_400_BAD_REQUEST}): "
-        f"{json_return_value['errors']}"
+        f"Payment API experienced an error (code: {status.HTTP_400_BAD_REQUEST})"
     )
 
     assert WebStoreMerchant.objects.count() == 0
@@ -1742,7 +1740,7 @@ def test_update_organization_with_web_store_merchant_api_unknown_exception(
 
     assert WebStoreMerchant.objects.count() == 0
 
-    with requests_mock.Mocker() as req_mock:
+    with translation.override("en"), requests_mock.Mocker() as req_mock:
         req_mock.post(
             merchant_create_url, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -1753,7 +1751,7 @@ def test_update_organization_with_web_store_merchant_api_unknown_exception(
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.data[0] == (
-        f"Unknown Talpa web store API error (status_code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
+        f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
     )
 
     assert WebStoreMerchant.objects.count() == 0

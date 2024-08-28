@@ -1842,8 +1842,7 @@ def test_web_store_partial_refund_api_exception_when_deleting_signup_from_group_
         response = delete_signup(api_client, signup.pk)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data[0] == (
-            "Unknown Talpa web store API error "
-            f"(status_code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
+            f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
         )
 
         assert req_mock.call_count == 2
@@ -1955,8 +1954,7 @@ def test_web_store_automatically_fully_refund_paid_signup_payment_api_error(api_
         response = delete_signup(api_client, signup.pk)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data[0] == (
-            f"Unknown Talpa web store API error (status_code: "
-            f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
+            f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
         )
 
         assert req_mock.call_count == 2
@@ -2088,8 +2086,7 @@ def test_web_store_automatically_cancel_unpaid_created_signup_payment_api_error(
         response = delete_signup(api_client, signup.pk)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data[0] == (
-            f"Unknown Talpa web store API error (status_code: "
-            f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
+            f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
         )
 
         assert req_mock.call_count == 3
@@ -2146,8 +2143,7 @@ def test_web_store_cancel_unpaid_signup_order_or_payment_status_api_error(
         response = delete_signup(api_client, signup.pk)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data[0] == (
-            f"Unknown Talpa web store API error (status_code: "
-            f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
+            f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
         )
 
         assert req_mock.call_count == expected_calls_count
@@ -2219,8 +2215,7 @@ def test_web_store_partial_refund_order_or_payment_status_api_error(
         response = delete_signup(api_client, signup.pk)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data[0] == (
-            f"Unknown Talpa web store API error (status_code: "
-            f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
+            f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
         )
 
         assert req_mock.call_count == expected_calls_count

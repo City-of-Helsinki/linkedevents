@@ -1659,8 +1659,7 @@ def test_signup_group_web_store_automatically_fully_refund_payment_api_error(
         response = delete_signup_group(api_client, signup_group.pk)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data[0] == (
-            f"Unknown Talpa web store API error (status_code: "
-            f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
+            f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
         )
 
         assert req_mock.call_count == 2
@@ -1719,8 +1718,7 @@ def test_signup_group_web_store_automatically_cancel_unpaid_created_signup_payme
         response = delete_signup_group(api_client, signup_group.pk)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.data[0] == (
-            f"Unknown Talpa web store API error (status_code: "
-            f"{status.HTTP_500_INTERNAL_SERVER_ERROR})"
+            f"Payment API experienced an error (code: {status.HTTP_500_INTERNAL_SERVER_ERROR})"
         )
 
         assert req_mock.call_count == 3
