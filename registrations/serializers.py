@@ -1496,7 +1496,7 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
             waiting_list_count = registration.current_waiting_list_count
             waiting_list_capacity_left = waiting_list_capacity - waiting_list_count
 
-            # Prevent to reserve seats to waiting ist if all available seats in waiting list
+            # Prevent to reserve seats to waiting list if all available seats in waiting list
             # are already reserved
             if (
                 validated_data["seats"]
