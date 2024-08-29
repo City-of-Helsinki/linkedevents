@@ -2400,7 +2400,41 @@ def test_get_organization_web_store_merchants_from_ancestor(
     assert response.status_code == expected_status
 
     if expected_status == status.HTTP_200_OK:
+        # User is admin in parent organization, but not in child organization
+        # => should get merchants from the parent.
         assert len(response.data) == 2
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    [
+        "org_admin",
+        "org_registration_admin",
+        "org_financial_admin",
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_org_admin_cannot_get_organization_web_store_merchants_from_ancestor_without_permissions(
+    api_client, organization, organization2, user2_with_user_type
+):
+    organization2.admin_users.remove(user2_with_user_type)
+
+    organization.parent = organization2
+    organization.save(update_fields=["parent"])
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        WebStoreMerchantFactory(organization=organization2)
+        WebStoreMerchantFactory(organization=organization2)
+
+    api_client.force_authenticate(user2_with_user_type)
+
+    response = get_organization_merchants(api_client, organization.id)
+
+    # User is admin in child organization, but not in parent organization
+    # => should not get any merchants from the parent.
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 0
 
 
 @pytest.mark.parametrize(
@@ -2465,7 +2499,40 @@ def test_get_organization_web_store_accounts_from_ancestor(
     assert response.status_code == expected_status
 
     if expected_status == status.HTTP_200_OK:
+        # User is admin in parent organization, but not in child organization
+        # => should get accounts from the parent.
         assert len(response.data) == 2
+
+
+@pytest.mark.parametrize(
+    "user2_with_user_type",
+    [
+        "org_admin",
+        "org_registration_admin",
+        "org_financial_admin",
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_org_admin_cannot_get_organization_web_store_accounts_from_ancestor_without_permissions(
+    api_client, organization, organization2, user2_with_user_type
+):
+    organization2.admin_users.remove(user2_with_user_type)
+
+    organization.parent = organization2
+    organization.save(update_fields=["parent"])
+
+    WebStoreAccountFactory(organization=organization2)
+    WebStoreAccountFactory(organization=organization2)
+
+    api_client.force_authenticate(user2_with_user_type)
+
+    response = get_organization_accounts(api_client, organization.id)
+
+    # User is admin in child organization, but not in parent organization
+    # => should not get any accounts from the parent.
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 0
 
 
 @pytest.mark.django_db

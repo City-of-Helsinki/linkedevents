@@ -1432,9 +1432,20 @@ class OrganizationViewSet(
                 queryset = queryset.none()
         return queryset
 
-    @staticmethod
-    def _get_web_store_objects(organization, relation_name):
-        for ancestor in organization.get_ancestors(ascending=True, include_self=True):
+    def _get_web_store_objects(self, organization, relation_name):
+        if self.request.user.is_superuser:
+            org_qs_filter = Q()
+        else:
+            all_admin_orgs = (
+                self.request.user.get_admin_organizations_and_descendants()
+                | self.request.user.get_registration_admin_organizations_and_descendants()
+                | self.request.user.get_financial_admin_organizations_and_descendants()
+            ).distinct()
+            org_qs_filter = Q(pk__in=all_admin_orgs)
+
+        for ancestor in organization.get_ancestors(
+            ascending=True, include_self=True
+        ).filter(org_qs_filter):
             if objects := list(getattr(ancestor, relation_name).filter(active=True)):
                 return objects
 
