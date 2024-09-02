@@ -82,6 +82,10 @@ jobs:
         run: |
           django-admin compilemessages
 
+      - name: Check OpenAPI schema
+        run: |
+          python manage.py spectacular --lang en --validate --fail-on-warn --api-version v1
+
       - name: Check black
         run: |
           black --check .

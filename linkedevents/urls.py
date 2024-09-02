@@ -5,6 +5,7 @@ from django.http import HttpResponse, JsonResponse
 from django.urls import path, re_path, reverse
 from django.views.decorators.http import require_GET
 from django.views.generic import RedirectView
+from drf_spectacular.views import SpectacularAPIView
 
 from linkedevents import __version__
 
@@ -27,10 +28,11 @@ urlpatterns = [
     path("helauth/", include("helusers.urls")),
     path("gdpr-api/", include("helsinki_gdpr.urls")),
     path("data-analytics/", include("data_analytics.urls", namespace="data_analytics")),
+    path("docs/schema/", SpectacularAPIView.as_view(api_version="v1"), name="schema"),
     path(
         "docs/swagger-ui/",
         CustomSpectacularSwaggerView.as_view(url_name="schema"),
-        name="schema",
+        name="swagger-ui",
     ),
     path("", RedirectToAPIRootView.as_view()),
 ]

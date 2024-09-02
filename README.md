@@ -361,8 +361,11 @@ For an example extension implementation, see [course extension](extension_course
 
 Swagger documentation is available at the endpoint `/docs/swagger-ui/`. The schema is generated using [drf-spectacular](https://github.com/tfranzel/drf-spectacular).
 
-To update the .yaml file that the Swagger UI is based on, run the following management command:
+Development/local servers use a dynamic schema that is generated on-the-fly, and production servers use a pregenerated static YAML file.
+
+To create or update a static YAML file for testing purposes, etc., you may run the following management command:
 
 ```shell
-./manage.py spectacular --file ./linkedevents/static/linked-events.yaml --lang en --validate --fail-on-warn --api-version v1
+./manage.py spectacular --file <file_name> --lang en --validate --fail-on-warn --api-version v1
 ```
+To make your local Linked Events instance use the static file, the environment variable `SWAGGER_USE_STATIC_SCHEMA` should be set to `true`.

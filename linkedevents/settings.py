@@ -149,6 +149,7 @@ env = environ.Env(
     STATIC_URL=(str, "/static/"),
     SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS=(list, ["@hel.fi"]),
     SUPPORT_EMAIL=(str, ""),
+    SWAGGER_USE_STATIC_SCHEMA=(bool, False),
     SYSTEM_DATA_SOURCE_ID=(str, "system"),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(list, ["https://api.hel.fi/auth/linkedevents"]),
     TOKEN_AUTH_ACCEPTED_SCOPE_PREFIX=(str, "linkedevents"),
@@ -746,6 +747,7 @@ FINANCIAL_ADMIN_EXPIRATION_MONTHS = env("FINANCIAL_ADMIN_EXPIRATION_MONTHS")
 REGISTRATION_ADMIN_EXPIRATION_MONTHS = env("REGISTRATION_ADMIN_EXPIRATION_MONTHS")
 REGISTRATION_USER_EXPIRATION_MONTHS = env("REGISTRATION_USER_EXPIRATION_MONTHS")
 
+SWAGGER_USE_STATIC_SCHEMA = env("SWAGGER_USE_STATIC_SCHEMA")
 SPECTACULAR_SETTINGS = {
     "TITLE": "Linked Events information API",
     "DESCRIPTION": (
@@ -775,7 +777,6 @@ SPECTACULAR_SETTINGS = {
     ],
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
-        "url": "/static/linked-events.yaml",
     },
     "TAGS": [
         {"name": "event", "description": "Search and edit events"},
@@ -805,6 +806,8 @@ SPECTACULAR_SETTINGS = {
         {"name": "user", "description": "Get users"},
     ],
 }
+if SWAGGER_USE_STATIC_SCHEMA:
+    SPECTACULAR_SETTINGS["SWAGGER_UI_SETTINGS"]["url"] = "/static/openapi_schema.yaml"
 if WEB_STORE_INTEGRATION_ENABLED:
     SPECTACULAR_SETTINGS["TAGS"].append(
         {
