@@ -31,6 +31,13 @@ if [[ "$COMPILE_TRANSLATIONS" = "true" ]]; then
     django-admin compilemessages
 fi
 
+if [[ "$SWAGGER_USE_STATIC_SCHEMA" = "true" ]]; then
+    echo "Generating static OpenAPI schema..."
+    mkdir -p ./linkedevents/static
+    touch ./linkedevents/static/openapi_schema.yaml
+    ./manage.py spectacular --file ./linkedevents/static/openapi_schema.yaml --lang en --validate --fail-on-warn --api-version v1
+fi
+
 # Allow running arbitrary commands instead of the servers
 if [[ -n "$@" ]]; then
     "$@"
