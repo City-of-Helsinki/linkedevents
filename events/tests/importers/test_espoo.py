@@ -3,9 +3,11 @@ from http.client import HTTPMessage, HTTPResponse
 from unittest.mock import Mock, patch
 
 import factory
+import freezegun
 import pytest
 import pytz
 from django.conf import settings as django_settings
+from django.utils import timezone
 from django_orghierarchy.models import Organization
 from faker import Faker
 
@@ -27,6 +29,7 @@ from events.importer.espoo import (
 from events.models import Event, Image, Keyword, Place
 from events.tests.factories import (
     DataSourceFactory,
+    EventFactory,
     KeywordFactory,
     OrganizationFactory,
     PlaceFactory,
@@ -277,6 +280,8 @@ def event_mock_data(
     audience=None,
     offers=None,
     external_links=None,
+    start_time=None,
+    end_time=None,
     **kwargs,
 ):
     keywords = keywords or []
@@ -285,7 +290,7 @@ def event_mock_data(
     external_links = external_links or []
 
     faker = Faker()
-    end_time = faker.date_time(tzinfo=pytz.utc)
+    end_time = end_time or faker.date_time(tzinfo=pytz.utc)
     return {
         "id": _id,
         "data_source": "espoo",
@@ -294,7 +299,11 @@ def event_mock_data(
         "deleted": False,
         "end_time": end_time.isoformat(),
         "last_modified_time": faker.iso8601(tzinfo=pytz.utc),
-        "start_time": faker.iso8601(tzinfo=pytz.utc, end_datetime=end_time),
+        "start_time": (
+            start_time.isoformat()
+            if start_time
+            else faker.iso8601(tzinfo=pytz.utc, end_datetime=end_time)
+        ),
         "super_event_type": None,
         "name": {
             "fi": faker.bs(),
@@ -384,8 +393,17 @@ def test_importer(settings, requests_mock, sleep, api_client):
     common_kw2_data = keyword_mock_data(common_kw2.id, org1["id"])
     common_place1_data = keyword_mock_data(common_place1.id, org1["id"])
 
+    end = timezone.now()
+    start = end - timezone.timedelta(days=1)
+
     event1 = event_mock_data(
-        "espoo:event1", org1["id"], place1_data, [common_kw1_data], [audience_kw_data]
+        "espoo:event1",
+        org1["id"],
+        place1_data,
+        [common_kw1_data],
+        [audience_kw_data],
+        start_time=start,
+        end_time=end,
     )
     event2 = event_mock_data(
         "espoo:event2",
@@ -402,6 +420,8 @@ def test_importer(settings, requests_mock, sleep, api_client):
                 "price": 10,
             },
         ],
+        start_time=start,
+        end_time=end,
     )
     event3 = event_mock_data(
         "espoo:event3",
@@ -412,6 +432,8 @@ def test_importer(settings, requests_mock, sleep, api_client):
         description={
             "en": '<h1>h1 tags should disappear</h1><p>Hello world! <a href="https://google.com">Google</a></p>'
         },
+        start_time=start,
+        end_time=end,
     )
 
     requests_mock.get(
@@ -491,6 +513,68 @@ def test_purge_orphans_no_orphans():
         },
     ]
     assert purge_orphans(events_data) == events_data
+
+
+@pytest.mark.django_db
+def test_importer_keeps_older_than_event_start_days_before(
+    settings, requests_mock, sleep, api_client
+):
+    settings.ESPOO_API_URL = "http://localhost/"
+    settings.ESPOO_API_EVENT_QUERY_PARAMS = {"test": 1}
+    data_source = DataSourceFactory(id="espoo_le", name="Espoo Linkedevents")
+    org = OrganizationFactory(
+        id="test_org", data_source_id=data_source.id, origin_id="test_org"
+    )
+    place = PlaceFactory(
+        id="espoo_le:place1", publisher_id=org.id, data_source_id=data_source.id
+    )
+    place_data = place_mock_data(place.id, org.id)
+    now = timezone.now()
+    wayback = now - timezone.timedelta(
+        days=settings.ESPOO_API_EVENT_START_DAYS_BACK + 7
+    )
+
+    new_event = event_mock_data(
+        "espoo_le:fresh",
+        org.id,
+        place_data,
+        start_time=now,
+        end_time=now + timezone.timedelta(days=1),
+    )
+
+    older_event = EventFactory(
+        id="espoo_le:sour",
+        publisher_id=org.id,
+        data_source_id=data_source.id,
+        location_id=place.id,
+        start_time=wayback,
+        end_time=wayback + timezone.timedelta(days=1),
+    )
+
+    requests_mock.get(
+        f"{settings.ESPOO_API_URL}v1/organization/",
+        json={
+            "meta": {"count": 1, "next": None, "previous": None},
+            "data": [org_mock_data(org.id)],
+        },
+    )
+
+    event_data = {
+        "meta": {"count": 2, "next": None, "previous": None},
+        "data": [new_event],
+    }
+
+    requests_mock.get(
+        f"{settings.ESPOO_API_URL}v1/event/?include=keywords%2Caudience%2Clocation&test=1",
+        json=event_data,
+    )
+
+    importer = EspooImporter({"force": False})
+    importer.import_events()
+
+    # Test old event should stay in the database.
+    assert Event.objects.filter(id=older_event.id).exists()
+    assert Event.objects.filter(origin_id=new_event["id"]).exists()
 
 
 def test_purge_orphans():

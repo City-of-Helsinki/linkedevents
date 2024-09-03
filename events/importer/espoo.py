@@ -9,6 +9,7 @@ import requests
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Model
+from django.utils import timezone
 from django_orghierarchy.models import Organization
 from requests.adapters import HTTPAdapter
 from requests.exceptions import RetryError
@@ -26,6 +27,10 @@ from .sync import ModelSyncher
 logger = logging.getLogger(__name__)
 
 M = TypeVar("M", bound=Model)
+
+EVENT_START = timezone.now() - timezone.timedelta(
+    days=settings.ESPOO_API_EVENT_START_DAYS_BACK
+)
 
 
 PreMapper = Annotated[
@@ -356,8 +361,13 @@ def _import_origin_objs(
     def origin_id(instance):
         return getattr(instance, instance_id_field)
 
+    queryset = model.objects.filter(data_source=data_source)
+
+    if model == Event:
+        queryset = queryset.filter(start_time__gte=EVENT_START)
+
     syncher = ModelSyncher(
-        model.objects.filter(data_source=data_source),
+        queryset,
         origin_id,
     )
 
@@ -545,10 +555,12 @@ class EspooImporter(Importer):
         orgs_data = _list_data(_build_url("v1/organization/"))
 
         # Grab all relevant events from origin
-        # Using include=keywords,audience,location to reduce the number of needed requests
+        # Using include=keywords,audience,location and restrict events starting from
+        # configured days (defaulting to 180) back to reduce the number of needed requests.
         events_data = _list_data(
             _build_url("v1/event/"),
             params={
+                "start": EVENT_START.isoformat(),
                 "include": "keywords,audience,location",
                 **settings.ESPOO_API_EVENT_QUERY_PARAMS,
             },
@@ -585,6 +597,10 @@ class EspooImporter(Importer):
         for image_data in origin_images.values():
             _add_id_to_set(origin_org_ids, image_data, "publisher")
 
+        old_event_ids = Event.objects.filter(
+            data_source=self.data_source, start_time__lt=EVENT_START
+        ).values_list("id", flat=True)
+
         # Import organizations
         logger.info("Importing organizations")
         org_objs = [org for org in orgs_data if org["id"] in origin_org_ids]
@@ -598,6 +614,12 @@ class EspooImporter(Importer):
             org_objs,
             copy_fields=["name"],
         )
+
+        # Mark Organizations which are referenced in older Espoo events to avoid deletion.
+        for org in Organization.objects.filter(
+            data_source=self.data_source, published_events__in=old_event_ids
+        ).iterator():
+            org_syncher.mark(org)
 
         # Import places
         common_places, origin_places = _split_common_objs(
@@ -613,6 +635,12 @@ class EspooImporter(Importer):
                 "publisher": _build_pre_map_to_id(org_map),
             },
         )
+
+        # Mark Places which are referenced in older Espoo events to avoid deletion.
+        for place in Place.objects.filter(
+            data_source=self.data_source, events__in=old_event_ids
+        ).iterator():
+            place_syncher.mark(place)
 
         # Import keywords
         common_keywords, origin_keywords = _split_common_objs(
@@ -630,6 +658,12 @@ class EspooImporter(Importer):
                 "publisher": _build_pre_map_to_id(org_map),
             },
         )
+
+        # Mark Keywords which are referenced in older Espoo events to avoid deletion.
+        for kw in Keyword.objects.filter(
+            data_source=self.data_source, events__in=old_event_ids
+        ).iterator():
+            place_syncher.mark(kw)
 
         image_map, image_syncher = _import_origin_objs(
             Image,
