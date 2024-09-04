@@ -512,7 +512,11 @@ class TestSignUpGroup(TestCase):
                         "priceNet": price_net,
                         "priceGross": price_total,
                         "priceVat": price_vat,
-                        "vatPercentage": str(int(price_group.vat_percentage)),
+                        "vatPercentage": str(
+                            strip_trailing_zeroes_from_decimal(
+                                price_group.vat_percentage
+                            )
+                        ),
                         "meta": [
                             {
                                 "key": web_store_price_group_meta_key,
@@ -533,7 +537,11 @@ class TestSignUpGroup(TestCase):
                         "priceNet": price_net2,
                         "priceGross": price_total2,
                         "priceVat": price_vat2,
-                        "vatPercentage": str(int(price_group2.vat_percentage)),
+                        "vatPercentage": str(
+                            strip_trailing_zeroes_from_decimal(
+                                price_group2.vat_percentage
+                            )
+                        ),
                         "meta": [
                             {
                                 "key": web_store_price_group_meta_key,
@@ -977,7 +985,11 @@ class TestSignUp(TestCase):
                         "priceNet": price_net,
                         "priceGross": price_total,
                         "priceVat": price_vat,
-                        "vatPercentage": str(int(price_group.vat_percentage)),
+                        "vatPercentage": str(
+                            strip_trailing_zeroes_from_decimal(
+                                price_group.vat_percentage
+                            )
+                        ),
                         "meta": [
                             {
                                 "key": web_store_price_group_meta_key,
@@ -1410,7 +1422,9 @@ class TestSignUpPriceGroup(TestCase):
                 "priceNet": price_net,
                 "priceGross": price_total,
                 "priceVat": price_vat,
-                "vatPercentage": str(int(self.price_group.vat_percentage)),
+                "vatPercentage": str(
+                    strip_trailing_zeroes_from_decimal(self.price_group.vat_percentage)
+                ),
                 "meta": [
                     {
                         "key": web_store_price_group_meta_key,

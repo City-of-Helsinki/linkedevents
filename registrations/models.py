@@ -2055,7 +2055,9 @@ class SignUpPriceGroup(RegistrationPriceGroupBaseModel, SoftDeletableBaseModel):
             "priceNet": str(strip_trailing_zeroes_from_decimal(self.price_without_vat)),
             "priceGross": str(strip_trailing_zeroes_from_decimal(self.price)),
             "priceVat": str(strip_trailing_zeroes_from_decimal(self.vat)),
-            "vatPercentage": str(int(self.vat_percentage)),
+            "vatPercentage": str(
+                strip_trailing_zeroes_from_decimal(self.vat_percentage)
+            ),
             "meta": [
                 {
                     "key": web_store_price_group_meta_key,
