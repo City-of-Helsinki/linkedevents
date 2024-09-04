@@ -64,7 +64,6 @@ def create_registration(api_client, registration_data, data_source=None):
 
 def assert_create_registration(api_client, registration_data, data_source=None):
     response = create_registration(api_client, registration_data, data_source)
-    print(response.json())
     assert response.status_code == status.HTTP_201_CREATED
     assert response.data["event"] == registration_data["event"]
 
