@@ -60,7 +60,13 @@ FROM appbase AS staticbuilder
 
 ENV VAR_ROOT=/app
 COPY --chown=appuser:appuser . /app
-RUN SECRET_KEY="only-used-for-collectstatic" python manage.py collectstatic --noinput
+
+RUN mkdir -p /app/linkedevents/static \
+    && touch /app/linkedevents/static/openapi_schema.yaml \
+    && SECRET_KEY="only-used-for-collectstatic" python manage.py spectacular \
+    --file /app/linkedevents/static/openapi_schema.yaml --lang en --validate --fail-on-warn \
+    --api-version v1 \
+    && SECRET_KEY="only-used-for-collectstatic" python manage.py collectstatic --noinput
 
 # ==============================
 FROM appbase AS production
