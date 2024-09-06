@@ -740,13 +740,20 @@ registration_user_access_invitation_texts = {
     "registration_user_access": {
         "text": {
             Event.TypeId.GENERAL: _(
-                "The e-mail address <strong>%(email)s</strong> has been granted the rights to read the participant list of the event <strong>%(event_name)s</strong>."  # noqa E501
+                "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
+                "read the participant list of the event <strong>%(event_name)s</strong>. Using "
+                "the Suomi.fi identification is required to be able to read the participant list."
             ),
             Event.TypeId.COURSE: _(
-                "The e-mail address <strong>%(email)s</strong> has been granted the rights to read the participant list of the course <strong>%(event_name)s</strong>."  # noqa E501
+                "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
+                "read the participant list of the course <strong>%(event_name)s</strong>. Using "
+                "the Suomi.fi identification is required to be able to read the participant list."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "The e-mail address <strong>%(email)s</strong> has been granted the rights to read the participant list of the volunteering <strong>%(event_name)s</strong>."  # noqa E501
+                "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
+                "read the participant list of the volunteering <strong>%(event_name)s</strong>. "
+                "Using the Suomi.fi identification is required to be able to read the participant "
+                "list."
             ),
         }
     },

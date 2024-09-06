@@ -89,21 +89,24 @@ def test_not_allowed_roles_cannot_send_invitation_to_registration_user_access(
             False,
             "Rights granted to the participant list",
             f"The e-mail address <strong>{email}</strong> has been granted the rights "
-            f"to read the participant list of the event <strong>{event_name}</strong>.",
+            f"to read the participant list of the event <strong>{event_name}</strong>. Using "
+            "the Suomi.fi identification is required to be able to read the participant list.",
         ),
         (
             "fi",
             False,
             "Oikeudet myönnetty osallistujalistaan",
             f"Sähköpostiosoitteelle <strong>{email}</strong> on myönnetty oikeudet "
-            f"lukea tapahtuman <strong>{event_name}</strong> osallistujalista.",
+            f"lukea tapahtuman <strong>{event_name}</strong> osallistujalista. Osallistujalistan "
+            "lukeminen vaatii Suomi.fi-tunnistautumisen.",
         ),
         (
             "sv",
             False,
             "Rättigheter tilldelade deltagarlistan",
             f"E-postadressen <strong>{email}</strong> har beviljats rättigheter att "
-            f"läsa deltagarlistan för evenemanget <strong>{event_name}</strong>.",
+            f"läsa deltagarlistan för evenemanget <strong>{event_name}</strong>. Användning av "
+            "Suomi.fi-identifiering krävs för att kunna läsa deltagarlistan.",
         ),
         (
             "en",
