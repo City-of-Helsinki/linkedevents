@@ -1545,8 +1545,8 @@ class Feedback(models.Model):
     def save(self, *args, **kwargs):
         send_mail(
             subject=f"[LinkedEvents] {self.subject} reported by {self.name}",
-            message=self.body,
-            from_email=self.email,
+            message=f"Email: {self.email}, message: {self.body}",
+            from_email=get_email_noreply_address(),
             recipient_list=[settings.SUPPORT_EMAIL],
             fail_silently=False,
         )
