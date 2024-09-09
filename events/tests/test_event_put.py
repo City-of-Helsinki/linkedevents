@@ -1326,3 +1326,74 @@ def test_update_event_with_large_minimum_and_maximum_attendee_capacity(
     event.refresh_from_db()
     assert event.minimum_attendee_capacity == 500000
     assert event.maximum_attendee_capacity == 1000000
+
+
+@pytest.mark.django_db
+def test_update_event_external_link_texts_are_cleaned(
+    user_api_client, event, minimal_event_dict
+):
+    cleaned_name = "&lt;p&gt;Test&lt;/p&gt;"
+    link = "https://example.com"
+    language = "fi"
+
+    minimal_event_dict["external_links"] = [
+        {
+            "name": "<p>Test</p>",
+            "link": link,
+            "language": language,
+        }
+    ]
+
+    response = user_api_client.put(
+        reverse("event-detail", kwargs={"pk": event.id}),
+        minimal_event_dict,
+        format="json",
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["external_links"][0] == {
+        "name": cleaned_name,
+        "link": link,
+        "language": language,
+    }
+
+    event.refresh_from_db()
+    assert event.external_links.count() == 1
+
+    external_link = event.external_links.first()
+    assert external_link.name == cleaned_name
+    assert external_link.link == link
+    assert external_link.language_id == language
+
+
+@pytest.mark.django_db
+def test_update_event_duplicate_external_links_are_not_allowed(
+    user_api_client, event, minimal_event_dict
+):
+    name = "Test"
+    link = "https://example.com"
+    language = "fi"
+
+    minimal_event_dict["external_links"] = [
+        {"name": name, "link": link, "language": language} for _ in range(2)
+    ]
+
+    response = user_api_client.put(
+        reverse("event-detail", kwargs={"pk": event.id}),
+        minimal_event_dict,
+        format="json",
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert (
+        response.data["external_links"]["name"]
+        == f"Duplicate link given with name {name}."
+    )
+    assert response.data["external_links"]["language"] == (
+        f"Duplicate link given with language {language}."
+    )
+    assert (
+        response.data["external_links"]["link"]
+        == f"Duplicate link given with link {link}."
+    )
+
+    event.refresh_from_db()
+    assert event.external_links.count() == 0

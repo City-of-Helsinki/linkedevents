@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-06 12:29+0000\n"
+"POT-Creation-Date: 2024-09-10 13:19+0000\n"
 "PO-Revision-Date: 2023-06-19 12:05+0300\n"
 "Last-Translator: <harri.rissanen@vincit.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -619,41 +619,56 @@ msgstr "Användaren har inga rättigheter till denna organisation"
 msgid "Deprecated keyword not allowed ({})"
 msgstr ""
 
-#: events/serializers.py:999
+#: events/serializers.py:974
+#, python-format
+msgid "Duplicate link given with name %(name)s."
+msgstr ""
+
+#: events/serializers.py:976
+#, python-format
+msgid "Duplicate link given with language %(language)s."
+msgstr ""
+
+#: events/serializers.py:978
+#, python-format
+msgid "Duplicate link given with link %(link)s."
+msgstr ""
+
+#: events/serializers.py:1030
 msgid "You have to set either user_email or user_phone_number."
 msgstr ""
 
-#: events/serializers.py:1008
+#: events/serializers.py:1039
 msgid "User consent is required if personal information fields are filled."
 msgstr ""
 
-#: events/serializers.py:1011
+#: events/serializers.py:1042
 msgid "This field must be specified before an event is published."
 msgstr "Detta fält måste anges innan ett evenemanget publiceras."
 
-#: events/serializers.py:1025
+#: events/serializers.py:1056
 msgid "Short description length must be 160 characters or less"
 msgstr ""
 
-#: events/serializers.py:1041
+#: events/serializers.py:1072
 msgid "Price info must be specified before an event is published."
 msgstr ""
 
-#: events/serializers.py:1075
+#: events/serializers.py:1101
 msgid "End time cannot be in the past. Please set a future end time."
 msgstr "Sluttiden kan inte ligga i det förflutna. Ange en framtida sluttid."
 
-#: events/serializers.py:1180
+#: events/serializers.py:1206
 msgid "Cannot edit a past event."
 msgstr ""
 
-#: events/serializers.py:1195
+#: events/serializers.py:1221
 msgid ""
 "POSTPONED and RESCHEDULED statuses cannot be set directly.Changing event "
 "start_time or marking start_time nullwill reschedule or postpone an event."
 msgstr ""
 
-#: events/serializers.py:1216
+#: events/serializers.py:1242
 msgid ""
 "Public events cannot be set back to SCHEDULED if theyhave already been "
 "CANCELLED, POSTPONED or RESCHEDULED."
@@ -2467,8 +2482,8 @@ msgid ""
 "participant list."
 msgstr ""
 "E-postadressen <strong>%(email)s</strong> har beviljats rättigheter att läsa "
-"deltagarlistan för evenemanget <strong>%(event_name)s</strong>. "
-"Användning av Suomi.fi-identifiering krävs för att kunna läsa deltagarlistan."
+"deltagarlistan för evenemanget <strong>%(event_name)s</strong>. Användning "
+"av Suomi.fi-identifiering krävs för att kunna läsa deltagarlistan."
 
 #: registrations/notifications.py:748
 #, python-format
@@ -2479,8 +2494,8 @@ msgid ""
 "participant list."
 msgstr ""
 "E-postadressen <strong>%(email)s</strong> har beviljats rättigheter att läsa "
-"deltagarlistan för kursen <strong>%(event_name)s</strong>."
-"Användning av Suomi.fi-identifiering krävs för att kunna läsa deltagarlistan."
+"deltagarlistan för kursen <strong>%(event_name)s</strong>.Användning av "
+"Suomi.fi-identifiering krävs för att kunna läsa deltagarlistan."
 
 #: registrations/notifications.py:753
 #, python-format
