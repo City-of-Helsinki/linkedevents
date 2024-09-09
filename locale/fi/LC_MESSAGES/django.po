@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-09-06 12:29+0000\n"
+"POT-Creation-Date: 2024-09-10 13:19+0000\n"
 "PO-Revision-Date: 2015-04-29 12:26+0140\n"
 "Last-Translator: <harri.rissanen@vincit.fi>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -621,43 +621,58 @@ msgstr "Käyttäjällä ei ole oikeuksia tähän organisaatioon"
 msgid "Deprecated keyword not allowed ({})"
 msgstr ""
 
-#: events/serializers.py:999
+#: events/serializers.py:974
+#, python-format
+msgid "Duplicate link given with name %(name)s."
+msgstr ""
+
+#: events/serializers.py:976
+#, python-format
+msgid "Duplicate link given with language %(language)s."
+msgstr ""
+
+#: events/serializers.py:978
+#, python-format
+msgid "Duplicate link given with link %(link)s."
+msgstr ""
+
+#: events/serializers.py:1030
 msgid "You have to set either user_email or user_phone_number."
 msgstr ""
 
-#: events/serializers.py:1008
+#: events/serializers.py:1039
 msgid "User consent is required if personal information fields are filled."
 msgstr ""
 
-#: events/serializers.py:1011
+#: events/serializers.py:1042
 msgid "This field must be specified before an event is published."
 msgstr "Kenttä on täytettävä ennen kuin tapahtuman voi julkaista."
 
-#: events/serializers.py:1025
+#: events/serializers.py:1056
 msgid "Short description length must be 160 characters or less"
 msgstr ""
 
-#: events/serializers.py:1041
+#: events/serializers.py:1072
 msgid "Price info must be specified before an event is published."
 msgstr ""
 
-#: events/serializers.py:1075
+#: events/serializers.py:1101
 msgid "End time cannot be in the past. Please set a future end time."
 msgstr ""
 "Päättymisaika ei voi olla menneisyydessä. Ole hyvä ja anna tulevaisuudessa "
 "oleva päättymisaika."
 
-#: events/serializers.py:1180
+#: events/serializers.py:1206
 msgid "Cannot edit a past event."
 msgstr ""
 
-#: events/serializers.py:1195
+#: events/serializers.py:1221
 msgid ""
 "POSTPONED and RESCHEDULED statuses cannot be set directly.Changing event "
 "start_time or marking start_time nullwill reschedule or postpone an event."
 msgstr ""
 
-#: events/serializers.py:1216
+#: events/serializers.py:1242
 msgid ""
 "Public events cannot be set back to SCHEDULED if theyhave already been "
 "CANCELLED, POSTPONED or RESCHEDULED."
@@ -2488,8 +2503,8 @@ msgid ""
 "participant list."
 msgstr ""
 "Sähköpostiosoitteelle <strong>%(email)s</strong> on myönnetty oikeudet lukea "
-"kurssin <strong>%(event_name)s</strong> osallistujalista. "
-"Osallistujalistan lukeminen vaatii Suomi.fi-tunnistautumisen."
+"kurssin <strong>%(event_name)s</strong> osallistujalista. Osallistujalistan "
+"lukeminen vaatii Suomi.fi-tunnistautumisen."
 
 #: registrations/notifications.py:753
 #, python-format

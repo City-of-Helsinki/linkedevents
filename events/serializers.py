@@ -953,6 +953,39 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
     def validate_audience(self, audiences):
         return self.validate_keywords(audiences)
 
+    def validate_external_links(self, value):
+        if not value:
+            return value
+
+        for index, link in enumerate(value):
+            # clean link text fields
+            value[index] = clean_text_fields(link)
+
+        checked_values = set()
+        for data in value:
+            name = data.get("name", "")
+            language = data["language"].pk
+            link = data["link"]
+
+            unique_link = f"{name}-{language}-{link}".lower()
+            if unique_link in checked_values:
+                raise serializers.ValidationError(
+                    {
+                        "name": _("Duplicate link given with name %(name)s.")
+                        % {"name": name},
+                        "language": _(
+                            "Duplicate link given with language %(language)s."
+                        )
+                        % {"language": language},
+                        "link": _("Duplicate link given with link %(link)s.")
+                        % {"link": link},
+                    }
+                )
+
+            checked_values.add(unique_link)
+
+        return value
+
     def validate(self, data):
         context = self.context
         user = self.context["request"].user
@@ -1040,11 +1073,6 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             errors["offers"] = _(
                 "Price info must be specified before an event is published."
             )
-
-        # clean link description text
-        for index, link in enumerate(data.get("external_links", [])):
-            # clean link text fields
-            data["external_links"][index] = clean_text_fields(link)
 
         # clean video text fields
         for index, video in enumerate(data.get("video", [])):
