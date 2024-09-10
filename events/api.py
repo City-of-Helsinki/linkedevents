@@ -84,11 +84,11 @@ from events.models import (
     PublicationStatus,
 )
 from events.permissions import (
-    DataSourceOrganizationEditPermission,
     DataSourceResourceEditPermission,
     GuestPost,
     GuestRetrieve,
     IsObjectEditableByUser,
+    OrganizationEditPermission,
     OrganizationUserEditPermission,
     OrganizationWebStoreMerchantsAndAccountsPermission,
     UserIsAdminInAnyOrganization,
@@ -1027,9 +1027,7 @@ class OrganizationViewSet(
     viewsets.ModelViewSet,
 ):
     queryset = Organization.objects.all()
-    permission_classes = [
-        DataSourceResourceEditPermission & DataSourceOrganizationEditPermission
-    ]
+    permission_classes = [DataSourceResourceEditPermission & OrganizationEditPermission]
     filterset_class = OrganizationFilter
 
     @extend_schema(

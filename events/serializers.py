@@ -573,8 +573,10 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
             self.fields["data_source"].read_only = True
             self.fields["origin_id"].read_only = True
 
-            # Show admin users and regular users only to admins
-            if user.is_anonymous or not user.is_admin_of(instance):
+            # Show organization's users only to superusers or the organization's admins.
+            if user.is_anonymous or not (
+                user.is_superuser or user.is_admin_of(instance)
+            ):
                 for field in self.user_fields:
                     self.fields.pop(field, None)
 
