@@ -51,6 +51,12 @@ merchant_create_url = (
     f"{django_settings.WEB_STORE_API_BASE_URL}merchant/create/"
     f"merchant/{django_settings.WEB_STORE_API_NAMESPACE}"
 )
+organization_user_fields = (
+    "regular_users",
+    "admin_users",
+    "registration_admin_users",
+    "financial_admin_users",
+)
 
 
 def organization_id(pk):
@@ -183,13 +189,29 @@ def assert_account_fields_exist(data):
     assert_fields_exist(data, fields)
 
 
-@pytest.mark.django_db
-def test_admin_user_can_see_organization_users(organization, user, user_api_client):
-    organization.regular_users.add(user)
+def assert_can_see_organization_users(data):
+    for field in organization_user_fields:
+        assert data.get(field) is not None
 
+
+def assert_cannot_see_organization_users(data):
+    for field in organization_user_fields:
+        assert data.get(field) is None
+
+
+@pytest.mark.django_db
+def test_superuser_can_see_organization_users(api_client, organization):
+    superuser = UserFactory(is_superuser=True)
+    api_client.force_authenticate(superuser)
+
+    response = get_organization(api_client, organization.id)
+    assert_can_see_organization_users(response.data)
+
+
+@pytest.mark.django_db
+def test_org_admin_can_see_organization_users(user_api_client, organization):
     response = get_organization(user_api_client, organization.id)
-    assert response.data["admin_users"]
-    assert response.data["regular_users"]
+    assert_can_see_organization_users(response.data)
 
 
 @pytest.mark.django_db
@@ -197,20 +219,17 @@ def test_anonymous_user_cannot_see_organization_users(api_client, organization, 
     organization.regular_users.add(user)
 
     response = get_organization(api_client, organization.id)
-    assert response.data.get("admin_users") is None
-    assert response.data.get("regular_users") is None
+    assert_cannot_see_organization_users(response.data)
 
 
 @pytest.mark.django_db
-def test_regular_user_cannot_see_organization_users(
-    organization, user, user_api_client
-):
-    organization.regular_users.add(user)
-    organization.admin_users.remove(user)
+def test_regular_user_cannot_see_organization_users(api_client, organization):
+    user = UserFactory()
+    user.organization_memberships.add(organization)
+    api_client.force_authenticate(user)
 
-    response = get_organization(user_api_client, organization.id)
-    assert response.data.get("admin_users") is None
-    assert response.data.get("regular_users") is None
+    response = get_organization(api_client, organization.id)
+    assert_cannot_see_organization_users(response.data)
 
 
 @pytest.mark.django_db
@@ -337,9 +356,9 @@ def test_cannot_add_sub_organization_with_wrong_id(
     response = assert_create_organization(user_api_client, payload)
     org_id = response.data["id"]
     response = get_organization(user_api_client, org_id)
-    assert set(response.data["sub_organizations"]) == set(
-        [organization_id(organization2.id)]
-    )
+    assert set(response.data["sub_organizations"]) == {
+        organization_id(organization2.id)
+    }
 
 
 @pytest.mark.django_db
@@ -388,69 +407,20 @@ def test_user_is_automatically_added_to_admins_users(
     assert response.data["admin_users"][0]["username"] == user.username
 
 
+@pytest.mark.parametrize(
+    "users_key",
+    [
+        "regular_users",
+        "admin_users",
+        "registration_admin_users",
+        "financial_admin_users",
+    ],
+)
 @pytest.mark.django_db
-def test_admin_user_add_users_to_new_organization(
-    api_client, organization, data_source, user, user2, user_api_client
+def test_superuser_can_add_users_to_new_organization(
+    api_client, organization, data_source, user, user2, users_key
 ):
-    organization.admin_users.add(user)
-    api_client.force_authenticate(user)
-    origin_id = "test_organization2"
-    payload = {
-        "data_source": data_source.id,
-        "origin_id": origin_id,
-        "id": f"{data_source.id}:{origin_id}",
-        "name": organization_name,
-        "admin_users": [user.username, user2.username],
-        "regular_users": [user2.username],
-    }
-
-    response = assert_create_organization(user_api_client, payload)
-    assert set(payload["admin_users"]) == set(
-        [i["username"] for i in response.data["admin_users"]]
-    )
-    assert set(payload["regular_users"]) == set(
-        [i["username"] for i in response.data["regular_users"]]
-    )
-
-
-@pytest.mark.django_db
-def test_admin_user_add_registration_admin_users_to_new_organization(
-    api_client, organization, data_source, user, user2, user_api_client
-):
-    organization.admin_users.add(user)
-    api_client.force_authenticate(user)
-    origin_id = "test_organization2"
-    payload = {
-        "data_source": data_source.id,
-        "origin_id": origin_id,
-        "id": f"{data_source.id}:{origin_id}",
-        "name": organization_name,
-        "admin_users": [user.username, user2.username],
-        "registration_admin_users": [user2.username],
-    }
-    admins_set = set(payload["admin_users"])
-    registration_admins_set = set(payload["registration_admin_users"])
-
-    response = assert_create_organization(user_api_client, payload)
-    assert admins_set == set([i["username"] for i in response.data["admin_users"]])
-    assert registration_admins_set == set(
-        [i["username"] for i in response.data["registration_admin_users"]]
-    )
-    new_organization = Organization.objects.get(id=f"{data_source.id}:{origin_id}")
-    assert admins_set == set(
-        new_organization.admin_users.values_list("username", flat=True)
-    )
-    assert registration_admins_set == set(
-        new_organization.registration_admin_users.values_list("username", flat=True)
-    )
-
-
-@pytest.mark.django_db
-def test_admin_user_add_financial_admin_users_to_new_organization(
-    api_client, organization, data_source, user2
-):
-    user = UserFactory()
-    user.admin_organizations.add(organization)
+    user = UserFactory(is_superuser=True)
     api_client.force_authenticate(user)
 
     origin_id = "test_organization2"
@@ -459,29 +429,214 @@ def test_admin_user_add_financial_admin_users_to_new_organization(
         "origin_id": origin_id,
         "id": f"{data_source.id}:{origin_id}",
         "name": organization_name,
-        "financial_admin_users": [user2.username],
+        users_key: [user2.username],
     }
-    financial_admins_set = set(payload["financial_admin_users"])
+
+    assert Organization.objects.count() == 1
 
     response = assert_create_organization(api_client, payload)
-    assert financial_admins_set == set(
-        [i["username"] for i in response.data["financial_admin_users"]]
-    )
-    new_organization = Organization.objects.get(id=f"{data_source.id}:{origin_id}")
-    assert financial_admins_set == set(
-        new_organization.financial_admin_users.values_list("username", flat=True)
-    )
+    assert response.data[users_key][0]["username"] == user2.username
+
+    assert Organization.objects.count() == 2
+
+    admin_users = getattr(Organization.objects.last(), users_key).all()
+    # Current user is automatically added to admin users so there should be 2 in that case.
+    assert len(admin_users) == 2 if users_key == "admin_users" else 1
+    assert admin_users[0].username == user2.username
 
 
+@pytest.mark.parametrize(
+    "users_key",
+    [
+        "regular_users",
+        "admin_users",
+        "registration_admin_users",
+        "financial_admin_users",
+    ],
+)
 @pytest.mark.django_db
-def test_admin_user_can_update_organization(organization, user_api_client):
+def test_admin_user_cannot_add_users_to_new_organization(
+    user_api_client, organization, data_source, user, user2, users_key
+):
+    origin_id = "test_organization2"
+    payload = {
+        "data_source": data_source.id,
+        "origin_id": origin_id,
+        "id": f"{data_source.id}:{origin_id}",
+        "name": organization_name,
+        users_key: [user2.username],
+    }
+
+    if users_key != "admin_users":
+        payload["admin_users"] = [user.username]
+    else:
+        payload["admin_users"].append(user.username)
+
+    response = create_organization(user_api_client, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.parametrize(
+    "users_key",
+    [
+        "regular_users",
+        "admin_users",
+        "registration_admin_users",
+        "financial_admin_users",
+    ],
+)
+@pytest.mark.django_db
+def test_superuser_can_add_users_to_existing_organization(
+    api_client, organization, data_source, user, user2, users_key
+):
+    user = UserFactory(is_superuser=True)
+    api_client.force_authenticate(user)
+
+    payload = {
+        "id": organization.id,
+        "name": organization_name,
+        users_key: [user2.username],
+    }
+
+    response = assert_update_organization(api_client, organization.id, payload)
+    assert response.data[users_key][0]["username"] == user2.username
+
+    organization.refresh_from_db()
+    assert user2 in getattr(organization, users_key).all()
+
+
+@pytest.mark.parametrize(
+    "users_key",
+    [
+        "regular_users",
+        "admin_users",
+        "registration_admin_users",
+        "financial_admin_users",
+    ],
+)
+@pytest.mark.django_db
+def test_admin_user_cannot_add_users_to_existing_organization(
+    user_api_client, organization, user, user2, users_key
+):
+    payload = {
+        "id": organization.id,
+        "name": organization_name,
+        users_key: [user2.username],
+    }
+
+    if users_key != "admin_users":
+        payload["admin_users"] = [user.username]
+    else:
+        payload["admin_users"].append(user.username)
+
+    response = update_organization(user_api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    organization.refresh_from_db()
+    assert user2 not in getattr(organization, users_key).all()
+
+
+@pytest.mark.parametrize(
+    "users_key, user2_with_user_type",
+    [
+        ("regular_users", "org_regular"),
+        ("admin_users", "org_admin"),
+        ("registration_admin_users", "org_registration_admin"),
+        ("financial_admin_users", "org_financial_admin"),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_superuser_can_remove_users_from_existing_organization(
+    api_client, organization, data_source, user, users_key, user2_with_user_type
+):
+    user = UserFactory(is_superuser=True)
+    api_client.force_authenticate(user)
+
+    payload = {"id": organization.id, "name": organization_name, users_key: []}
+
+    if users_key != "admin_users":
+        payload["admin_users"] = [user.username]
+    else:
+        payload["admin_users"].append(user.username)
+
+    assert user2_with_user_type in getattr(organization, users_key).all()
+
+    assert_update_organization(api_client, organization.id, payload)
+
+    organization.refresh_from_db()
+    assert user2_with_user_type not in getattr(organization, users_key).all()
+
+
+@pytest.mark.parametrize(
+    "users_key, user2_with_user_type",
+    [
+        ("regular_users", "org_regular"),
+        ("admin_users", "org_admin"),
+        ("registration_admin_users", "org_registration_admin"),
+        ("financial_admin_users", "org_financial_admin"),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_admin_user_cannot_remove_users_from_existing_organization(
+    user_api_client, organization, user, users_key, user2_with_user_type
+):
+    payload = {
+        "id": organization.id,
+        "name": organization_name,
+        users_key: [],
+    }
+
+    if users_key != "admin_users":
+        payload["admin_users"] = [user.username]
+    else:
+        payload["admin_users"].append(user.username)
+
+    assert user2_with_user_type in getattr(organization, users_key).all()
+
+    response = update_organization(user_api_client, organization.id, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    organization.refresh_from_db()
+    assert user2_with_user_type in getattr(organization, users_key).all()
+
+
+@pytest.mark.parametrize(
+    "users_key, user2_with_user_type",
+    [
+        ("regular_users", "org_regular"),
+        ("admin_users", "org_admin"),
+        ("registration_admin_users", "org_registration_admin"),
+        ("financial_admin_users", "org_financial_admin"),
+        (None, None),
+    ],
+    indirect=["user2_with_user_type"],
+)
+@pytest.mark.django_db
+def test_admin_user_can_update_organization(
+    user_api_client, organization, user, users_key, user2_with_user_type
+):
     payload = {
         "id": organization.id,
         "name": edited_organization_name,
     }
 
+    if users_key:
+        payload[users_key] = [user2_with_user_type.username]
+
+    if users_key != "admin_users":
+        payload["admin_users"] = [user.username]
+    else:
+        payload["admin_users"].append(user.username)
+
     response = assert_update_organization(user_api_client, organization.id, payload)
     assert response.data["name"] == payload["name"]
+
+    organization.refresh_from_db()
+    assert user in organization.admin_users.all()
+    if users_key:
+        assert user2_with_user_type in getattr(organization, users_key).all()
 
 
 @pytest.mark.django_db
@@ -497,48 +652,6 @@ def test_organization_id_is_audit_logged_on_put(organization, user_api_client):
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         organization.pk
     ]
-
-
-@pytest.mark.django_db
-def test_admin_user_update_organization_registration_admin_users(
-    organization, user2, user_api_client
-):
-    assert organization.registration_admin_users.count() == 0
-
-    payload = {
-        "id": organization.id,
-        "name": organization_name,
-        "registration_admin_users": [user2.username],
-    }
-
-    response = assert_update_organization(user_api_client, organization.id, payload)
-    assert set(payload["registration_admin_users"]) == set(
-        [i["username"] for i in response.data["registration_admin_users"]]
-    )
-
-    organization.refresh_from_db()
-    assert organization.registration_admin_users.count() == 1
-
-
-@pytest.mark.django_db
-def test_admin_user_update_organization_financial_admin_users(
-    organization, user2, user_api_client
-):
-    assert organization.financial_admin_users.count() == 0
-
-    payload = {
-        "id": organization.id,
-        "name": organization_name,
-        "financial_admin_users": [user2.username],
-    }
-
-    response = assert_update_organization(user_api_client, organization.id, payload)
-    assert set(payload["financial_admin_users"]) == set(
-        [i["username"] for i in response.data["financial_admin_users"]]
-    )
-
-    organization.refresh_from_db()
-    assert organization.financial_admin_users.count() == 1
 
 
 @pytest.mark.django_db
@@ -582,33 +695,14 @@ def test_admin_user_from_other_organization_cannot_update_organization(
 
 
 @pytest.mark.django_db
-def test_admin_user_can_edit_users(
-    organization, super_user, user, user2, user_api_client
-):
-    organization.admin_users.add(super_user)
-
-    payload = {
-        "id": organization.id,
-        "name": organization.name,
-        "admin_users": [user.username, user2.username],
-        "regular_users": [user2.username],
-    }
-
-    response = assert_update_organization(user_api_client, organization.pk, payload)
-    assert set(payload["admin_users"]) == set(
-        [i["username"] for i in response.data["admin_users"]]
-    )
-    assert set(payload["regular_users"]) == set(
-        [i["username"] for i in response.data["regular_users"]]
-    )
-
-
-@pytest.mark.django_db
 def test_user_cannot_remove_itself_from_admins(organization, user, user_api_client):
     payload = {"id": organization.id, "name": organization.name, "admin_users": []}
 
-    response = assert_update_organization(user_api_client, organization.pk, payload)
-    assert response.data["admin_users"][0]["username"] == user.username
+    response = update_organization(user_api_client, organization.pk, payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    organization.refresh_from_db()
+    assert user in organization.admin_users.all()
 
 
 @pytest.mark.django_db
@@ -789,10 +883,27 @@ def test_superuser_or_financial_and_event_admin_can_create_organization_with_web
     )
 
 
+@pytest.mark.parametrize(
+    "merchants_data, accounts_data",
+    [
+        (
+            {"web_store_merchants": default_web_store_merchants_data},
+            {"web_store_accounts": default_web_store_accounts_data},
+        ),
+        (
+            {"web_store_merchants": default_web_store_merchants_data},
+            {"web_store_accounts": []},
+        ),
+        (
+            {"web_store_merchants": default_web_store_merchants_data},
+            {},
+        ),
+    ],
+)
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
 def test_superuser_or_financial_and_event_admin_can_update_organization_with_web_store_merchant(
-    data_source, organization, api_client, user_role
+    data_source, organization, api_client, merchants_data, accounts_data, user_role
 ):
     user = create_user_by_role(user_role, organization)
     if user_role == "financial_admin":
@@ -806,7 +917,8 @@ def test_superuser_or_financial_and_event_admin_can_update_organization_with_web
         "origin_id": origin_id,
         "id": f"{data_source.id}:{origin_id}",
         "name": organization_name,
-        "web_store_merchants": default_web_store_merchants_data,
+        **merchants_data,
+        **accounts_data,
     }
 
     assert WebStoreMerchant.objects.count() == 0
@@ -842,16 +954,34 @@ def test_superuser_or_financial_and_event_admin_can_update_organization_with_web
     )
 
 
+@pytest.mark.parametrize(
+    "merchants_data, accounts_data",
+    [
+        (
+            {"web_store_merchants": default_web_store_merchants_data},
+            {"web_store_accounts": default_web_store_accounts_data},
+        ),
+        (
+            {"web_store_merchants": default_web_store_merchants_data},
+            {"web_store_accounts": []},
+        ),
+        (
+            {"web_store_merchants": default_web_store_merchants_data},
+            {},
+        ),
+    ],
+)
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
 def test_superuser_and_financial_admin_can_patch_organization_with_web_store_merchant(
-    data_source, organization, api_client, user_role
+    data_source, organization, api_client, merchants_data, accounts_data, user_role
 ):
     user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     payload = {
-        "web_store_merchants": default_web_store_merchants_data,
+        **merchants_data,
+        **accounts_data,
     }
 
     assert WebStoreMerchant.objects.count() == 0
@@ -1889,9 +2019,26 @@ def test_superuser_can_create_organization_with_web_store_account(
     )
 
 
+@pytest.mark.parametrize(
+    "accounts_data, merchants_data",
+    [
+        (
+            {"web_store_accounts": default_web_store_accounts_data},
+            {"web_store_merchants": default_web_store_merchants_data},
+        ),
+        (
+            {"web_store_accounts": default_web_store_accounts_data},
+            {"web_store_merchants": []},
+        ),
+        (
+            {"web_store_accounts": default_web_store_accounts_data},
+            {},
+        ),
+    ],
+)
 @pytest.mark.django_db
 def test_superuser_can_update_organization_with_web_store_account(
-    data_source, organization, api_client
+    data_source, organization, api_client, accounts_data, merchants_data
 ):
     user = create_user_by_role("superuser", None)
     api_client.force_authenticate(user)
@@ -1902,12 +2049,18 @@ def test_superuser_can_update_organization_with_web_store_account(
         "origin_id": origin_id,
         "id": f"{data_source.id}:{origin_id}",
         "name": organization_name,
-        "web_store_accounts": default_web_store_accounts_data,
+        **accounts_data,
+        **merchants_data,
     }
 
     assert WebStoreAccount.objects.count() == 0
 
-    response = assert_update_organization(api_client, organization.id, payload)
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url, json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA
+        )
+
+        response = assert_update_organization(api_client, organization.id, payload)
     assert len(response.data["web_store_accounts"]) == 1
 
     assert WebStoreAccount.objects.count() == 1
@@ -1924,21 +2077,44 @@ def test_superuser_can_update_organization_with_web_store_account(
     )
 
 
+@pytest.mark.parametrize(
+    "accounts_data, merchants_data",
+    [
+        (
+            {"web_store_accounts": default_web_store_accounts_data},
+            {"web_store_merchants": default_web_store_merchants_data},
+        ),
+        (
+            {"web_store_accounts": default_web_store_accounts_data},
+            {"web_store_merchants": []},
+        ),
+        (
+            {"web_store_accounts": default_web_store_accounts_data},
+            {},
+        ),
+    ],
+)
 @pytest.mark.parametrize("user_role", ["superuser", "financial_admin"])
 @pytest.mark.django_db
 def test_superuser_and_financial_admin_can_patch_organization_with_web_store_account(
-    data_source, organization, api_client, user_role
+    data_source, organization, api_client, accounts_data, merchants_data, user_role
 ):
     user = create_user_by_role(user_role, organization)
     api_client.force_authenticate(user)
 
     payload = {
-        "web_store_accounts": default_web_store_accounts_data,
+        **accounts_data,
+        **merchants_data,
     }
 
     assert WebStoreAccount.objects.count() == 0
 
-    response = assert_patch_organization(api_client, organization.id, payload)
+    with requests_mock.Mocker() as req_mock:
+        req_mock.post(
+            merchant_create_url, json=DEFAULT_CREATE_UPDATE_MERCHANT_RESPONSE_DATA
+        )
+
+        response = assert_patch_organization(api_client, organization.id, payload)
     assert len(response.data["web_store_accounts"]) == 1
 
     assert WebStoreAccount.objects.count() == 1

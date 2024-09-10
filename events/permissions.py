@@ -159,13 +159,46 @@ class DataSourceResourceEditPermission(
         return True
 
 
-class DataSourceOrganizationEditPermission(BasePermission):
+class OrganizationEditPermission(BasePermission):
+    @staticmethod
+    def _is_editing_web_store_merchants_or_accounts(request_data):
+        return settings.WEB_STORE_INTEGRATION_ENABLED and (
+            request_data.get("web_store_merchants")
+            or request_data.get("web_store_accounts")
+        )
+
+    @staticmethod
+    def _is_editing_organization_users(request_data, obj=None):
+        user_keys = (
+            "admin_users",
+            "registration_admin_users",
+            "financial_admin_users",
+            "regular_users",
+        )
+
+        if not obj or not obj.pk:
+            # New organization => can only add users.
+            return any([request_data.get(key) for key in user_keys])
+
+        # Existing organization => can add or remove users
+        # => check if usernames are equal between request data and the organization's user relations.
+        return any(
+            [
+                key in request_data
+                and set(request_data[key])
+                != set(getattr(obj, key).values_list("username", flat=True))
+                for key in user_keys
+            ]
+        )
+
     def has_permission(self, request, view):
         if request.method == "POST":
-            if settings.WEB_STORE_INTEGRATION_ENABLED and (
-                request.data.get("web_store_merchants")
-                or request.data.get("web_store_accounts")
-            ):
+            if self._is_editing_organization_users(request.data):
+                # User must be a superuser to add users to a new organization.
+                return request.user.is_authenticated and request.user.is_superuser
+            elif self._is_editing_web_store_merchants_or_accounts(request.data):
+                # User must be a superuser or a financial admin with organization admin rights to
+                # add web store merchants or accounts to a new organization.
                 return request.user.is_authenticated and (
                     request.user.is_superuser
                     or request.user.admin_organizations.exists()
@@ -185,26 +218,27 @@ class DataSourceOrganizationEditPermission(BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        if (
-            settings.WEB_STORE_INTEGRATION_ENABLED
-            and request.method in ("PUT", "PATCH")
-            and (
-                request.data.get("web_store_merchants")
-                or request.data.get("web_store_accounts")
-            )
-        ):
-            data_keys = request.data.keys()
+        if request.method in ("PUT", "PATCH"):
+            if self._is_editing_organization_users(request.data, obj):
+                # User must a superuser to add or remove an existing organization's users.
+                return request.user.is_authenticated and request.user.is_superuser
+            elif self._is_editing_web_store_merchants_or_accounts(request.data):
+                # User must be a superuser or a financial admin to edit an existing organization's
+                # web store merchants or accounts.
+                financial_perms = (
+                    request.user.is_superuser or request.user.is_financial_admin_of(obj)
+                )
 
-            if len(data_keys) > 1:
-                return (
-                    request.user.is_superuser
-                    or request.user.is_financial_admin_of(obj)
-                    and utils.organization_can_be_edited_by(obj, request.user)
-                )
-            else:
-                return request.user.is_superuser or request.user.is_financial_admin_of(
-                    obj
-                )
+                if set(request.data.keys()).difference(
+                    {"web_store_merchants", "web_store_accounts"}
+                ):
+                    # If other organization data is also edited, organization admin rights are also
+                    # required from a financial admin.
+                    return financial_perms and utils.organization_can_be_edited_by(
+                        obj, request.user
+                    )
+
+                return financial_perms
 
         return utils.organization_can_be_edited_by(obj, request.user)
 
