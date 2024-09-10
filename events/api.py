@@ -1086,7 +1086,7 @@ class OrganizationViewSet(
             ),
             **get_common_api_error_responses(),
             404: OpenApiResponse(
-                description=("Organization was not found."),
+                description="Organization was not found.",
             ),
         },
     )
@@ -2902,7 +2902,7 @@ class EventViewSet(
             OpenApiParameter(
                 name="internet_based",
                 type=OpenApiTypes.BOOL,
-                description=("Search only for events that happen in the internet."),
+                description="Search only for events that happen in the internet.",
             ),
             OpenApiParameter(
                 name="start",
