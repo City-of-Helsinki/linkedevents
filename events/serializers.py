@@ -123,6 +123,10 @@ class DivisionSerializer(ParlerTranslatedModelSerializer):
 
 
 class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
+    has_user_editable_resources = serializers.BooleanField(
+        source="is_user_editable_resources", read_only=True
+    )
+
     def create(self, validated_data):
         if "data_source" not in validated_data:
             validated_data["data_source"] = self.context["data_source"]
@@ -298,6 +302,9 @@ class KeywordSetSerializer(LinkedEventsSerializer):
     )
     last_modified_time = DateTimeField(
         default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+    )
+    has_user_editable_resources = serializers.BooleanField(
+        source="is_user_editable_resources", read_only=True
     )
 
     def to_internal_value(self, data):

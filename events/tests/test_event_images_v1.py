@@ -62,6 +62,7 @@ def assert_image_fields_exist(data, version="v1"):
         "created_time",
         "cropping",
         "id",
+        "has_user_editable_resources",
         "url",
         "last_modified_time",
         "license",

@@ -65,6 +65,7 @@ def assert_event_fields_exist(data, version="v1"):
         "images",
         "in_language",
         "info_url",
+        "has_user_editable_resources",
         "keywords",
         "last_modified_time",
         "location",
