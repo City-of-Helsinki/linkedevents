@@ -282,7 +282,7 @@ class KeywordViewSet(
     viewsets.GenericViewSet,
 ):
     queryset = Keyword.objects.all()
-    queryset = queryset.select_related("publisher")
+    queryset = queryset.select_related("data_source", "publisher")
     serializer_class = KeywordSerializer
     permission_classes = [
         DataSourceResourceEditPermission & OrganizationUserEditPermission
@@ -392,8 +392,13 @@ class KeywordListViewSet(
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
-    # publisher relation performs better with prefetch than selected
-    queryset = Keyword.objects.all().prefetch_related("publisher", "alt_labels")
+    # publisher relation performs better with prefetch than selected,
+    # while data_source has less queries with select
+    queryset = (
+        Keyword.objects.all()
+        .select_related("data_source")
+        .prefetch_related("publisher", "alt_labels")
+    )
     serializer_class = KeywordSerializer
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ("n_events", "id", "name", "data_source")
@@ -549,7 +554,7 @@ class KeywordSetViewSet(
     AuditLogApiViewMixin,
     viewsets.ModelViewSet,
 ):
-    queryset = KeywordSet.objects.all()
+    queryset = KeywordSet.objects.all().select_related("data_source")
     serializer_class = KeywordSetSerializer
     permission_classes = [
         DataSourceResourceEditPermission & OrganizationUserEditPermission
@@ -712,7 +717,7 @@ class PlaceRetrieveViewSet(
     viewsets.GenericViewSet,
 ):
     queryset = Place.objects.all()
-    queryset = queryset.select_related("publisher")
+    queryset = queryset.select_related("data_source", "publisher")
     serializer_class = PlaceSerializer
     permission_classes = [
         DataSourceResourceEditPermission & OrganizationUserEditPermission
@@ -1356,7 +1361,12 @@ class ImageViewSet(
     viewsets.ModelViewSet,
 ):
     queryset = Image.objects.all().select_related(
-        "publisher", "data_source", "created_by", "last_modified_by", "license"
+        "data_source",
+        "publisher",
+        "data_source",
+        "created_by",
+        "last_modified_by",
+        "license",
     )
     serializer_class = ImageSerializer
     pagination_class = LargeResultsSetPagination
@@ -2360,7 +2370,7 @@ class EventViewSet(
     # sub_event prefetches are handled in get_queryset()
     queryset = (
         Event.objects.all()
-        .select_related("publisher", "created_by", "last_modified_by")
+        .select_related("data_source", "publisher", "created_by", "last_modified_by")
         .prefetch_related(
             "audience",
             "external_links",
