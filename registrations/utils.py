@@ -98,7 +98,8 @@ def send_mass_html_mail(
 
 def get_email_noreply_address():
     return (
-        settings.DEFAULT_FROM_EMAIL or "noreply@%s" % Site.objects.get_current().domain
+        settings.DEFAULT_FROM_EMAIL
+        or "noreply-linkedevents@%s" % Site.objects.get_current().domain
     )
 
 
