@@ -65,7 +65,7 @@ env = environ.Env(
     DATABASE_URL=(str, "postgis:///linkedevents"),
     DATABASE_PASSWORD=(str, ""),
     DEBUG=(bool, False),
-    DEFAULT_FROM_EMAIL=(str, "noreply@linkedevents.hel.fi"),
+    DEFAULT_FROM_EMAIL=(str, "noreply-linkedevents@hel.fi"),
     ELASTICSEARCH_URL=(str, None),
     ELIS_EVENT_API_URL=(
         str,
