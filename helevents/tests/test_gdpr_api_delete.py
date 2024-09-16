@@ -5,6 +5,7 @@ import pytest
 import requests_mock
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
 from events.tests.conftest import APIClient
@@ -175,6 +176,91 @@ def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
     assert event.user_email == "someotherguy@localhost"
     assert event.user_phone_number == "123"
     assert event.user_organization == "test"
+
+
+@pytest.mark.django_db
+@override_settings(GDPR_DISABLE_API_DELETION=False)
+def test_authenticated_user_cannot_delete_own_data_with_upcoming_signups_in_group(
+    api_client, settings, django_capture_on_commit_callbacks
+):
+    user = UserFactory()
+
+    upcoming_event = EventFactory(end_time=timezone.now() + timezone.timedelta(days=1))
+    registration = RegistrationFactory(event=upcoming_event)
+
+    signup_group = SignUpGroupFactory(registration=registration, created_by=user)
+    signup = SignUpFactory(signup_group=signup_group, created_by=user)
+    SignUpGroupProtectedDataFactory(
+        signup_group=signup_group, registration=registration
+    )
+    SignUpProtectedDataFactory(signup=signup, registration=registration)
+    SignUpContactPersonFactory(signup_group=signup_group)
+
+    def callback():
+        with requests_mock.Mocker() as req_mock:
+            auth_header = get_api_token_for_user_with_scopes(
+                user.uuid, [settings.GDPR_API_DELETE_SCOPE], req_mock
+            )
+            api_client.credentials(HTTP_AUTHORIZATION=auth_header)
+
+            with django_capture_on_commit_callbacks(execute=True):
+                response = _delete_gdpr_data(api_client, user.uuid)
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            code = response.data["errors"][0]["code"]
+            assert code == "UPCOMING_SIGNUPS"
+
+    _assert_gdpr_delete(
+        callback,
+        start_user_count=1,
+        start_group_count=1,
+        start_signup_count=1,
+        start_contact_person_count=1,
+        end_user_count=1,
+        end_group_count=1,
+        end_signup_count=1,
+        end_contact_person_count=1,
+    )
+
+
+@pytest.mark.django_db
+@override_settings(GDPR_DISABLE_API_DELETION=False)
+def test_authenticated_user_cannot_delete_own_data_with_upcoming_signups(
+    api_client, settings, django_capture_on_commit_callbacks
+):
+    user = UserFactory()
+
+    upcoming_event = EventFactory(end_time=timezone.now() + timezone.timedelta(days=1))
+    registration = RegistrationFactory(event=upcoming_event)
+
+    signup = SignUpFactory(registration=registration, created_by=user)
+
+    SignUpProtectedDataFactory(signup=signup, registration=registration)
+    SignUpContactPersonFactory(signup=signup)
+
+    def callback():
+        with requests_mock.Mocker() as req_mock:
+            auth_header = get_api_token_for_user_with_scopes(
+                user.uuid, [settings.GDPR_API_DELETE_SCOPE], req_mock
+            )
+            api_client.credentials(HTTP_AUTHORIZATION=auth_header)
+
+            with django_capture_on_commit_callbacks(execute=True):
+                response = _delete_gdpr_data(api_client, user.uuid)
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            code = response.data["errors"][0]["code"]
+            assert code == "UPCOMING_SIGNUPS"
+
+    _assert_gdpr_delete(
+        callback,
+        start_user_count=1,
+        start_group_count=0,
+        start_signup_count=1,
+        start_contact_person_count=1,
+        end_user_count=1,
+        end_group_count=0,
+        end_signup_count=1,
+        end_contact_person_count=1,
+    )
 
 
 @pytest.mark.django_db
