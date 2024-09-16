@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from knox import crypto
+from knox.models import AuthToken
 from knox.settings import CONSTANTS, knox_settings
 
 from data_analytics.forms import DataAnalyticsApiTokenAdminForm
@@ -43,4 +44,5 @@ class DataAnalyticsApiTokenAdmin(admin.ModelAdmin):
         obj.save()
 
 
+admin.site.unregister(AuthToken)
 admin.site.register(DataAnalyticsApiToken, DataAnalyticsApiTokenAdmin)

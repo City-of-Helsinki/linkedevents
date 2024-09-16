@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.test import TestCase
 from django.utils import timezone, translation
 from knox import crypto
+from knox.models import AuthToken
 from knox.settings import CONSTANTS, knox_settings
 from rest_framework import status
 
@@ -34,6 +35,9 @@ class TestLocalAuthTokenAdmin(TestCase):
 
     def setUp(self):
         self.client.force_login(self.admin)
+
+    def test_knox_auth_token_admin_is_not_registered(self):
+        self.assertFalse(admin.site.is_registered(AuthToken))
 
     def test_local_auth_token_admin_is_registered(self):
         self.assertTrue(admin.site.is_registered(DataAnalyticsApiToken))
