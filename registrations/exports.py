@@ -20,7 +20,7 @@ class RegistrationSignUpsExportXLSX:
             .select_related(
                 "contact_person", "signup_group__contact_person", "protected_data"
             )
-            .order_by("first_name", "last_name")
+            .order_by("attendee_status", "first_name", "last_name")
             .only(
                 "first_name",
                 "last_name",
