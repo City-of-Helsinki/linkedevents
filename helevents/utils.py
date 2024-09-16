@@ -2,6 +2,8 @@ from typing import Optional
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db.models import Q
+from django.utils import timezone
 from helsinki_gdpr.types import Error, ErrorResponse
 
 
@@ -40,6 +42,28 @@ def delete_user_and_gdpr_data(
                         "fi": "GDPR poistopyynnöt on estetty toistaiseksi Linked Events -palvelussa",
                         "en": "GDPR removal requests are temporarily unavailable in Linked Events",
                         "sv": "GDPR-borttagning begäran är tillfälligt inte tillgänglig i Linked Events",
+                    },
+                )
+            ]
+        )
+
+    minimum_event_end = timezone.now() - timezone.timedelta(
+        days=settings.GDPR_API_DELETE_EVENT_END_THRESHOLD_DAYS
+    )
+    upcoming_query = Q(
+        signup_group__registration__event__end_time__gt=minimum_event_end
+    ) | Q(registration__event__end_time__gt=minimum_event_end)
+    has_upcoming_signups = user.signup_created_by.filter(upcoming_query).exists()
+
+    if has_upcoming_signups:
+        return ErrorResponse(
+            [
+                Error(
+                    "UPCOMING_SIGNUPS",
+                    {
+                        "fi": "Käyttäjällä on tulevia ilmoittautumisia, joten tietoja ei voida poistaa.",
+                        "en": "User has upcoming signups, so data cannot be deleted.",
+                        "sv": "Användaren har kommande registreringar, så data kan inte raderas.",
                     },
                 )
             ]
