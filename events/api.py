@@ -7,7 +7,7 @@ from datetime import timedelta
 from datetime import timezone as datetime_timezone
 from functools import partial, reduce
 from operator import or_
-from typing import Literal
+from typing import Literal, Union
 
 import django_filters
 import pytz
@@ -2715,22 +2715,36 @@ class EventViewSet(
     def create(self, *args, **kwargs):
         return super().create(*args, **kwargs)
 
-    def cache_related_fields_to_context(self, request):
-        def retrieve_ids(key, event):
-            if key in event.keys():
-                if isinstance(event[key], list):
-                    event_list = event.get(key, [])
-                else:
-                    event_list = [event.get(key, [])]
-                ids = [
-                    urllib.parse.unquote(i["@id"].rstrip("/").split("/").pop())
-                    for i in event_list
-                    if i and isinstance(i, dict) and i.get("@id", None)  # noqa E127
-                ]  # noqa E127
-                return ids
-            else:
-                return []
+    @staticmethod
+    def _retrieve_ids(key, event, id_data_type: Union[type[str], type[int]] = str):
+        if key not in event.keys():
+            return []
 
+        if isinstance(event[key], list):
+            event_list = event.get(key, [])
+        else:
+            event_list = [event.get(key, [])]
+
+        id_field = "@id"
+        try:
+            ids = [
+                id_data_type(
+                    urllib.parse.unquote(i[id_field].rstrip("/").split("/").pop())
+                )
+                for i in event_list
+                if i and isinstance(i, dict) and i.get(id_field, None)  # noqa E127
+            ]  # noqa E127
+        except (ValueError, AttributeError):
+            raise serializers.ValidationError(
+                {
+                    key: _("Invalid value given for %(id_field)s")
+                    % {"id_field": id_field}
+                }
+            )
+
+        return ids
+
+    def cache_related_fields_to_context(self, request):
         events = request.data
         if not isinstance(request.data, list):
             events = [events]
@@ -2744,11 +2758,11 @@ class EventViewSet(
         image_ids = []
         subevent_ids = []
         for event in events:
-            keyword_ids.extend(retrieve_ids("keywords", event))
-            keyword_ids.extend(retrieve_ids("audience", event))
-            location_ids.extend(retrieve_ids("location", event))
-            image_ids.extend(retrieve_ids("images", event))
-            subevent_ids.extend(retrieve_ids("sub_events", event))
+            keyword_ids.extend(self._retrieve_ids("keywords", event))
+            keyword_ids.extend(self._retrieve_ids("audience", event))
+            location_ids.extend(self._retrieve_ids("location", event))
+            image_ids.extend(self._retrieve_ids("images", event, id_data_type=int))
+            subevent_ids.extend(self._retrieve_ids("sub_events", event))
         if location_ids:
             locations = Place.objects.filter(id__in=location_ids)
         if keyword_ids:
