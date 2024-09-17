@@ -816,6 +816,25 @@ def test__create_event_with_image_without_id(
 
 
 @pytest.mark.django_db
+def test_create_event_with_non_numeric_image_id(
+    user_api_client, data_source, organization, minimal_event_dict, list_url
+):
+    minimal_event_dict["images"] = [
+        {
+            "@id": "http://testserver/v1/image/abc/",
+            "name": "image",
+            "data_source": data_source.id,
+            "publisher": organization.id,
+            "url": "https://example.com/image.jpg",
+        }
+    ]
+
+    response = user_api_client.post(list_url, minimal_event_dict, format="json")
+    assert response.status_code == 400
+    assert response.json()["images"] == "Invalid value given for @id"
+
+
+@pytest.mark.django_db
 def test__deprecated_keyword(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user=user)
     deprecated_kw = KeywordFactory(deprecated=True)
