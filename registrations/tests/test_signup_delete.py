@@ -1338,9 +1338,16 @@ def test_send_email_with_payment_link_when_moving_participant_from_waitlist_for_
     )
 
 
+@pytest.mark.parametrize(
+    "price,expected_attendee_status,expected_mailbox_count",
+    [
+        (None, SignUp.AttendeeStatus.WAITING_LIST, 1),
+        (Decimal("0"), SignUp.AttendeeStatus.ATTENDING, 2),
+    ],
+)
 @pytest.mark.django_db
-def test_email_with_payment_link_sent_when_moving_participant_with_zero_price(
-    api_client,
+def test_email_with_payment_link_not_sent_when_moving_participant_if_price_missing(
+    api_client, price, expected_attendee_status, expected_mailbox_count
 ):
     language = LanguageFactory(pk="en", service_language=True)
 
@@ -1352,12 +1359,7 @@ def test_email_with_payment_link_sent_when_moving_participant_with_zero_price(
     user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
-    RegistrationWebStoreProductMappingFactory(registration=registration)
-
-    zero_price = Decimal("0.00")
-    registration_price_group = RegistrationPriceGroupFactory(
-        registration=registration, price=zero_price
-    )
+    registration_price_group = RegistrationPriceGroupFactory(registration=registration)
 
     signup = SignUpFactory(
         registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
@@ -1376,9 +1378,14 @@ def test_email_with_payment_link_sent_when_moving_participant_with_zero_price(
         email="test@test.com",
         service_language=language,
     )
-    SignUpPriceGroupFactory(
-        signup=signup2, registration_price_group=registration_price_group
-    )
+
+    if price is not None:
+        registration_price_group.price = price
+        registration_price_group.save()
+
+        SignUpPriceGroupFactory(
+            signup=signup2, registration_price_group=registration_price_group
+        )
 
     assert SignUpPayment.objects.count() == 0
 
@@ -1386,30 +1393,28 @@ def test_email_with_payment_link_sent_when_moving_participant_with_zero_price(
         translation.override(language.pk),
         requests_mock.Mocker() as req_mock,
     ):
-        req_mock.post(
-            f"{settings.WEB_STORE_API_BASE_URL}order/",
-            json=DEFAULT_GET_ORDER_DATA,
-        )
+        req_mock.post(f"{settings.WEB_STORE_API_BASE_URL}order/")
 
         assert_delete_signup(
             api_client, signup.id, signup_count=2, contact_person_count=2
         )
 
-        assert req_mock.call_count == 1
+        assert req_mock.call_count == 0
 
-    assert SignUpPayment.objects.count() == 1
-    assert SignUpPayment.objects.first().amount == zero_price
+    assert SignUpPayment.objects.count() == 0
 
     signup2.refresh_from_db()
-    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+    assert signup2.attendee_status == expected_attendee_status
 
-    assert len(mail.outbox) == 2
-    assert mail.outbox[0].to[0] == contact_person2.email
-    assert (
-        mail.outbox[0].subject == "Payment required for registration confirmation - Foo"
-    )
-    assert mail.outbox[1].to[0] == contact_person.email
-    assert mail.outbox[1].subject == "Registration cancelled - Foo"
+    assert len(mail.outbox) == expected_mailbox_count
+    if expected_mailbox_count == 1:
+        assert mail.outbox[0].to[0] == contact_person.email
+        assert mail.outbox[0].subject == "Registration cancelled - Foo"
+    else:
+        assert mail.outbox[0].to[0] == contact_person2.email
+        assert mail.outbox[0].subject == "Registration confirmation - Foo"
+        assert mail.outbox[1].to[0] == contact_person.email
+        assert mail.outbox[1].subject == "Registration cancelled - Foo"
 
 
 @pytest.mark.parametrize(

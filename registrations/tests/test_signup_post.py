@@ -625,16 +625,15 @@ def test_create_signup_payment_contact_person_name_missing(
     )
 
 
+@pytest.mark.parametrize("price", [Decimal("0"), Decimal("-10")])
 @pytest.mark.django_db
-def test_create_signup_payment_with_zero_price(api_client, registration):
+def test_create_signup_payment_with_zero_or_negative_price(
+    api_client, registration, price
+):
     LanguageFactory(pk="fi", service_language=True)
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
-
-    RegistrationWebStoreProductMappingFactory(registration=registration)
-
-    zero_price = Decimal("0.00")
     registration_price_group = RegistrationPriceGroupFactory(
-        registration=registration, price=zero_price
+        registration=registration, price=price
     )
 
     user = create_user_by_role("registration_admin", registration.publisher)
@@ -656,18 +655,15 @@ def test_create_signup_payment_with_zero_price(api_client, registration):
 
     assert SignUpPayment.objects.count() == 0
 
-    with requests_mock.Mocker() as req_mock:
-        req_mock.post(
-            f"{settings.WEB_STORE_API_BASE_URL}order/",
-            json=DEFAULT_GET_ORDER_DATA,
-        )
+    response = create_signups(api_client, signups_data)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-        assert_create_signups(api_client, signups_data)
+    assert SignUpPayment.objects.count() == 0
 
-        assert req_mock.call_count == 1
-
-    assert SignUpPayment.objects.count() == 1
-    assert SignUpPayment.objects.first().amount == zero_price
+    assert response.data["signups"][0]["price_group"][0] == (
+        "Participants must have a price group with price greater than 0 "
+        "selected to make a payment."
+    )
 
 
 @pytest.mark.django_db
