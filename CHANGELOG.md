@@ -1,5 +1,66 @@
 # Changelog
 
+## [3.8.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.7.1...linkedevents-v3.8.0) (2024-09-25)
+
+
+### Features
+
+* **espoo-importer:** Restrict importing old espoo events ([5b6364d](https://github.com/City-of-Helsinki/linkedevents/commit/5b6364d357803c009fbf3410d2da72529bfadd0b))
+* **events:** Add has_user_editable_resources to API ([d802de2](https://github.com/City-of-Helsinki/linkedevents/commit/d802de2ebabefd37f2358df945dd29378d06ca0c))
+* **events:** Only superusers can edit org users ([eae9327](https://github.com/City-of-Helsinki/linkedevents/commit/eae9327a97bfc2e8fded58a884f850d25cd53c7d))
+* **events:** Use noreply address for feedback ([40cdd77](https://github.com/City-of-Helsinki/linkedevents/commit/40cdd773132e0cd73d17f28b4f0a5a760ea7981f))
+* **registration:** Add lang attr to email base template ([6bc7b3c](https://github.com/City-of-Helsinki/linkedevents/commit/6bc7b3c9baae0d8fcce5e4fc88583356e853a6ff))
+* **registration:** Add title elem to email templates ([77c488e](https://github.com/City-of-Helsinki/linkedevents/commit/77c488ec6b130207d1d109845cff2a102cfb8d8e))
+* **registration:** Authentication for web store webhooks ([f53ddf6](https://github.com/City-of-Helsinki/linkedevents/commit/f53ddf6e1c568c46aa81f9c17d220944ad1df9c1))
+* **registration:** Check refund status from a new endpoint ([77000ed](https://github.com/City-of-Helsinki/linkedevents/commit/77000ed33cab1c97566f5a0bf0a416dde345659a))
+* **registration:** Only admins can delete signup after event start_time ([9d2cdcd](https://github.com/City-of-Helsinki/linkedevents/commit/9d2cdcd39e87eb343b32422f9abeba74fc558b4b))
+* **registration:** Order XLSX primarily by attendee_status ([bc345aa](https://github.com/City-of-Helsinki/linkedevents/commit/bc345aa9878245f89862d787771f5c1aa95a93c8))
+* **registration:** Replace general VAT percentage with 25,5 ([73a4cf8](https://github.com/City-of-Helsinki/linkedevents/commit/73a4cf87a7f183f8b6bcbbeba6c3cc6468aa9e68))
+* **registration:** Suomi.fi info text to invitation email ([4cc3610](https://github.com/City-of-Helsinki/linkedevents/commit/4cc36106d5c334b111f8d7bba36929f9e5ae4d0d))
+* **registration:** User-friendlier web store API error message ([69da441](https://github.com/City-of-Helsinki/linkedevents/commit/69da441a99a8f3da2076eb2e4b46ed861dd5dcbb))
+
+
+### Bug Fixes
+
+* Allow to patch presence_status regardless of price groups ([0d7a4c0](https://github.com/City-of-Helsinki/linkedevents/commit/0d7a4c02a70563acf04d05d5474edd3e6cf993bb))
+* **analytics:** Properly use the swappable knox token model ([8452c85](https://github.com/City-of-Helsinki/linkedevents/commit/8452c858ef7f7d7b90382d92d089dbd0a3c8853e))
+* **analytics:** Unregister knox.AuthToken from admin site ([bae087f](https://github.com/City-of-Helsinki/linkedevents/commit/bae087f6f5becda8eeefa478e8601d999d150836))
+* Change logger error to info ([bacec67](https://github.com/City-of-Helsinki/linkedevents/commit/bacec67dd46cb7c765eaf855607d42de1431c422))
+* Clean all html tags from non-allowed fields ([cd2c469](https://github.com/City-of-Helsinki/linkedevents/commit/cd2c469a7ffd11b9829aff1953660e522e9d2851))
+* Disable GDPR feature not working as intended ([cdfaaa5](https://github.com/City-of-Helsinki/linkedevents/commit/cdfaaa545f33754b39009e240d297ebfd8e90a4e))
+* **docs:** Generate OpenAPI schema in staticbuilder ([ebc2794](https://github.com/City-of-Helsinki/linkedevents/commit/ebc2794d5a365f9a74fbac86168fb2e99c1cc340))
+* **docs:** Remove unnecessary description parentheses ([b1e0a13](https://github.com/City-of-Helsinki/linkedevents/commit/b1e0a13da3741f09e311076ec701161d8bc9ba86))
+* Enkora course expiry check and service image urls ([4155efe](https://github.com/City-of-Helsinki/linkedevents/commit/4155efeabacf236ed9001cb78c5ca61c44610312))
+* **espoo:** Sanitize html from incoming texts ([91fca34](https://github.com/City-of-Helsinki/linkedevents/commit/91fca345b13175ad14922e4b2b8340eec70241dc))
+* **events:** Fix error with x_ongoing_OR_set ([1453144](https://github.com/City-of-Helsinki/linkedevents/commit/14531444d9ffd3922a06219b844914e98dc3b5c3))
+* **events:** Modeltranslation field reference fixes ([dde1994](https://github.com/City-of-Helsinki/linkedevents/commit/dde1994452c27451f87dfa987fe40aef5f3b1d1a))
+* **events:** Proper ValidationError for invalid image id ([3fb28db](https://github.com/City-of-Helsinki/linkedevents/commit/3fb28dbfeac4b2093a2090554284e1d8d5a775de))
+* **events:** Validation for duplicate event links ([8df7b1b](https://github.com/City-of-Helsinki/linkedevents/commit/8df7b1b201c43e052e159b663cac2bfc8be803ef))
+* **regisration:** Check ancestor perms for accounts and merchants ([0510fcd](https://github.com/City-of-Helsinki/linkedevents/commit/0510fcd109aab37fba4c109d63cade3e1c0e4b6b))
+* **registration:** Allow customer groups with zero price ([9a3e035](https://github.com/City-of-Helsinki/linkedevents/commit/9a3e03527b28777069591fe85d713dc5adba4808))
+* **registration:** Safer mandatory field validation ([85a152d](https://github.com/City-of-Helsinki/linkedevents/commit/85a152d0ff2d68f3ea387f2962c9899289d74ef6))
+* **registration:** Send VAT as decimal to Talpa ([854941b](https://github.com/City-of-Helsinki/linkedevents/commit/854941bc9fbbed7046dcc87f86c787717c8ee053))
+* Terms_to_regex outputs correct regex for OR operator ([4e39021](https://github.com/City-of-Helsinki/linkedevents/commit/4e390218f46eb505ecd430a5acf51d3d0c90c6ef))
+
+
+### Performance Improvements
+
+* **registration:** Fix a couple of slow tests ([5bd124e](https://github.com/City-of-Helsinki/linkedevents/commit/5bd124e4e802e786390cfadb5c8e3f50fa2b3cd0))
+
+
+### Dependencies
+
+* Bump dependencies ([de365c1](https://github.com/City-of-Helsinki/linkedevents/commit/de365c198a7bee0b5f8bc2251e4a7fafe420f636))
+
+
+### Documentation
+
+* Add missing example for show_all_places parameter ([a7ab109](https://github.com/City-of-Helsinki/linkedevents/commit/a7ab1094269be3d2bdec70ae7235e84f9639f60e))
+* **espoo:** Add docstrings, typehints, comments ([776fa83](https://github.com/City-of-Helsinki/linkedevents/commit/776fa8343ffff703fcfec459ee650535e712532a))
+* Integrated swagger documentation ([834c7b3](https://github.com/City-of-Helsinki/linkedevents/commit/834c7b3fc4b7151d487d8919a1858bef1e8545d0))
+* Remove links for trying out the filters in swagger docs ([0555ecb](https://github.com/City-of-Helsinki/linkedevents/commit/0555ecbac5379b8e86c7f1a6abb063071f1de23f))
+* Static OpenAPI yaml generation ([c74cf99](https://github.com/City-of-Helsinki/linkedevents/commit/c74cf99eea9ab82a3331a7d98ab7e3375daa40fa))
+
 ## [3.7.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.7.0...linkedevents-v3.7.1) (2024-06-26)
 
 
