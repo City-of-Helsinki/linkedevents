@@ -6,6 +6,8 @@ from django.db.models import Q
 from django.utils import timezone
 from helsinki_gdpr.types import Error, ErrorResponse
 
+from registrations.models import SignUpGroup, SignUpPayment
+
 
 def get_user_for_gdpr_api(user: get_user_model()) -> get_user_model():
     """
@@ -64,6 +66,33 @@ def delete_user_and_gdpr_data(
                         "fi": "Käyttäjällä on tulevia ilmoittautumisia, joten tietoja ei voida poistaa.",
                         "en": "User has upcoming signups, so data cannot be deleted.",
                         "sv": "Användaren har kommande registreringar, så data kan inte raderas.",
+                    },
+                )
+            ]
+        )
+
+    ongoing_statuses = (
+        SignUpPayment.PaymentStatus.CANCELLED,
+        SignUpPayment.PaymentStatus.REFUNDED,
+        SignUpPayment.PaymentStatus.CREATED,
+    )
+    signups = user.signup_created_by.all()
+    signup_groups = SignUpGroup.objects.filter(signups__in=signups)
+
+    has_ongoing_payments = (
+        user.signuppayment_created_by.filter(status__in=ongoing_statuses).exists()
+        or signup_groups.filter(payment__status__in=ongoing_statuses).exists()
+    )
+
+    if has_ongoing_payments:
+        return ErrorResponse(
+            [
+                Error(
+                    "ONGOING_PAYMENTS",
+                    {
+                        "fi": "Käyttäjällä on avoimia maksuja, joten tietoja ei voida poistaa.",
+                        "en": "User has ongoing payments, so data cannot be deleted.",
+                        "sv": "Användaren har pågående betalningar, så data kan inte raderas.",
                     },
                 )
             ]
