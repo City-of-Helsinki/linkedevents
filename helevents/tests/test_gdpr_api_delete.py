@@ -18,6 +18,7 @@ from registrations.models import (
     SignUpContactPerson,
     SignUpGroup,
     SignUpGroupProtectedData,
+    SignUpPayment,
     SignUpProtectedData,
 )
 from registrations.tests.factories import (
@@ -26,6 +27,7 @@ from registrations.tests.factories import (
     SignUpFactory,
     SignUpGroupFactory,
     SignUpGroupProtectedDataFactory,
+    SignUpPaymentFactory,
     SignUpProtectedDataFactory,
 )
 
@@ -233,7 +235,6 @@ def test_authenticated_user_cannot_delete_own_data_with_upcoming_signups(
     registration = RegistrationFactory(event=upcoming_event)
 
     signup = SignUpFactory(registration=registration, created_by=user)
-
     SignUpProtectedDataFactory(signup=signup, registration=registration)
     SignUpContactPersonFactory(signup=signup)
 
@@ -247,6 +248,7 @@ def test_authenticated_user_cannot_delete_own_data_with_upcoming_signups(
             with django_capture_on_commit_callbacks(execute=True):
                 response = _delete_gdpr_data(api_client, user.uuid)
             assert response.status_code == status.HTTP_403_FORBIDDEN
+
             code = response.data["errors"][0]["code"]
             assert code == "UPCOMING_SIGNUPS"
 
@@ -260,6 +262,111 @@ def test_authenticated_user_cannot_delete_own_data_with_upcoming_signups(
         end_group_count=0,
         end_signup_count=1,
         end_contact_person_count=1,
+    )
+
+
+@pytest.mark.django_db
+@override_settings(GDPR_DISABLE_API_DELETION=False)
+@pytest.mark.parametrize(
+    "payment_status",
+    [
+        SignUpPayment.PaymentStatus.CANCELLED,
+        SignUpPayment.PaymentStatus.CREATED,
+        SignUpPayment.PaymentStatus.REFUNDED,
+    ],
+)
+def test_authenticated_user_cannot_delete_own_data_with_ongoing_payments(
+    api_client, settings, django_capture_on_commit_callbacks, payment_status
+):
+    user = UserFactory()
+
+    event = EventFactory(end_time=timezone.now() - timezone.timedelta(days=31))
+    registration = RegistrationFactory(event=event)
+    signup = SignUpFactory(registration=registration, created_by=user)
+    SignUpPaymentFactory(signup=signup, status=payment_status, created_by=user)
+    SignUpProtectedDataFactory(signup=signup, registration=registration)
+    SignUpContactPersonFactory(signup=signup)
+
+    def callback():
+        with requests_mock.Mocker() as req_mock:
+            auth_header = get_api_token_for_user_with_scopes(
+                user.uuid, [settings.GDPR_API_DELETE_SCOPE], req_mock
+            )
+            api_client.credentials(HTTP_AUTHORIZATION=auth_header)
+
+            with django_capture_on_commit_callbacks(execute=True):
+                response = _delete_gdpr_data(api_client, user.uuid)
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+            code = response.data["errors"][0]["code"]
+            assert code == "ONGOING_PAYMENTS"
+
+    _assert_gdpr_delete(
+        callback,
+        start_user_count=1,
+        start_group_count=0,
+        start_signup_count=1,
+        start_contact_person_count=1,
+        end_user_count=1,
+        end_group_count=0,
+        end_signup_count=1,
+        end_contact_person_count=1,
+    )
+
+
+@pytest.mark.django_db
+@override_settings(GDPR_DISABLE_API_DELETION=False)
+@pytest.mark.parametrize(
+    "payment_status",
+    [
+        SignUpPayment.PaymentStatus.CANCELLED,
+        SignUpPayment.PaymentStatus.CREATED,
+        SignUpPayment.PaymentStatus.REFUNDED,
+    ],
+)
+def test_authenticated_user_cannot_delete_own_data_with_ongoing_payments_in_signup_group(
+    api_client, settings, django_capture_on_commit_callbacks, payment_status
+):
+    user = UserFactory()
+
+    event = EventFactory(end_time=timezone.now() - timezone.timedelta(days=31))
+    registration = RegistrationFactory(event=event)
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup = SignUpFactory(
+        registration=registration, signup_group=signup_group, created_by=user
+    )
+    SignUpPaymentFactory(signup_group=signup_group, signup=None, status=payment_status)
+    SignUpGroupProtectedDataFactory(
+        signup_group=signup_group, registration=registration
+    )
+    SignUpProtectedDataFactory(signup=signup, registration=registration)
+    SignUpContactPersonFactory(signup=signup)
+    SignUpContactPersonFactory(signup_group=signup_group)
+
+    def callback():
+        with requests_mock.Mocker() as req_mock:
+            auth_header = get_api_token_for_user_with_scopes(
+                user.uuid, [settings.GDPR_API_DELETE_SCOPE], req_mock
+            )
+            api_client.credentials(HTTP_AUTHORIZATION=auth_header)
+
+            with django_capture_on_commit_callbacks(execute=True):
+                response = _delete_gdpr_data(api_client, user.uuid)
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+            code = response.data["errors"][0]["code"]
+            assert code == "ONGOING_PAYMENTS"
+
+    _assert_gdpr_delete(
+        callback,
+        start_user_count=1,
+        start_group_count=1,
+        start_signup_count=1,
+        start_contact_person_count=2,
+        end_user_count=1,
+        end_group_count=1,
+        end_signup_count=1,
+        end_contact_person_count=2,
     )
 
 
