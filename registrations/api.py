@@ -582,8 +582,8 @@ class SignUpViewSet(
         ActionDependingBackend,
         filters.OrderingFilter,
     ]
-    ordering_fields = ("first_name", "last_name")
-    ordering = ("first_name", "last_name")
+    ordering_fields = ("id", "first_name", "last_name")
+    ordering = ("id",)
     filterset_class = SignUpFilter
     permission_classes = [CanAccessSignup]
 
