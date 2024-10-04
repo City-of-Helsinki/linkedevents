@@ -802,6 +802,83 @@ def test_signup_list_assert_attendee_status_filter(api_client, registration):
 
 
 @pytest.mark.django_db
+def test_signup_list_orders_by_id_by_default(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_first = SignUpFactory(
+        registration=registration,
+        first_name="The First",
+        last_name="Attendee",
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    signup_second = SignUpFactory(
+        registration=registration,
+        first_name="Second",
+        last_name="Attendee",
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    signup_third = SignUpFactory(
+        registration=registration,
+        first_name="A Last",
+        last_name="Attendee",
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+
+    response = get_list(
+        api_client,
+        query_string=f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING}",
+    )
+    data = response.data["data"]
+    assert data[0]["id"] == signup_first.id
+    assert data[1]["id"] == signup_second.id
+    assert data[2]["id"] == signup_third.id
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "ordering",
+    (
+        ("first_name", ("A Last", "Second", "The First")),
+        ("-first_name", ("The First", "Second", "A Last")),
+        ("last_name", ("Second", "A Last", "The First")),
+        ("-last_name", ("The First", "A Last", "Second")),
+    ),
+)
+def test_signup_list_orders_by_name(api_client, registration, ordering):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    SignUpFactory(
+        registration=registration,
+        first_name="The First",
+        last_name="C Attendee",
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    SignUpFactory(
+        registration=registration,
+        first_name="Second",
+        last_name="A Attendee",
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    SignUpFactory(
+        registration=registration,
+        first_name="A Last",
+        last_name="B Attendee",
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+
+    response = get_list(
+        api_client,
+        query_string=f"registration={registration.id}&"
+        f"attendee_status={SignUp.AttendeeStatus.ATTENDING}&"
+        f"sort={ordering[0]}",
+    )
+    names = tuple([data["first_name"] for data in response.data["data"]])
+    assert names == ordering[1]
+
+
+@pytest.mark.django_db
 def test_filter_signups(api_client, registration, registration2, event, event2):
     user = create_user_by_role("registration_admin", registration.publisher)
     user2 = create_user_by_role("registration_admin", registration2.publisher)
