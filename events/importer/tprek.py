@@ -4,7 +4,6 @@ import requests
 import requests_cache
 from django.conf import settings
 from django.contrib.gis.geos import Point
-from django.core.management import call_command
 from django.db import transaction
 from django_orghierarchy.models import Organization
 
@@ -61,17 +60,8 @@ class TprekImporter(Importer):
         obj.save(update_fields=["deleted"])
         # we won't stand idly by and watch tprek delete needed units willy-nilly without raising a ruckus!
         if obj.events.count() > 0:
-            # try to replace by tprek and, failing that, matko
+            # try to replace by tprek
             replaced = replace_location(replace=obj, by_source="tprek")
-            if not replaced:
-                # matko location may indeed be deleted by an earlier iteration
-                replaced = replace_location(
-                    replace=obj, by_source="matko", include_deleted=True
-                )
-            if not replaced:
-                # matko location may never have been imported in the first place, do it now!
-                call_command("event_import", "matko", places=True, single=obj.name)
-                replaced = replace_location(replace=obj, by_source="matko")
             if not replaced:
                 logger.warning(
                     "Tprek deleted location %s (%s) with events."
