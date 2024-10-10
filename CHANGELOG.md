@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.9.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.8.0...linkedevents-v3.9.0) (2024-10-10)
+
+
+### Features
+
+* **gdpr-api:** In deletion check for upcoming signups ([50b4e48](https://github.com/City-of-Helsinki/linkedevents/commit/50b4e4802218da13578895dd7a4ab3588608a370))
+* **gdpr-api:** Prevent deletion when payments ongoing ([ac27878](https://github.com/City-of-Helsinki/linkedevents/commit/ac27878fb4de1280ff5316e8073f7ba6b6834c1e))
+
+
+### Bug Fixes
+
+* **registration:** Order signups by id ([3058608](https://github.com/City-of-Helsinki/linkedevents/commit/3058608d9c7a14bb394a7221ea5725dfeabef057))
+* Remove matko importer ([4efdee9](https://github.com/City-of-Helsinki/linkedevents/commit/4efdee928eb3e29612b030455277cda6214aa432))
+
 ## [3.8.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.7.1...linkedevents-v3.8.0) (2024-09-25)
 
 
