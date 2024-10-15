@@ -586,37 +586,6 @@ AUTO_ENABLED_EXTENSIONS = env("AUTO_ENABLED_EXTENSIONS")
 # shown in the browsable API
 INSTANCE_NAME = env("INSTANCE_NAME")
 
-# We generate a persistent SECRET_KEY if it is not defined. Note that
-# setting SECRET_KEY will override the persisted key
-if "SECRET_KEY" not in locals():
-    secret_file = os.path.join(BASE_DIR, ".django_secret")
-    try:
-        SECRET_KEY = open(secret_file).read().strip()
-    except IOError:
-        import random
-
-        system_random = random.SystemRandom()
-        try:
-            SECRET_KEY = "".join(
-                [
-                    system_random.choice(
-                        "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)"
-                    )
-                    for i in range(64)
-                ]
-            )
-            secret = open(secret_file, "w")
-            import os
-
-            os.chmod(secret_file, 0o0600)
-            secret.write(SECRET_KEY)
-            secret.close()
-        except IOError:
-            raise Exception(
-                "Please create a %s file with random characters to generate your secret key!"  # noqa: E501
-                % secret_file
-            )
-
 # Email configuration
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env("EMAIL_PORT")
