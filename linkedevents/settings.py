@@ -6,6 +6,7 @@ import importlib.util
 import os
 import subprocess
 from datetime import datetime, timedelta
+from urllib.parse import urljoin
 
 import bleach
 import environ
@@ -813,7 +814,9 @@ SPECTACULAR_SETTINGS = {
     ],
 }
 if SWAGGER_USE_STATIC_SCHEMA:
-    SPECTACULAR_SETTINGS["SWAGGER_UI_SETTINGS"]["url"] = "/static/openapi_schema.yaml"
+    SPECTACULAR_SETTINGS["SWAGGER_UI_SETTINGS"]["url"] = urljoin(
+        STATIC_URL, "openapi_schema.yaml"
+    )
 if WEB_STORE_INTEGRATION_ENABLED:
     SPECTACULAR_SETTINGS["TAGS"].append(
         {
