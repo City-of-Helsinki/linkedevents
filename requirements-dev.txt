@@ -8,12 +8,6 @@ asgiref==3.8.1
     # via
     #   -c requirements.txt
     #   django
-attrs==24.2.0
-    # via
-    #   -c requirements.txt
-    #   flake8-bugbear
-black==24.8.0
-    # via -r requirements-dev.in
 build==1.2.2
     # via pip-tools
 certifi==2024.8.30
@@ -25,9 +19,7 @@ charset-normalizer==3.3.2
     #   -c requirements.txt
     #   requests
 click==8.1.7
-    # via
-    #   black
-    #   pip-tools
+    # via pip-tools
 coverage[toml]==7.6.1
     # via pytest-cov
 django==4.2.16
@@ -56,13 +48,6 @@ factory-boy==3.3.1
     #   pytest-factoryboy
 faker==29.0.0
     # via factory-boy
-flake8==7.1.1
-    # via
-    #   -r requirements-dev.in
-    #   flake8-bugbear
-    #   pep8-naming
-flake8-bugbear==24.8.19
-    # via -r requirements-dev.in
 freezegun==1.5.1
     # via
     #   -r requirements-dev.in
@@ -81,33 +66,18 @@ inflection==0.5.1
     #   pytest-factoryboy
 iniconfig==2.0.0
     # via pytest
-isort==5.13.2
-    # via -r requirements-dev.in
 markupsafe==2.1.5
     # via
     #   -c requirements.txt
     #   werkzeug
-mccabe==0.7.0
-    # via flake8
-mypy-extensions==1.0.0
-    # via black
 packaging==24.1
     # via
     #   -c requirements.txt
-    #   black
     #   build
     #   pytest
     #   pytest-factoryboy
-pathspec==0.12.1
-    # via black
-pep8-naming==0.14.1
-    # via -r requirements-dev.in
 pip-tools==7.4.1
     # via -r requirements-dev.in
-platformdirs==4.3.6
-    # via
-    #   -c requirements.txt
-    #   black
 pluggy==1.5.0
     # via pytest
 pyasn1==0.6.1
@@ -115,10 +85,6 @@ pyasn1==0.6.1
     #   -c requirements.txt
     #   python-jose
     #   rsa
-pycodestyle==2.12.1
-    # via flake8
-pyflakes==3.2.0
-    # via flake8
 pyproject-hooks==1.1.0
     # via
     #   build
@@ -158,6 +124,8 @@ rsa==4.9
     # via
     #   -c requirements.txt
     #   python-jose
+ruff==0.7.1
+    # via -r requirements-dev.in
 six==1.16.0
     # via
     #   -c requirements.txt
@@ -170,9 +138,8 @@ sqlparse==0.5.1
     #   -c requirements.txt
     #   django
     #   django-debug-toolbar
-tomli==2.0.1
+tomli==2.0.2
     # via
-    #   black
     #   build
     #   coverage
     #   pip-tools
@@ -181,7 +148,6 @@ typing-extensions==4.12.2
     # via
     #   -c requirements.txt
     #   asgiref
-    #   black
     #   pytest-factoryboy
 urllib3==1.26.20
     # via
