@@ -13,7 +13,7 @@ from rest_framework.test import APITestCase
 
 from audit_log.models import AuditLogEntry
 
-from ..api import _terms_to_regex, EventSerializer, OrganizationListSerializer
+from ..api import EventSerializer, OrganizationListSerializer, _terms_to_regex
 from ..auth import ApiKeyAuth
 from ..models import DataSource, Image
 from ..utils import get_user_data_source_and_organization_from_request
@@ -24,7 +24,7 @@ from .utils import versioned_reverse as reverse
 def test_api_page_size(api_client, event):
     event_count = 200
     id_base = event.id
-    for i in range(0, event_count):
+    for i in range(event_count):
         event.pk = "%s-%d" % (id_base, i)
         event.save(force_insert=True)
     resp = api_client.get(reverse("event-list") + "?page_size=10")

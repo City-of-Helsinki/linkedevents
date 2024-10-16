@@ -4,13 +4,13 @@ from rest_framework import serializers
 
 from events.fields import EnumChoiceField
 from events.models import (
+    PUBLICATION_STATUSES,
     DataSource,
     Event,
     Keyword,
     Language,
     Offer,
     Place,
-    PUBLICATION_STATUSES,
 )
 from events.serializers import DivisionSerializer
 from linkedevents.serializers import TranslatedModelSerializer

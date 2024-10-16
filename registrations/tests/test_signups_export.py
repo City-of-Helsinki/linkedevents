@@ -1,6 +1,6 @@
 from collections import Counter
 from typing import Union
-from unittest.mock import patch, PropertyMock
+from unittest.mock import PropertyMock, patch
 
 import pytest
 from rest_framework import status

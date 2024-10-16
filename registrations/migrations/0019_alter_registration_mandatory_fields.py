@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 from django.db.models import Q
+
 import registrations.models
 
 

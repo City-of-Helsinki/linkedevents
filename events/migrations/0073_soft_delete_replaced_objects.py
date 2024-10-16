@@ -4,12 +4,14 @@ from django.db import migrations
 
 
 def soft_delete_replaced_objects(
-    Model, deleted_attr="deleted", replaced_by_attr="replaced_by"
+    Model,  # noqa: N803
+    deleted_attr="deleted",
+    replaced_by_attr="replaced_by",  # noqa: N803
 ):
     for obj in Model.objects.filter(
         **{f"{replaced_by_attr}__isnull": False, deleted_attr: False}
     ):
-        print(
+        print(  # noqa: T201
             f'Found an object that is replaced but not soft deleted: "{obj}". Soft deleting now.'
         )
         setattr(obj, deleted_attr, True)
@@ -18,7 +20,7 @@ def soft_delete_replaced_objects(
 
 def forwards(apps, schema_editor):
     # Begin printing on a new line
-    print("")
+    print("")  # noqa: T201
 
     Keyword = apps.get_model("events", "Keyword")
     Place = apps.get_model("events", "Place")

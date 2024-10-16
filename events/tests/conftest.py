@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 # 3rd party
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
 
@@ -30,7 +32,7 @@ from events.models import (
 from linkedevents.tests.conftest import *  # noqa
 from registrations.models import Registration
 
-from ..models import License, PublicationStatus
+from ..models import PublicationStatus
 from .utils import versioned_reverse as reverse
 
 TEXT_FI = "testaus"

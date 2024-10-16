@@ -6,8 +6,8 @@ from registrations.models import SignUpGroupProtectedData, SignUpProtectedData
 
 class Command(BaseCommand):
     help = (
-        "Encrypts existing encrypted data with a new encryption key. Please remember to prepend "
-        "the new key to the secrets value of the FIELD_ENCRYPTION_KEYS setting before running "
+        "Encrypts existing encrypted data with a new encryption key. Please remember to prepend "  # noqa: E501
+        "the new key to the secrets value of the FIELD_ENCRYPTION_KEYS setting before running "  # noqa: E501
         "this command."
     )
 

@@ -49,7 +49,7 @@ def test_place_divisions_by_division_type(
 def test_place_cannot_replace_itself(place):
     place.replaced_by = place
     place.deprecated = True
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         place.save()
 
 
@@ -60,5 +60,5 @@ def test_prevent_circular_place_replacement(place, place2, place3):
     place2.replaced_by = place3
     place2.save()
     place3.replaced_by = place
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         place.save()

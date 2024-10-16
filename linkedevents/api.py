@@ -18,7 +18,8 @@ class CustomAPIRootView(APIRootView):
         ret = OrderedDict()
         namespace = request.resolver_match.namespace
         for key, url_name in self.api_root_dict.items():
-            # Don't show data source, feedback and organization class routes in the api root
+            # Don't show data source, feedback and organization class routes in the
+            # api root
             if url_name in [
                 "datasource-list",
                 "organizationclass-list",

@@ -1,6 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
-from unittest.mock import patch, PropertyMock
+from unittest.mock import PropertyMock, patch
 
 import pytest
 import requests_mock

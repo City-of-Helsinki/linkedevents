@@ -6,7 +6,6 @@ from data_analytics.models import DataAnalyticsApiToken
 
 
 class DataAnalyticsApiTokenAdminForm(forms.ModelForm):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

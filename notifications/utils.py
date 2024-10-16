@@ -2,7 +2,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from notifications.exceptions import NotificationTemplateException
+from notifications.exceptions import NotificationTemplateError
 
 DEFAULT_LANG = settings.LANGUAGES[0][0]
 
@@ -19,7 +19,7 @@ def format_datetime(dt, lang="fi"):
         # 1 Jan 2017 at 12:00
         dt_format = r"j M Y \a\t G:i"
     else:
-        raise NotificationTemplateException(
+        raise NotificationTemplateError(
             f"format_datetime received unknown language '{lang}'"
         )
 
@@ -36,7 +36,7 @@ def format_date(dt, lang="fi"):
         # 1 Jan 2017
         dt_format = r"j M Y"
     else:
-        raise NotificationTemplateException(
+        raise NotificationTemplateError(
             f"format_date received unknown language '{lang}'"
         )
 

@@ -163,7 +163,7 @@ class EnkoraImporter(Importer):
         133: {
             "enkora-name": "Sovellettu liikunta",
             "keywords": {
-                SPORT_ADAPTED_PE  # YSO: erityisliikunta, sisältää mm. soveltava liikunta
+                SPORT_ADAPTED_PE  # YSO: erityisliikunta, sisältää mm. soveltava liikunta  # noqa: E501
             },
             "image": None,
         },
@@ -206,7 +206,7 @@ class EnkoraImporter(Importer):
         2: {
             "enkora-name": "Itäkeskuksen uimahalli",  # 4 TPrek paikkaa
             "tprek-id": 41835,
-            "keywords": set(),  # kuntosalikursseja, ryhmäliikuntaa, vesiliikuntaa ja uimakouluja
+            "keywords": set(),  # kuntosalikursseja, ryhmäliikuntaa, vesiliikuntaa ja uimakouluja  # noqa: E501
         },
         3: {
             "enkora-name": "Jakomäen uimahalli",  # 2 TPrek paikkaa
@@ -228,12 +228,12 @@ class EnkoraImporter(Importer):
         7: {
             "enkora-name": "Yrjönkadun uimahalli",  # 3 TPrek paikkaa
             "tprek-id": 41102,
-            "keywords": set(),  # kuntosalikursseja, ryhmäliikuntaa, vesiliikuntaa ja uimakouluja
+            "keywords": set(),  # kuntosalikursseja, ryhmäliikuntaa, vesiliikuntaa ja uimakouluja  # noqa: E501
         },
         8: {
             "enkora-name": "Pirkkolan uimahalli",  # 2 TPrek paikkaa
             "tprek-id": 40774,
-            "keywords": set(),  # kuntosalikursseja, ryhmäliikuntaa, vesiliikuntaa ja uimakouluja
+            "keywords": set(),  # kuntosalikursseja, ryhmäliikuntaa, vesiliikuntaa ja uimakouluja  # noqa: E501
         },
         10: {
             "enkora-name": "Töölön kisahalli",  # 17 TPrek paikkaa
@@ -522,19 +522,19 @@ class EnkoraImporter(Importer):
             "enkora-name": "Pohjoinen",
             "tprek-id": None,
             "keywords": set(),
-            "group": True,  # Note: groups in Enkora are not actual geographical locations
+            "group": True,  # Note: groups in Enkora are not actual geographical locations  # noqa: E501
         },
         247: {
             "enkora-name": "Länsi",
             "tprek-id": None,
             "keywords": set(),
-            "group": True,  # Note: groups in Enkora are not actual geographical locations
+            "group": True,  # Note: groups in Enkora are not actual geographical locations  # noqa: E501
         },
         248: {
             "enkora-name": "Itä",
             "tprek-id": None,
             "keywords": set(),
-            "group": True,  # Note: groups in Enkora are not actual geographical locations
+            "group": True,  # Note: groups in Enkora are not actual geographical locations  # noqa: E501
         },
         257: {
             "enkora-name": "Malmin pk, OV, Talvelantie 1",
@@ -577,7 +577,7 @@ class EnkoraImporter(Importer):
             "keywords": set(),
         },
         285: {
-            "enkora-name": "Pirkkolan lähiliikuntapaikka",  # kts. Pirkkolan liikuntapuisto
+            "enkora-name": "Pirkkolan lähiliikuntapaikka",  # kts. Pirkkolan liikuntapuisto  # noqa: E501
             "tprek-id": 42006,
             "keywords": set(),
         },
@@ -603,12 +603,14 @@ class EnkoraImporter(Importer):
             "keywords": set(),
         },
         302: {
-            "enkora-name": "Malmin peruskoulu (Talvelantie 1)",  # kts. 257: Malmin pk, OV, Talvelantie 1
+            # kts. 257: Malmin pk, OV, Talvelantie 1
+            "enkora-name": "Malmin peruskoulu (Talvelantie 1)",
             "tprek-id": 46604,
             "keywords": set(),
         },
         303: {
-            "enkora-name": "Käpylän peruskoulu (Untamontie 2)",  # kts. 262: Käpylän pk, IV, Untamontie 2
+            # kts. 262: Käpylän pk, IV, Untamontie 2
+            "enkora-name": "Käpylän peruskoulu (Untamontie 2)",
             "tprek-id": 51480,
             "keywords": set(),
         },
@@ -929,7 +931,7 @@ class EnkoraImporter(Importer):
         Handles importing courses from Enkora API.
         :param: months_back_from_today, int determines how many months back from today data should be queried
         :return: None
-        """
+        """  # noqa: E501
         kurssi_api = self.driver_cls(
             settings.ENKORA_API_USER, settings.ENKORA_API_PASSWORD, request_timeout=20.0
         )
@@ -1057,13 +1059,14 @@ class EnkoraImporter(Importer):
 
             course_sync_count += 1
 
-        # After looping all the courses, delete the obsoleted ones (unless doing a single event).
+        # After looping all the courses, delete the obsoleted ones (unless doing a
+        # single event).
         event_syncher.finish(force=True)
 
         # Delayed conversion exception?
         if errors:
             logger.error(
-                "Enkora course import finished with {} courses with {} events seen. {} courses synchronized. "
+                "Enkora course import finished with {} courses with {} events seen. {} courses synchronized. "  # noqa: E501
                 "{} errors encounterd.".format(
                     course_count, course_event_count, course_sync_count, len(errors)
                 )
@@ -1072,7 +1075,7 @@ class EnkoraImporter(Importer):
 
         # Success
         logger.info(
-            "Enkora course import finished with {} courses with {} events seen. {} courses synchronized. "
+            "Enkora course import finished with {} courses with {} events seen. {} courses synchronized. "  # noqa: E501
             "No errors encounterd.".format(
                 course_count, course_event_count, course_sync_count
             )
@@ -1168,7 +1171,7 @@ class EnkoraImporter(Importer):
             # Location:
             if course["location_id"] not in EnkoraImporter.place_map:
                 raise ValueError(
-                    "Unknown Enkora location: {} for course {} / {}. Mapping missing!".format(
+                    "Unknown Enkora location: {} for course {} / {}. Mapping missing!".format(  # noqa: E501
                         course["location_id"],
                         course["reservation_event_group_id"],
                         course["reservation_event_group_name"],
@@ -1194,7 +1197,7 @@ class EnkoraImporter(Importer):
 
         # Success
         logger.info(
-            "Enkora place import finished with {} courses having {} unique Enkora-places. No errors encounterd.".format(
+            "Enkora place import finished with {} courses having {} unique Enkora-places. No errors encounterd.".format(  # noqa: E501
                 course_count, place_count
             )
         )
@@ -1206,14 +1209,14 @@ class EnkoraImporter(Importer):
         :param: course, dict containing data for a course
         :param: now_is, datetime.datetime current
         :return: bool, true if now isn't between public_visibility_start and public_visibility_end
-        """
+        """  # noqa: E501
         if not course["public_visibility_start"] or not course["public_visibility_end"]:
             logger.warning(
-                "Course with ID {} lacks public_visibility_start or public_visibility_end information.".format(
+                "Course with ID {} lacks public_visibility_start or public_visibility_end information.".format(  # noqa: E501
                     course["reservation_event_group_id"]
                 )
             )
-            return True  # True, indicating that course shouldn't be processed before source data is valid
+            return True  # True, indicating that course shouldn't be processed before source data is valid  # noqa: E501
 
         is_expired = not (
             course["public_visibility_start"]
@@ -1230,7 +1233,7 @@ class EnkoraImporter(Importer):
         :return: documentation string
         """
         import git  # gitpython
-        from snakemd import Inline, MDList, new_doc, Paragraph
+        from snakemd import Inline, MDList, Paragraph, new_doc
 
         repo = git.Repo(search_parent_directories=True)
         commit_sha = repo.head.object.hexsha
@@ -1488,7 +1491,7 @@ class EnkoraImporter(Importer):
         doc.add_heading("Enkora Service to Web Shop Link", level=2)
         doc.add_paragraph(
             "Importer sport/activity list mapping to Liikuntakauppa. "
-            "Optimally the link would point directly to a course. Current implementation of "
+            "Optimally the link would point directly to a course. Current implementation of "  # noqa: E501
             "liikuntakauppa doesn't allow this."
         )
         ul = []
@@ -1588,7 +1591,7 @@ class EnkoraImporter(Importer):
                 except AttributeError:
                     logging.error(
                         (
-                            "Enkora event ID {}: unable to add timezone info for field name {}"
+                            "Enkora event ID {}: unable to add timezone info for field name {}"  # noqa: E501
                             ", skipping event and related sub-events"
                         ).format(
                             course["reservation_event_group_id"],
@@ -1725,8 +1728,8 @@ class EnkoraImporter(Importer):
         # For development/testing:
         # Output commands to invalidate event cache for the course being imported
         if self.debug_print_cache_invalidation:
-            print(
-                'curl --header "Content-Type: application/json" https://harrastukset.hel.fi/api/revalidate --data'
+            print(  # noqa: T201
+                'curl --header "Content-Type: application/json" https://harrastukset.hel.fi/api/revalidate --data'  # noqa: E501
                 """ '{{"secret": "", "uri": "/fi/courses/enkora:{}"}}' """.format(
                     course["reservation_event_group_id"]
                 )
@@ -1782,10 +1785,10 @@ class EnkoraImporter(Importer):
         Note: Course description is not part of this deduction, Service and location are.
         :param course:
         :return: set of keyword ids for service, set of keyword ids for audience, list of single image
-        """
+        """  # noqa: E501
         if course["location_id"] not in EnkoraImporter.place_map:
             raise ValueError(
-                "Unknown Enkora location: {} for course {} / {}. Mapping missing!".format(
+                "Unknown Enkora location: {} for course {} / {}. Mapping missing!".format(  # noqa: E501
                     course["location_id"],
                     course["reservation_event_group_id"],
                     course["reservation_event_group_name"],
@@ -1793,7 +1796,7 @@ class EnkoraImporter(Importer):
             )
         if course["service_id"] not in EnkoraImporter.service_map:
             raise ValueError(
-                "Unknown Enkora service: {} for course {} / {}. Mapping missing!".format(
+                "Unknown Enkora service: {} for course {} / {}. Mapping missing!".format(  # noqa: E501
                     course["service_id"],
                     course["reservation_event_group_id"],
                     course["reservation_event_group_name"],
@@ -1843,7 +1846,8 @@ class EnkoraImporter(Importer):
             for lang in EnkoraImporter.supported_languages
         }
 
-        # If there's no course title found for key: reservation_event_group_name_fi, set the default one
+        # If there's no course title found for key:
+        # reservation_event_group_name_fi, set the default one
         if not course_title["fi"]:
             course_title["fi"] = course.get("reservation_event_group_name")
 
@@ -1923,7 +1927,7 @@ class EnkoraImporter(Importer):
         :param capacity_full: bool, if course capacity is known: true, if course is fully booked
         :param has_queue_capacity: bool, if course has a queue: true, if queue has capacity
         :return: dict, HTML-formatted course descriptions per language
-        """
+        """  # noqa: E501
         description = {
             lang: (
                 course.get(f"description_long_{lang}")
@@ -1934,7 +1938,8 @@ class EnkoraImporter(Importer):
         }
 
         # If there's no description found for keys:
-        # description_long_fi, description_fi, reservation_event_group_name_fi, set to the default one
+        # description_long_fi, description_fi, reservation_event_group_name_fi,
+        # set to the default one
         if not description["fi"]:
             description["fi"] = (
                 course.get("description_long")
@@ -1960,9 +1965,11 @@ class EnkoraImporter(Importer):
             },
         }
 
-        # Iterate over the different translations and form descriptions with proper HTML tags
+        # Iterate over the different translations and form descriptions with
+        # proper HTML tags
         for lang in EnkoraImporter.supported_languages:
-            # Check if the course there's a course description for the language, if there is, add additional info
+            # Check if the course there's a course description for the language, if
+            # there is, add additional info
             if description[lang]:
                 # Convert imported plain-text into HTML
                 # Make sure characters are escaped properly, form paragraphs
@@ -1982,8 +1989,8 @@ class EnkoraImporter(Importer):
 
                 desc_html += (
                     f'<p><b>{translated_description_text[lang]["add_on_text"]}</b></p>\n<p>'
-                    f'<a href="{EnkoraImporter.COURSE_CONTACT_LINK}">Liikuntaluuri</a>: '
-                    f'<a href="tel:{EnkoraImporter.COURSE_CONTACT_PHONE}">{EnkoraImporter.COURSE_CONTACT_PHONE}</a></p>'
+                    f'<a href="{EnkoraImporter.COURSE_CONTACT_LINK}">Liikuntaluuri</a>: '  # noqa: E501
+                    f'<a href="tel:{EnkoraImporter.COURSE_CONTACT_PHONE}">{EnkoraImporter.COURSE_CONTACT_PHONE}</a></p>'  # noqa: E501
                 )
 
                 description.update({lang: desc_html})
@@ -2001,7 +2008,7 @@ class EnkoraImporter(Importer):
         """
         if course["location_id"] not in EnkoraImporter.place_map:
             raise ValueError(
-                "Unknown Enkora location: {} for course {} / {}. Mapping missing!".format(
+                "Unknown Enkora location: {} for course {} / {}. Mapping missing!".format(  # noqa: E501
                     course["location_id"],
                     course["reservation_event_group_id"],
                     course["reservation_event_group_name"],
@@ -2104,7 +2111,7 @@ class EnkoraImporter(Importer):
                 if do_fare_description:
                     offer_desc = fare_product["fare_product_name"]
                     if offer_desc.lower().startswith(fare_words_to_remove):
-                        # Let loose the first word and any possible white-space after it.
+                        # Let loose the first word and any possible white-space after it.  # noqa: E501
                         # Capitalize the first letter of the description
                         offer_desc = re.sub(r"^\b\w+\b\s*", "", offer_desc)
                         offer_desc = offer_desc[0].upper() + offer_desc[1:]
@@ -2200,14 +2207,15 @@ class EnkoraImporter(Importer):
         only the first one encountered will be evaluated.
         :param course_tags: list, course tag data as a list of dicts
         :return: str, representing the abbreviated event language
-        """
+        """  # noqa: E501
         language_tag_id = None
         event_language = "fi"
         for tag_group in course_tags:
             # Checking if tag_group_id = 5, i.e. Ohjauskieli
             if int(tag_group.get("tag_group_id", -1)) == 5:
                 language_tag_id = int(tag_group.get("tag_id", -1))
-                # Stopping iterations once first language tag encountered, there should only be one
+                # Stopping iterations once first language tag encountered, there should
+                # only be one
                 break
 
         if language_tag_id == 45:
@@ -2229,7 +2237,8 @@ class EnkoraImporter(Importer):
         if service_id not in EnkoraImporter.liikuntakauppa_links:
             return EnkoraImporter.liikuntakauppa_links[""]
 
-        # All other link types, except default, will get the course ID attached to the link
+        # All other link types, except default, will get the course ID attached to
+        # the link
         chosen_link_base = EnkoraImporter.liikuntakauppa_links[service_id]
         chosen_link = chosen_link_base + str(course["reservation_event_group_id"])
 
@@ -2454,8 +2463,9 @@ class Kurssidata(Enkora):
         # Sanity:
         if len(reservation_event_groups) != 1:
             raise RuntimeError(
-                "Getting reservation event group {} "
-                "resulted in {} items!".format(course_id, len(reservation_event_groups))
+                "Getting reservation event group {} " "resulted in {} items!".format(
+                    course_id, len(reservation_event_groups)
+                )
             )
         reservation_event_group = reservation_event_groups[0]
 
@@ -2475,7 +2485,7 @@ class Kurssidata(Enkora):
         :param reservation_event_groups: list to append reservation event group data into
         :param reservation_events: list to append reservation event data into
         :return: reservation generator
-        """
+        """  # noqa: E501
         start_date = datetime(year=year, month=month, day=1).date()
         end_date = start_date + relativedelta(months=1)
         end_date = end_date - timedelta(days=1)
@@ -2509,7 +2519,7 @@ class Kurssidata(Enkora):
         :param reservation_event_groups: list to append reservation event group data into
         :param reservation_events: list to append reservation event data into
         :return: reservation generator
-        """
+        """  # noqa: E501
         payload = {
             "start_date": "{0}-{1}-{2}--{3}-{4}-{5}".format(
                 first_date.year,
@@ -2553,7 +2563,7 @@ class Kurssidata(Enkora):
         :param reservation_event_groups: list to append reservation event group data into
         :param reservation_events: list to append reservation event data into
         :return: reservation generator
-        """
+        """  # noqa: E501
         start_date = end_date - timedelta(days=364)
 
         payload = {
@@ -2721,7 +2731,8 @@ class Kurssidata(Enkora):
                 reservation_events.append(reservation_event)
 
             if "reservations" in course:
-                # Note: In Enkora a reservation is for the entire course, not for a specific event of it.
+                # Note: In Enkora a reservation is for the entire course, not for a
+                # specific event of it.
                 for reservation_in in course["reservations"]:
                     reservation = {
                         "reservation_id": int(reservation_in["reservation_id"]),

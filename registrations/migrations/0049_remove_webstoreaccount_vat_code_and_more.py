@@ -20,7 +20,6 @@ def migrate_vat_code(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0048_webstoreaccount_name"),
     ]

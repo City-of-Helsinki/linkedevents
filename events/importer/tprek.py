@@ -58,7 +58,8 @@ class TprekImporter(Importer):
     def delete_and_replace(self, obj):
         obj.deleted = True
         obj.save(update_fields=["deleted"])
-        # we won't stand idly by and watch tprek delete needed units willy-nilly without raising a ruckus!
+        # we won't stand idly by and watch tprek delete needed units willy-nilly
+        # without raising a ruckus!
         if obj.events.count() > 0:
             # try to replace by tprek
             replaced = replace_location(replace=obj, by_source="tprek")
@@ -66,7 +67,7 @@ class TprekImporter(Importer):
                 logger.warning(
                     "Tprek deleted location %s (%s) with events."
                     "No unambiguous replacement was found. "
-                    "Please look for a replacement location and save it in the replaced_by field. "
+                    "Please look for a replacement location and save it in the replaced_by field. "  # noqa: E501
                     "Until then, events will stay mapped to the deleted location."
                     % (obj.id, str(obj))
                 )

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0052_alter_registration_min_and_max_attendee_capacity"),
     ]

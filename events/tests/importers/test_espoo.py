@@ -3,7 +3,6 @@ from http.client import HTTPMessage, HTTPResponse
 from unittest.mock import Mock, patch
 
 import factory
-import freezegun
 import pytest
 import pytz
 from django.conf import settings as django_settings
@@ -12,6 +11,8 @@ from django_orghierarchy.models import Organization
 from faker import Faker
 
 from events.importer.espoo import (
+    EspooImporter,
+    EspooImporterError,
     _build_pre_map_to_id,
     _get_data,
     _get_origin_objs,
@@ -21,8 +22,6 @@ from events.importer.espoo import (
     _post_map_to_self_id,
     _pre_map_translation,
     _split_common_objs,
-    EspooImporter,
-    EspooImporterError,
     parse_jsonld_id,
     purge_orphans,
 )

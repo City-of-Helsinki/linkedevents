@@ -39,7 +39,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--create-no-transaction",
             action="store_true",
-            help="Same as --create but without a transaction. Primary use case is for testing.",
+            help="Same as --create but without a transaction. Primary use case is for testing.",  # noqa: E501
         )
 
         parser.add_argument("--force", action="store_true", help="Force refresh")
@@ -69,7 +69,7 @@ class Command(BaseCommand):
 
         elif options["create"] or options["create_no_transaction"]:
             self.stdout.write(
-                "Creating events_eventfulltext materialized view (this may take some seconds)"
+                "Creating events_eventfulltext materialized view (this may take some seconds)"  # noqa: E501
             )
 
             with open(sql_filename("create_materialized_view.sql"), "r") as file:
@@ -130,7 +130,7 @@ class Command(BaseCommand):
                     return
 
             self.stdout.write(
-                "Refreshing events_eventfulltext materialized view (this may take some seconds)"
+                "Refreshing events_eventfulltext materialized view (this may take some seconds)"  # noqa: E501
             )
             with connection.cursor() as cursor:
                 cursor.execute(

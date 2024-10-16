@@ -2,7 +2,7 @@ from copy import deepcopy
 from datetime import timedelta
 from decimal import Decimal
 from typing import Optional
-from unittest.mock import patch, PropertyMock
+from unittest.mock import PropertyMock, patch
 
 import pytest
 import requests_mock
@@ -1675,7 +1675,7 @@ def test_web_store_partial_refund_when_deleting_signup_from_group_with_payment(
     signup_group = create_signup_group_with_payment(
         signup.registration, service_language=language
     )
-    payment = getattr(signup_group, "payment")
+    payment = signup_group.payment
 
     signup.signup_group = signup_group
     signup.save(update_fields=["signup_group"])
@@ -1747,7 +1747,7 @@ def test_web_store_cannot_cancel_payment_when_deleting_signup_from_group_with_pa
         signup.registration,
         payment_status=SignUpPayment.PaymentStatus.CREATED,
     )
-    payment = getattr(signup_group, "payment")
+    payment = signup_group.payment
 
     signup.signup_group = signup_group
     signup.save(update_fields=["signup_group"])
@@ -1805,7 +1805,7 @@ def test_web_store_partial_refund_api_exception_when_deleting_signup_from_group_
     signup = price_group.signup
 
     signup_group = create_signup_group_with_payment(signup.registration)
-    payment = getattr(signup_group, "payment")
+    payment = signup_group.payment
 
     signup.signup_group = signup_group
     signup.save(update_fields=["signup_group"])
@@ -1868,7 +1868,7 @@ def test_web_store_partial_refund_has_errors_when_deleting_signup_from_group_wit
     signup = price_group.signup
 
     signup_group = create_signup_group_with_payment(signup.registration)
-    payment = getattr(signup_group, "payment")
+    payment = signup_group.payment
 
     signup.signup_group = signup_group
     signup.save(update_fields=["signup_group"])
@@ -2178,7 +2178,7 @@ def test_web_store_partial_refund_order_or_payment_status_api_error(
     signup_group = create_signup_group_with_payment(
         signup.registration, service_language=language
     )
-    payment = getattr(signup_group, "payment")
+    payment = signup_group.payment
 
     signup.signup_group = signup_group
     signup.save(update_fields=["signup_group"])

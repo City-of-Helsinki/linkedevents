@@ -40,8 +40,6 @@ from registrations.tests.utils import (
 )
 from registrations.utils import get_signup_create_url
 from web_store.tests.product.test_web_store_product_api_client import (
-    DEFAULT_CREATE_PRODUCT_ACCOUNTING_DATA,
-    DEFAULT_GET_PRODUCT_ACCOUNTING_DATA,
     DEFAULT_GET_PRODUCT_MAPPING_DATA,
     DEFAULT_PRODUCT_ID,
 )

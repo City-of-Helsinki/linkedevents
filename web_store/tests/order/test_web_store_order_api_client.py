@@ -4,7 +4,7 @@ from django.conf import settings as django_settings
 from requests.exceptions import RequestException
 from rest_framework import status
 
-from web_store.exceptions import WebStoreImproperlyConfiguredException
+from web_store.exceptions import WebStoreImproperlyConfiguredError
 from web_store.order.clients import WebStoreOrderAPIClient
 from web_store.order.enums import WebStoreOrderStatus
 
@@ -152,7 +152,7 @@ def test_mandatory_web_store_order_setting_missing_causes_right_exception(
 ):
     setattr(settings, setting_name, setting_value)
 
-    with pytest.raises(WebStoreImproperlyConfiguredException):
+    with pytest.raises(WebStoreImproperlyConfiguredError):
         WebStoreOrderAPIClient()
 
 

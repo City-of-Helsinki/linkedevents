@@ -29,7 +29,7 @@ def test_missing_cache_not_throwing_error_and_returns_none(django_cache):
         params, "local_ongoing_OR", "local_ids", "OR", queryset
     )
 
-    assert queryset.first() == None
+    assert queryset.first() is None
 
 
 @pytest.mark.django_db
@@ -57,4 +57,4 @@ def test_missing_cache_many_not_throwing_error_and_returns_none(django_cache):
         params, "all_ongoing_OR", ["internet_ids", "local_ids"], "OR", queryset
     )
 
-    assert queryset.first() == None
+    assert queryset.first() is None

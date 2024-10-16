@@ -3,7 +3,7 @@ from typing import Any, Optional, Union
 import requests
 from django.conf import settings
 
-from web_store.exceptions import WebStoreImproperlyConfiguredException
+from web_store.exceptions import WebStoreImproperlyConfiguredError
 
 
 class WebStoreAPIBaseClient:
@@ -17,7 +17,7 @@ class WebStoreAPIBaseClient:
                 settings.WEB_STORE_API_KEY,
             ]
         ):
-            raise WebStoreImproperlyConfiguredException(
+            raise WebStoreImproperlyConfiguredError(
                 "One or more mandatory Talpa web store setting is missing. "
                 "Please check environment variables with the prefix WEB_STORE_."
             )

@@ -34,7 +34,7 @@ def create_light_admin_group(apps):
         with transaction.atomic():
             light_admin_group = Group.objects.create(name="Light Admins")
     except IntegrityError:
-        print('\nGroup with name "Light Admins" already exists. Skipping creation.')
+        print('\nGroup with name "Light Admins" already exists. Skipping creation.')  # noqa: T201
         return
 
     regular_users_perm = Permission.objects.get(

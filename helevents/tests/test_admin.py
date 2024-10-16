@@ -261,7 +261,7 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
 
         return data
 
-    def assertMerchantValuesEqual(self, merchant, data, attrs_to_skip=None):
+    def assertMerchantValuesEqual(self, merchant, data, attrs_to_skip=None):  # noqa: N802
         attrs_to_skip = attrs_to_skip or []
 
         for field, value in data.items():
@@ -276,7 +276,7 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
                 else:
                     self.assertEqual(getattr(merchant, merchant_attr), value)
 
-    def assertMerchantValuesNotEqual(self, merchant, data, attrs_to_skip=None):
+    def assertMerchantValuesNotEqual(self, merchant, data, attrs_to_skip=None):  # noqa: N802
         attrs_to_skip = attrs_to_skip or []
 
         for field, value in data.items():
@@ -357,7 +357,7 @@ class TestLocalOrganizationMerchantAdmin(LocalOrganizationAdminTestCaseMixin, Te
         self.assertEqual(WebStoreMerchant.objects.count(), 2)
 
         organization = Organization.objects.last()
-        for merchant_id, merchant_data in [
+        for merchant_id, merchant_data in [  # noqa: B020
             (json_return_value["merchantId"], merchant_data),
             (json_return_value2["merchantId"], merchant_data2),
         ]:
@@ -783,7 +783,7 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
 
         return data
 
-    def assertAccountValuesEqual(self, account, data, attrs_to_skip=None):
+    def assertAccountValuesEqual(self, account, data, attrs_to_skip=None):  # noqa: N802
         attrs_to_skip = attrs_to_skip or []
 
         for field, value in data.items():
@@ -798,7 +798,7 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
                 else:
                     self.assertEqual(getattr(account, account_attr), value)
 
-    def assertAccountValuesNotEqual(self, account, data, attrs_to_skip=None):
+    def assertAccountValuesNotEqual(self, account, data, attrs_to_skip=None):  # noqa: N802
         attrs_to_skip = attrs_to_skip or []
 
         for field, value in data.items():
@@ -845,7 +845,7 @@ class TestLocalOrganizationAccountAdmin(LocalOrganizationAdminTestCaseMixin, Tes
         self.assertEqual(WebStoreAccount.objects.count(), 2)
 
         organization = Organization.objects.last()
-        for account_name, account_data in [
+        for account_name, account_data in [  # noqa: B020
             ("Test Account", account_data),
             ("Test Account 2", account_data2),
         ]:

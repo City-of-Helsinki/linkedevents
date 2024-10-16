@@ -92,7 +92,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
             if not isinstance(obj, dict):
                 raise serializers.ValidationError(
                     {
-                        field_name: "This field is a translated field. Instead of a string,"
+                        field_name: "This field is a translated field. Instead of a string,"  # noqa: E501
                         " you must supply an object with strings corresponding"
                         " to desired language ids."
                     }
@@ -179,7 +179,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if "request" in context:
             self.request = context["request"]
 
-        # for post and put methods as well as field visibility, user information is needed
+        # for post and put methods as well as field visibility, user information
+        # is needed
         if "user" in context:
             self.user = context["user"]
         if "admin_tree_ids" in context:
@@ -257,7 +258,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         # Display non-public fields if
         # 1) obj has publisher org, and
         # 2) user belongs to the same org tree.
-        # Never modify self.skip_fields, as it survives multiple calls in the serializer across objects.
+        # Never modify self.skip_fields, as it survives multiple calls in the
+        # serializer across objects.
         obj_skip_fields = set(self.skip_fields)
         if not self.are_only_admin_visible_fields_allowed(obj):
             obj_skip_fields |= set(self.only_admin_visible_fields)
@@ -306,7 +308,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         if value and self.context["request"].method == "POST":
             id_data_source_prefix = value.split(":", 1)[0]
             if id_data_source_prefix != data_source.id:
-                # if we are creating, there's no excuse to have any other data source than the request gave
+                # if we are creating, there's no excuse to have any other data source
+                # than the request gave
                 raise serializers.ValidationError(
                     _(
                         "Setting id to %(given)s "
@@ -348,7 +351,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
                 _(
                     "Setting %(field)s to %(given)s "
                     "is not allowed for this user. The %(field)s "
-                    "must be left blank or set to %(required)s or any other organization "
+                    "must be left blank or set to %(required)s or any other organization "  # noqa: E501
                     "the user belongs to."
                 )
                 % {
@@ -371,7 +374,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             )
 
             if value.replaced_by:
-                # for replaced organizations, we automatically update to the current organization
+                # for replaced organizations, we automatically update to the current organization  # noqa: E501
                 # even if the POST uses the old id
                 return value.replaced_by
 
@@ -382,7 +385,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             name_exists = False
             languages = [x[0] for x in settings.LANGUAGES]
             for language in languages:
-                # null or empty strings are not allowed, they are the same as missing name!
+                # null or empty strings are not allowed, they are the same as missing
+                # name!
                 name_lang_key = "name_%s" % language
                 if (
                     data.get(name_lang_key)

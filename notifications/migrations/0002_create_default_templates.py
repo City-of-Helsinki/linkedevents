@@ -116,7 +116,7 @@ def _get_text(notification_type, language, field):
     return text
 
 
-def create_existing_notifications(NotificationTemplate):
+def create_existing_notifications(NotificationTemplate):  # noqa: N803
     for notification_type in NOTIFICATION_TYPES:
         subject = _get_text(notification_type, DEFAULT_LANGUAGE, "subject")
         html_body = _get_text(notification_type, DEFAULT_LANGUAGE, "html_body")

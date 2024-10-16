@@ -4,7 +4,7 @@ from django.conf import settings
 from requests import RequestException
 from rest_framework import status
 
-from web_store.exceptions import WebStoreImproperlyConfiguredException
+from web_store.exceptions import WebStoreImproperlyConfiguredError
 from web_store.order.enums import WebStoreOrderRefundStatus
 from web_store.payment.clients import WebStorePaymentAPIClient
 from web_store.payment.enums import WebStorePaymentStatus
@@ -100,7 +100,7 @@ def test_mandatory_web_store_payment_setting_missing_causes_right_exception(
 ):
     setattr(settings, setting_name, setting_value)
 
-    with pytest.raises(WebStoreImproperlyConfiguredException):
+    with pytest.raises(WebStoreImproperlyConfiguredError):
         WebStorePaymentAPIClient()
 
 

@@ -200,7 +200,7 @@ def assert_confirmation_email_sent_to_contact_person(
 
 
 def assert_confirmation_sent_to_contact_person(
-    signup_or_signup_group: Union[SignUpGroup, SignUp]
+    signup_or_signup_group: Union[SignUpGroup, SignUp],
 ):
     if not signup_or_signup_group.actual_contact_person:
         assert len(mail.outbox) == 0
@@ -268,7 +268,7 @@ def assert_payment_refund_failed(api_client, data: dict, payment: SignUpPayment)
 
 
 def assert_payment_or_refund_id_audit_logged(
-    obj: Union[SignUpPayment, SignUpPaymentRefund]
+    obj: Union[SignUpPayment, SignUpPaymentRefund],
 ) -> None:
     assert AuditLogEntry.objects.count() == 1
 

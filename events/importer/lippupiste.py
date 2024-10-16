@@ -76,7 +76,7 @@ YSO_KEYWORD_MAPS = {
 }
 
 HKT_TPREK_PLACE_MAP = {
-    "Arena-näyttämö": "tprek:46367",  # As of writing, tprek has duplicate, so we will map manually
+    "Arena-näyttämö": "tprek:46367",  # As of writing, tprek has duplicate, so we will map manually  # noqa: E501
     "Gloria, Pieni Roobertinkatu, Helsinki": "tprek:8099",  # String match fails
     "Helsingin Vanha kirkko": "tprek:43184",  # String match fails
 }
@@ -121,7 +121,8 @@ def mark_deleted(obj):
 
 
 def check_deleted(obj):
-    # we don't want to delete past events, so as far as the importer cares, they are considered deleted
+    # we don't want to delete past events, so as far as the importer cares,
+    # they are considered deleted
     if obj.deleted or obj.end_time < datetime.now(pytz.utc):
         return True
     return False
@@ -316,12 +317,14 @@ class LippupisteImporter(Importer):
             candidate_address_sv = place_data["street_address_sv__lower"]
             candidate_postal_code = place_data["postal_code"]
 
-            # If the name matches exactly, the list will not produce better matches, so we can skip the rest
+            # If the name matches exactly, the list will not produce better matches,
+            # so we can skip the rest
             if candidate_place_name and source_place_name == candidate_place_name:
                 self.existing_place_id_matches[source_event["EventVenue"]] = place_id
                 return place_id
 
-            # We might have a partial match instead, check for common and different words
+            # We might have a partial match instead, check for common and different
+            # words
             candidate_place_name_words = set(
                 candidate_place_name.replace(",", " ")
                 .replace("-", " ")
@@ -370,7 +373,8 @@ class LippupisteImporter(Importer):
                 if is_partial_address_match:
                     matches_by_partial_address.append(place_id)
 
-            # If none of the above match, the promoter might be the key and the venue just extra info
+            # If none of the above match, the promoter might be the key and the venue
+            # just extra info
             if candidate_place_name and source_provider_name == candidate_place_name:
                 matches_by_provider_name.append(place_id)
 
@@ -382,7 +386,7 @@ class LippupisteImporter(Importer):
         place_id = None
         if matches_by_address:
             logger.info(
-                "address match, pick the name with most common words and least different words, if any:"
+                "address match, pick the name with most common words and least different words, if any:"  # noqa: E501
             )
             if len(matches_by_address) > 1:
                 for _common_words, match_list in sorted(
@@ -410,7 +414,7 @@ class LippupisteImporter(Importer):
             return place_id
         if matches_by_partial_name:
             logger.info(
-                "partial name match, pick the name with most common words and least different words:"
+                "partial name match, pick the name with most common words and least different words:"  # noqa: E501
             )
             most_common_words = max(matches_by_partial_name.keys())
             most_common_matches = matches_by_partial_name[most_common_words]
@@ -424,7 +428,8 @@ class LippupisteImporter(Importer):
         if matches_by_provider_name:
             logger.info("provider name match:")
             place_id = matches_by_provider_name[0]
-            # provider name was an exact match, so we assume all events in this venue will match
+            # provider name was an exact match, so we assume all events in this venue
+            # will match
             self.existing_place_id_matches[source_event["EventVenue"]] = place_id
             logger.info(Place.objects.get(id=place_id))
             return place_id
@@ -448,7 +453,7 @@ class LippupisteImporter(Importer):
         event_date = datetime.strptime(source_event["EventDate"], "%d.%m.%Y").date()
         event_time = datetime.strptime(source_event["EventTime"], "%H:%M").time()
         event_datetime = LOCAL_TZ.localize(datetime.combine(event_date, event_time))
-        # we would prefer to retain the local timezone, so as to better communicate it to base importer
+        # we would prefer to retain the local timezone, so as to better communicate it to base importer  # noqa: E501
         # event_datetime = event_datetime.astimezone(pytz.utc)
         event["start_time"] = event_datetime
         provider = source_event["EventPromoterName"]
@@ -676,8 +681,9 @@ class LippupisteImporter(Importer):
                 # not ignored
                 # check if the event already exists from another data source
                 for data_source in DATA_SOURCES_TO_CHECK_FOR_DUPLICATES:
-                    # the event name must *start* with an existing event name, as lippupiste uses suffixes
-                    # there is no standard django method for filtering startswith this way around
+                    # the event name must *start* with an existing event name, as lippupiste uses suffixes  # noqa: E501
+                    # there is no standard django method for filtering startswith this
+                    # way around
                     event_name = source_event["EventName"].lower()
                     if Event.objects.filter(
                         data_source=data_source,
@@ -689,7 +695,7 @@ class LippupisteImporter(Importer):
                         logger.info("---------")
                         logger.info(source_event["EventName"])
                         logger.info(
-                            "omitting due to event existing already in another data source:"
+                            "omitting due to event existing already in another data source:"  # noqa: E501
                         )
                         logger.info(data_source)
                         break
@@ -701,7 +707,8 @@ class LippupisteImporter(Importer):
 
         self._synch_events(events)
 
-        # Because super events must exist to be linked, do this after synch. We also need to resynch.
+        # Because super events must exist to be linked, do this after synch. We
+        # also need to resynch.
         self._cache_super_event_ids()
         for source_event in event_source_data:
             self._link_event_to_superevent(source_event, events)

@@ -12,7 +12,7 @@ def forward(apps, schema_editor):
             (keyword.events.all() | keyword.audience_events.all()).distinct().count()
         )
         if n_events != keyword.n_events:
-            print("Updating event number for " + str(keyword.name))
+            print("Updating event number for " + str(keyword.name))  # noqa: T201
             keyword.n_events = n_events
             keyword.save(update_fields=("n_events",), skip_last_modified_time=True)
 

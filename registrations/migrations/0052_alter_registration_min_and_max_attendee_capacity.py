@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0051_signuppaymentcancellation_and_external_refund_id"),
     ]

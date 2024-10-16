@@ -16,6 +16,7 @@ from events.tests.factories import OfferFactory
 from events.tests.utils import versioned_reverse as reverse
 from registrations.enums import VatPercentage
 from registrations.models import (
+    VAT_CODE_MAPPING,
     PriceGroup,
     Registration,
     RegistrationPriceGroup,
@@ -25,7 +26,6 @@ from registrations.models import (
     RegistrationWebStoreProductMapping,
     SignUp,
     SignUpPayment,
-    VAT_CODE_MAPPING,
 )
 from registrations.tests.factories import (
     PriceGroupFactory,

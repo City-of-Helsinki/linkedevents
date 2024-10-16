@@ -182,7 +182,6 @@ class TestTransport(Transport):
 
     def capture_envelope(self, _: Envelope) -> None:
         """No-op capture_envelope for tests"""
-        pass
 
 
 @pytest.fixture

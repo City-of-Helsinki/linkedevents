@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
-from drf_spectacular.utils import extend_schema_field, OpenApiTypes
+from drf_spectacular.utils import OpenApiTypes, extend_schema_field
 from munigeo.api import DEFAULT_SRS, GeoModelSerializer
 from munigeo.api import TranslatedModelSerializer as ParlerTranslatedModelSerializer
 from munigeo.models import AdministrativeDivision
@@ -41,6 +41,7 @@ from events.fields import (
     StringSlugRelatedField,
 )
 from events.models import (
+    PUBLICATION_STATUSES,
     DataSource,
     Event,
     EventLink,
@@ -52,7 +53,6 @@ from events.models import (
     License,
     Offer,
     Place,
-    PUBLICATION_STATUSES,
     PublicationStatus,
     Video,
 )
@@ -257,7 +257,8 @@ class KeywordSerializer(EditableLinkedEventsObjectSerializer):
             id_data_source_prefix = value.split(":", 1)[0]
             data_source = self.context["data_source"]
             if id_data_source_prefix != data_source.id:
-                # the object might be from another data source by the same organization, and we are only editing it
+                # the object might be from another data source by the same organization,
+                # and we are only editing it
                 if (
                     self.instance
                     and self.context["publisher"]
@@ -308,7 +309,9 @@ class KeywordSetSerializer(LinkedEventsSerializer):
     )
 
     def to_internal_value(self, data):
-        # extracting ids from the '@id':'http://testserver/v1/keyword/system:tunnettu_avainsana/' type record
+        # extracting ids from the
+        # '@id':'http://testserver/v1/keyword/system:tunnettu_avainsana/' type
+        # record
         keyword_ids = [
             urllib.parse.unquote(i.get("@id", "").rstrip("/").split("/")[-1])
             for i in data.get("keywords", {})
@@ -509,7 +512,7 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
                 )
             else:
                 raise ParseError(
-                    f"Two coordinates have to be provided and they should be float. You provided {coord}"
+                    f"Two coordinates have to be provided and they should be float. You provided {coord}"  # noqa: E501
                 )
         return None
 
@@ -700,7 +703,7 @@ class OrganizationDetailSerializer(OrganizationListSerializer):
                     ]
                 else:
                     raise ParseError(
-                        f"{org_type} should be a list, you provided {type(self.request.data[org_type])}"
+                        f"{org_type} should be a list, you provided {type(self.request.data[org_type])}"  # noqa: E501
                     )
 
         web_store_merchants = validated_data.pop("web_store_merchants", None)
@@ -1006,7 +1009,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         if "publication_status" not in data:
             data["publication_status"] = PublicationStatus.PUBLIC
 
-        # If the event is a draft, postponed or cancelled, no further validation is performed
+        # If the event is a draft, postponed or cancelled, no further validation is performed  # noqa: E501
         # For external users do all validations.
         if (
             data["publication_status"] == PublicationStatus.DRAFT
@@ -1162,7 +1165,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             {
                 "created_by": user,
                 "last_modified_by": user,
-                "created_time": Event.now(),  # we must specify creation time as we are setting id
+                "created_time": Event.now(),  # we must specify creation time as we are setting id  # noqa: E501
                 "event_status": Event.Status.SCHEDULED,
                 # mark all newly created events as scheduled
             }
@@ -1217,7 +1220,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             raise DRFPermissionDenied(_("Cannot edit a past event."))
 
         # The API only allows scheduling and cancelling events.
-        # POSTPONED and RESCHEDULED may not be set, but should be allowed in already set instances.
+        # POSTPONED and RESCHEDULED may not be set, but should be allowed in
+        # already set instances.
         if (
             validated_data.get("event_status")
             in (
@@ -1236,7 +1240,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 }
             )
 
-        # Update event_status if a PUBLIC SCHEDULED or CANCELLED event start_time is updated.
+        # Update event_status if a PUBLIC SCHEDULED or CANCELLED event start_time is updated.  # noqa: E501
         # DRAFT events will remain SCHEDULED up to publication.
         # Check that the event is not explicitly CANCELLED at the same time.
         if (
@@ -1244,7 +1248,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             and validated_data.get("event_status", Event.Status.SCHEDULED)
             != Event.Status.CANCELLED
         ):
-            # if the instance was ever CANCELLED, RESCHEDULED or POSTPONED, it may never be SCHEDULED again
+            # if the instance was ever CANCELLED, RESCHEDULED or POSTPONED, it may
+            # never be SCHEDULED again
             if instance.event_status != Event.Status.SCHEDULED:
                 if validated_data.get("event_status") == Event.Status.SCHEDULED:
                     raise serializers.ValidationError(
@@ -1348,8 +1353,9 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 ret["end_time"] = None
 
             else:
-                # If we're storing only the date part, do not pretend we have the exact time.
-                # Timestamp is of the form %Y-%m-%dT00:00:00, so we report the previous date.
+                # If we're storing only the date part, do not pretend we have the exact time.  # noqa: E501
+                # Timestamp is of the form %Y-%m-%dT00:00:00, so we report the previous
+                # date.
                 ret["end_time"] = utils.start_of_previous_day(obj.end_time).strftime(
                     "%Y-%m-%d"
                 )
