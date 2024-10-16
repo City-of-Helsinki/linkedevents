@@ -48,7 +48,7 @@ def test_filter_full_text_wrong_language():
     request = Mock()
     request.query_params = {"x_full_text_language": "unknown"}
     filter_set = EventFilter(request=request)
-    with pytest.raises(ValidationError) as ex:
+    with pytest.raises(ValidationError):
         filter_set.filter_x_full_text(None, "x_full_text", "something")
 
 
