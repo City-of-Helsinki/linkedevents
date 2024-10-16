@@ -19,4 +19,5 @@ pytest-factoryboy
 pytest-freezer
 python-jose
 requests-mock
+ruff
 snakemd
