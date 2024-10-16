@@ -20,7 +20,6 @@ def migrate_merchant_ids(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0046_alter_webstoremerchant_url"),
     ]

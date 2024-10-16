@@ -7,7 +7,6 @@ import registrations.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0050_registration_merchant_and_account"),
     ]

@@ -2454,8 +2454,9 @@ class Kurssidata(Enkora):
         # Sanity:
         if len(reservation_event_groups) != 1:
             raise RuntimeError(
-                "Getting reservation event group {} "
-                "resulted in {} items!".format(course_id, len(reservation_event_groups))
+                "Getting reservation event group {} " "resulted in {} items!".format(
+                    course_id, len(reservation_event_groups)
+                )
             )
         reservation_event_group = reservation_event_groups[0]
 

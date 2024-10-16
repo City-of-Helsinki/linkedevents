@@ -40,9 +40,7 @@ def signup3(registration):
     return signup
 
 
-@pytest.fixture(
-    params=[False, True], ids=["single event", "recurring event"]
-)  # noqa: F405
+@pytest.fixture(params=[False, True], ids=["single event", "recurring event"])  # noqa: F405
 def price_group(request):
     if request.param:
         return create_price_group_for_recurring_event()

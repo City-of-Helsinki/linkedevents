@@ -41,7 +41,6 @@ def migrate_to_new_general_vat_percentage(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         (
             "registrations",

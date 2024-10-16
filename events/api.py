@@ -520,7 +520,7 @@ class KeywordListViewSet(
             # no need to search English if there are accented letters
             langs = (
                 ["fi", "sv"]
-                if re.search("[\u00C0-\u00FF]", val)
+                if re.search("[\u00c0-\u00ff]", val)
                 else ["fi", "sv", "en"]
             )
             tri = [TrigramSimilarity(f"name_{i}", val) for i in langs]
@@ -1153,16 +1153,12 @@ class OrganizationViewSet(
         ).prefetch_related(
             Prefetch(
                 "children",
-                queryset=Organization.objects.filter(
-                    internal_type="normal"
-                ),  # noqa E501
+                queryset=Organization.objects.filter(internal_type="normal"),  # noqa E501
                 to_attr="sub_organizations",
             ),
             Prefetch(
                 "children",
-                queryset=Organization.objects.filter(
-                    internal_type="affiliated"
-                ),  # noqa E501
+                queryset=Organization.objects.filter(internal_type="affiliated"),  # noqa E501
                 to_attr="affiliated_organizations",
             ),
         )
@@ -1913,7 +1909,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
 
             langs = (
                 ["fi", "sv"]
-                if re.search("[\u00C0-\u00FF]", val)
+                if re.search("[\u00c0-\u00ff]", val)
                 else ["fi", "sv", "en"]
             )
             tri = [TrigramSimilarity(f"name_{i}", val) for i in langs]

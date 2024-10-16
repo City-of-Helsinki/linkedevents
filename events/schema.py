@@ -70,25 +70,25 @@ class DataSourceSerializerExtension(OpenApiSerializerExtension):
 
         result["properties"]["id"]["description"] = "Identifier of the data source."
         result["properties"]["name"]["description"] = "Name of the data source."
-        result["properties"]["user_editable_resources"][
-            "description"
-        ] = "Boolean to define if resources maybe be edited by users."
-        result["properties"]["user_editable_organizations"][
-            "description"
-        ] = "Boolean to define if organizations may be edited by users."
-        result["properties"]["edit_past_events"][
-            "description"
-        ] = "Boolean to define if past events may be created using API."
-        result["properties"]["create_past_events"][
-            "description"
-        ] = "Boolean to define if past events may be created using API."
+        result["properties"]["user_editable_resources"]["description"] = (
+            "Boolean to define if resources maybe be edited by users."
+        )
+        result["properties"]["user_editable_organizations"]["description"] = (
+            "Boolean to define if organizations may be edited by users."
+        )
+        result["properties"]["edit_past_events"]["description"] = (
+            "Boolean to define if past events may be created using API."
+        )
+        result["properties"]["create_past_events"]["description"] = (
+            "Boolean to define if past events may be created using API."
+        )
         result["properties"]["private"]["description"] = (
             "Boolean to define is data source private. By default events of private data source "
             "are hidden."
         )
-        result["properties"]["owner"][
-            "description"
-        ] = "Owner organization of the data source."
+        result["properties"]["owner"]["description"] = (
+            "Owner organization of the data source."
+        )
 
         return result
 
@@ -118,14 +118,14 @@ class EventSerializerExtension(OpenApiSerializerExtension):
             "to more information about the event."
         )
 
-        result["properties"]["keywords"][
-            "description"
-        ] = "The keywords that describe the topic and type of this event."
+        result["properties"]["keywords"]["description"] = (
+            "The keywords that describe the topic and type of this event."
+        )
         result["required"].append("keywords")
 
-        result["properties"]["super_event"][
-            "description"
-        ] = "References the aggregate event containing this event."
+        result["properties"]["super_event"]["description"] = (
+            "References the aggregate event containing this event."
+        )
         result["properties"]["super_event_type"]["description"] = (
             "If the event has sub_events, describes the type of the event. Current options are "
             "<code>null</code>, <code>recurring</code>, which means a repeating event, and "
@@ -135,9 +135,9 @@ class EventSerializerExtension(OpenApiSerializerExtension):
             "As defined in schema.org/Event. Postponed events do not have a date set, "
             "rescheduled events have been moved to different date."
         )
-        result["properties"]["type_id"][
-            "description"
-        ] = "Event type. Current options are General (Event), Course and Volunteering."
+        result["properties"]["type_id"]["description"] = (
+            "Event type. Current options are General (Event), Course and Volunteering."
+        )
 
         result["properties"]["publication_status"]["description"] = (
             "Specifies whether the event should be published in the API (<code>public</code>) or "
@@ -149,81 +149,81 @@ class EventSerializerExtension(OpenApiSerializerExtension):
             "Unique identifier (URI)for the system from which this event came from, preferably "
             "URL with more information about the system and its policies."
         )
-        result["properties"]["publisher"][
-            "description"
-        ] = "Id of the organization that published this event in Linked events."
+        result["properties"]["publisher"]["description"] = (
+            "Id of the organization that published this event in Linked events."
+        )
         result["properties"]["sub_events"]["description"] = (
             "For aggregate events this contains references to all sub events. Usually this "
             "means that the sub events are part of series. The field <code>super_event_type</code> "
             "tells the type of the aggregate event."
         )
-        result["properties"]["in_language"][
-            "description"
-        ] = "The languages spoken or supported at the event."
-        result["properties"]["audience"][
-            "description"
-        ] = "The audience groups (picked from keywords) this event is intended for."
-        result["properties"]["created_time"][
-            "description"
-        ] = "Time when the event was created."
-        result["properties"]["last_modified_time"][
-            "description"
-        ] = "Time when the event was last modified."
-        result["properties"]["created_by"][
-            "description"
-        ] = "URL reference to the user that created this event (user endpoint)."
-        result["properties"]["last_modified_by"][
-            "description"
-        ] = "URL reference to the user that last modified this event (user endpoint)."
-        result["properties"]["date_published"][
-            "description"
-        ] = "Date this event is free to be published."
+        result["properties"]["in_language"]["description"] = (
+            "The languages spoken or supported at the event."
+        )
+        result["properties"]["audience"]["description"] = (
+            "The audience groups (picked from keywords) this event is intended for."
+        )
+        result["properties"]["created_time"]["description"] = (
+            "Time when the event was created."
+        )
+        result["properties"]["last_modified_time"]["description"] = (
+            "Time when the event was last modified."
+        )
+        result["properties"]["created_by"]["description"] = (
+            "URL reference to the user that created this event (user endpoint)."
+        )
+        result["properties"]["last_modified_by"]["description"] = (
+            "URL reference to the user that last modified this event (user endpoint)."
+        )
+        result["properties"]["date_published"]["description"] = (
+            "Date this event is free to be published."
+        )
 
         result["properties"]["start_time"]["description"] = "Time the event will start."
         result["required"].append("start_time")
 
         result["properties"]["end_time"]["description"] = "Time the event will end."
         result["properties"]["user_name"]["description"] = "Name of the external user."
-        result["properties"]["user_email"][
-            "description"
-        ] = "Email of the external user."
-        result["properties"]["user_phone_number"][
-            "description"
-        ] = "Phone number of the external user."
-        result["properties"]["user_organization"][
-            "description"
-        ] = "Organization of the external user."
-        result["properties"]["user_consent"][
-            "description"
-        ] = "Consent to user information of the external user."
-        result["properties"]["environment"][
-            "description"
-        ] = "Environment of the event. Current options are in (Indoor) and out (Outdoor)."
-        result["properties"]["environmental_certificate"][
-            "description"
-        ] = "Url of the environmental certificate."
-        result["properties"]["audience_min_age"][
-            "description"
-        ] = "Minimum age of attendees."
-        result["properties"]["audience_max_age"][
-            "description"
-        ] = "Maximum age of attendees."
-        result["properties"]["deleted"][
-            "description"
-        ] = "Whether this event has been deleted in the original data source."
+        result["properties"]["user_email"]["description"] = (
+            "Email of the external user."
+        )
+        result["properties"]["user_phone_number"]["description"] = (
+            "Phone number of the external user."
+        )
+        result["properties"]["user_organization"]["description"] = (
+            "Organization of the external user."
+        )
+        result["properties"]["user_consent"]["description"] = (
+            "Consent to user information of the external user."
+        )
+        result["properties"]["environment"]["description"] = (
+            "Environment of the event. Current options are in (Indoor) and out (Outdoor)."
+        )
+        result["properties"]["environmental_certificate"]["description"] = (
+            "Url of the environmental certificate."
+        )
+        result["properties"]["audience_min_age"]["description"] = (
+            "Minimum age of attendees."
+        )
+        result["properties"]["audience_max_age"]["description"] = (
+            "Maximum age of attendees."
+        )
+        result["properties"]["deleted"]["description"] = (
+            "Whether this event has been deleted in the original data source."
+        )
         result["properties"]["maximum_attendee_capacity"]["description"] = (
             "Maximum number of people allowed to enrol to the event. Can also be an estimate of "
             "the maximum number of attendees."
         )
-        result["properties"]["minimum_attendee_capacity"][
-            "description"
-        ] = "Minimum number of people required to enrol to the event."
-        result["properties"]["enrolment_start_time"][
-            "description"
-        ] = "Time when enrolment for the event will start."
-        result["properties"]["enrolment_end_time"][
-            "description"
-        ] = "Time when enrolment for the event will end."
+        result["properties"]["minimum_attendee_capacity"]["description"] = (
+            "Minimum number of people required to enrol to the event."
+        )
+        result["properties"]["enrolment_start_time"]["description"] = (
+            "Time when enrolment for the event will start."
+        )
+        result["properties"]["enrolment_end_time"]["description"] = (
+            "Time when enrolment for the event will end."
+        )
 
         result["properties"]["custom_data"] = get_custom_data_schema()
 
@@ -336,15 +336,15 @@ class EventLinkSerializerExtension(OpenApiSerializerExtension):
             "most likely point to unstructured content, ie. web pages suitable for human viewing."
         )
 
-        result["properties"]["name"][
-            "description"
-        ] = "Name describing contents of the link."
-        result["properties"]["link"][
-            "description"
-        ] = "Link to an external related entity."
-        result["properties"]["language"][
-            "description"
-        ] = "Language of the content behind the link."
+        result["properties"]["name"]["description"] = (
+            "Name describing contents of the link."
+        )
+        result["properties"]["link"]["description"] = (
+            "Link to an external related entity."
+        )
+        result["properties"]["language"]["description"] = (
+            "Language of the content behind the link."
+        )
 
         return result
 
@@ -364,35 +364,35 @@ class ImageSerializerExtension(OpenApiSerializerExtension):
             'License data for the image. May be "cc_by" (default) or "event_only". The latter '
             "license restricts use of the image and is specified on the API front page."
         )
-        result["properties"]["created_time"][
-            "description"
-        ] = "Time when the image was created."
-        result["properties"]["last_modified_time"][
-            "description"
-        ] = "Time when the image was last modified."
-        result["properties"]["created_by"][
-            "description"
-        ] = "URL reference to the user that created this image (user endpoint)."
-        result["properties"]["last_modified_by"][
-            "description"
-        ] = "URL reference to the user that last modified this image (user endpoint)."
+        result["properties"]["created_time"]["description"] = (
+            "Time when the image was created."
+        )
+        result["properties"]["last_modified_time"]["description"] = (
+            "Time when the image was last modified."
+        )
+        result["properties"]["created_by"]["description"] = (
+            "URL reference to the user that created this image (user endpoint)."
+        )
+        result["properties"]["last_modified_by"]["description"] = (
+            "URL reference to the user that last modified this image (user endpoint)."
+        )
         result["properties"]["name"]["description"] = "Image description."
 
         result["properties"]["url"]["description"] = "The image file URL."
         result["required"].append("url")
 
         result["properties"]["cropping"]["description"] = "Cropping data for the image."
-        result["properties"]["photographer_name"][
-            "description"
-        ] = "Name of the photographer."
+        result["properties"]["photographer_name"]["description"] = (
+            "Name of the photographer."
+        )
         result["properties"]["data_source"]["description"] = (
             "Identifies the source for data, this is specific to API provider. This is useful "
             "for API users, as any data quality issues are likely to be specific to data source "
             "and workarounds can be applied as such."
         )
-        result["properties"]["publisher"][
-            "description"
-        ] = "The organization responsible for the image."
+        result["properties"]["publisher"]["description"] = (
+            "The organization responsible for the image."
+        )
 
         result["properties"]["alt_text"] = {
             "type": "object",
@@ -434,46 +434,46 @@ class KeywordSerializerExtension(OpenApiSerializerExtension):
             "standardized namespaces this will be a shared identifier."
         )
 
-        result["properties"]["alt_labels"][
-            "description"
-        ] = "Alternative labels for this keyword, no language specified."
+        result["properties"]["alt_labels"]["description"] = (
+            "Alternative labels for this keyword, no language specified."
+        )
         result["required"].remove("alt_labels")
 
-        result["properties"]["created_time"][
-            "description"
-        ] = "Time when the keyword was created"
-        result["properties"]["last_modified_time"][
-            "description"
-        ] = "Time when the keyword was last modified"
-        result["properties"]["created_by"][
-            "description"
-        ] = "URL reference to the user that created this keyword (user endpoint)."
-        result["properties"]["last_modified_by"][
-            "description"
-        ] = "URL reference to the user that last modified this keyword (user endpoint)."
-        result["properties"]["aggregate"][
-            "description"
-        ] = "This keyword is an combination of several keywords at source."
+        result["properties"]["created_time"]["description"] = (
+            "Time when the keyword was created"
+        )
+        result["properties"]["last_modified_time"]["description"] = (
+            "Time when the keyword was last modified"
+        )
+        result["properties"]["created_by"]["description"] = (
+            "URL reference to the user that created this keyword (user endpoint)."
+        )
+        result["properties"]["last_modified_by"]["description"] = (
+            "URL reference to the user that last modified this keyword (user endpoint)."
+        )
+        result["properties"]["aggregate"]["description"] = (
+            "This keyword is an combination of several keywords at source."
+        )
         result["properties"]["deprecated"]["description"] = (
             "Whether this keyword has been deprecated in the original data source. It may "
             "still contain old events linked to it."
         )
-        result["properties"]["has_upcoming_events"][
-            "description"
-        ] = "Tells if this keyword entry has any upcoming events."
-        result["properties"]["n_events"][
-            "description"
-        ] = "Amount of events using this keyword entry as a keyword or an audience."
-        result["properties"]["image"][
-            "description"
-        ] = "Id of the this keyword entry's image."
+        result["properties"]["has_upcoming_events"]["description"] = (
+            "Tells if this keyword entry has any upcoming events."
+        )
+        result["properties"]["n_events"]["description"] = (
+            "Amount of events using this keyword entry as a keyword or an audience."
+        )
+        result["properties"]["image"]["description"] = (
+            "Id of the this keyword entry's image."
+        )
         result["properties"]["data_source"]["description"] = (
             "Source of the keyword, typically API provider specific identifier. Will also be "
             "used to specify standardized namespaces as they are brought into use."
         )
-        result["properties"]["publisher"][
-            "description"
-        ] = "Id of the organization that has originally published this keyword."
+        result["properties"]["publisher"]["description"] = (
+            "Id of the organization that has originally published this keyword."
+        )
 
         result["properties"]["name"] = {
             "type": "object",
@@ -508,34 +508,34 @@ class KeywordSetSerializerExtension(OpenApiSerializerExtension):
             "source and the keyword set itself, and preferably also well formed http-URLs "
             "pointing to more information about the keyword."
         )
-        result["properties"]["origin_id"][
-            "description"
-        ] = "Identifier for the keyword set in the originating system, if any."
+        result["properties"]["origin_id"]["description"] = (
+            "Identifier for the keyword set in the originating system, if any."
+        )
         result["properties"]["usage"]["description"] = (
             "Usage type for this keyword set. These allow UIs to show the set in "
             "appropriate place."
         )
-        result["properties"]["created_time"][
-            "description"
-        ] = "Time when the keyword set was created."
-        result["properties"]["last_modified_time"][
-            "description"
-        ] = "Time when the keyword set was last modified."
-        result["properties"]["created_by"][
-            "description"
-        ] = "URL reference to the user that created this keyword set (user endpoint)."
-        result["properties"]["last_modified_by"][
-            "description"
-        ] = "URL reference to the user that last modified this keyword set (user endpoint)."
-        result["properties"]["image"][
-            "description"
-        ] = "Id of the this keyword set entry's image."
-        result["properties"]["data_source"][
-            "description"
-        ] = "Unique identifier (URI)for the system where this keyword set originated, if any."
-        result["properties"]["organization"][
-            "description"
-        ] = "Organization that has defined this keyword set."
+        result["properties"]["created_time"]["description"] = (
+            "Time when the keyword set was created."
+        )
+        result["properties"]["last_modified_time"]["description"] = (
+            "Time when the keyword set was last modified."
+        )
+        result["properties"]["created_by"]["description"] = (
+            "URL reference to the user that created this keyword set (user endpoint)."
+        )
+        result["properties"]["last_modified_by"]["description"] = (
+            "URL reference to the user that last modified this keyword set (user endpoint)."
+        )
+        result["properties"]["image"]["description"] = (
+            "Id of the this keyword set entry's image."
+        )
+        result["properties"]["data_source"]["description"] = (
+            "Unique identifier (URI)for the system where this keyword set originated, if any."
+        )
+        result["properties"]["organization"]["description"] = (
+            "Organization that has defined this keyword set."
+        )
 
         result["properties"]["name"] = {
             "type": "object",
@@ -570,9 +570,9 @@ class LanguageSerializerExtension(OpenApiSerializerExtension):
             "names of the languages."
         )
 
-        result["properties"]["id"][
-            "description"
-        ] = "Identifier for the language (typically ISO639-1)."
+        result["properties"]["id"]["description"] = (
+            "Identifier for the language (typically ISO639-1)."
+        )
         result["properties"]["translation_available"]["description"] = (
             "Event data may have translations in the languages which have "
             "<code>translation_available</code> set to <code>true</code>."
@@ -612,9 +612,9 @@ class OfferSerializerExtension(OpenApiSerializerExtension):
             "event. These are indicated using is_free flag, which is searchable."
         )
 
-        result["properties"]["is_free"][
-            "description"
-        ] = "Whether the event has an admission fee or not."
+        result["properties"]["is_free"]["description"] = (
+            "Whether the event has an admission fee or not."
+        )
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             result["properties"]["offer_price_groups"]["description"] = (
@@ -692,28 +692,28 @@ class OrganizationSerializerExtensionMixin:
             "Source of the organization data, typically API provider specific identifier. "
             "Will also be used to specify standardized namespaces as they are brought into use."
         )
-        result["properties"]["classification"][
-            "description"
-        ] = "Id of the organization type."
+        result["properties"]["classification"]["description"] = (
+            "Id of the organization type."
+        )
         result["properties"]["name"]["description"] = "The name of the organization."
-        result["properties"]["founding_date"][
-            "description"
-        ] = "Time the organization was founded."
-        result["properties"]["dissolution_date"][
-            "description"
-        ] = "Time the organization was dissolved. If present, the organization no longer exists."
-        result["properties"]["created_time"][
-            "description"
-        ] = "Time when the organization was created."
-        result["properties"]["last_modified_time"][
-            "description"
-        ] = "Time when the organization was last modified."
-        result["properties"]["created_by"][
-            "description"
-        ] = "URL reference to the user that created this organization (user endpoint)."
-        result["properties"]["last_modified_by"][
-            "description"
-        ] = "URL reference to the user that last modified this organization (user endpoint)."
+        result["properties"]["founding_date"]["description"] = (
+            "Time the organization was founded."
+        )
+        result["properties"]["dissolution_date"]["description"] = (
+            "Time the organization was dissolved. If present, the organization no longer exists."
+        )
+        result["properties"]["created_time"]["description"] = (
+            "Time when the organization was created."
+        )
+        result["properties"]["last_modified_time"]["description"] = (
+            "Time when the organization was last modified."
+        )
+        result["properties"]["created_by"]["description"] = (
+            "URL reference to the user that created this organization (user endpoint)."
+        )
+        result["properties"]["last_modified_by"]["description"] = (
+            "URL reference to the user that last modified this organization (user endpoint)."
+        )
 
         result["properties"]["sub_organizations"] = {
             "type": "array",
@@ -788,21 +788,21 @@ class OrganizationClassSerializerExtension(OpenApiSerializerExtension):
             "Organization classes are used for organization classification."
         )
 
-        result["properties"]["id"][
-            "description"
-        ] = "Consists of source prefix and source specific identifier."
-        result["properties"]["name"][
-            "description"
-        ] = "The name of the organization class."
+        result["properties"]["id"]["description"] = (
+            "Consists of source prefix and source specific identifier."
+        )
+        result["properties"]["name"]["description"] = (
+            "The name of the organization class."
+        )
 
-        result["properties"]["created_time"][
-            "description"
-        ] = "Time when the organization class was created."
+        result["properties"]["created_time"]["description"] = (
+            "Time when the organization class was created."
+        )
         result["required"].append("created_time")
 
-        result["properties"]["last_modified_time"][
-            "description"
-        ] = "Time when the organization class was last modified."
+        result["properties"]["last_modified_time"]["description"] = (
+            "Time when the organization class was last modified."
+        )
 
         result["properties"]["data_source"]["description"] = (
             "Source of the organization data, typically API provider specific identifier. "
@@ -840,49 +840,49 @@ class PlaceSerializerExtension(OpenApiSerializerExtension):
         )
         result["required"].append("origin_id")
 
-        result["properties"]["publisher"][
-            "description"
-        ] = "Organization that provided the location data"
-        result["properties"]["created_time"][
-            "description"
-        ] = "Time when the place was created"
-        result["properties"]["last_modified_time"][
-            "description"
-        ] = "Time when the place was last modified"
-        result["properties"]["created_by"][
-            "description"
-        ] = "URL reference to the user that created this place (user endpoint)."
-        result["properties"]["last_modified_by"][
-            "description"
-        ] = "URL reference to the user that last modified this place (user endpoint)."
-        result["properties"]["email"][
-            "description"
-        ] = "Contact email for the place, note that this is not multilingual."
-        result["properties"]["address_region"][
-            "description"
-        ] = "Larger region for address (like states), not typically used in Finland."
-        result["properties"]["postal_code"][
-            "description"
-        ] = "Postal code of the location (as used by traditional mail)."
-        result["properties"]["post_office_box_num"][
-            "description"
-        ] = "PO box for traditional mail, in case mail is not delivered to the building."
-        result["properties"]["address_country"][
-            "description"
-        ] = "Country for the place, not multilingual."
+        result["properties"]["publisher"]["description"] = (
+            "Organization that provided the location data"
+        )
+        result["properties"]["created_time"]["description"] = (
+            "Time when the place was created"
+        )
+        result["properties"]["last_modified_time"]["description"] = (
+            "Time when the place was last modified"
+        )
+        result["properties"]["created_by"]["description"] = (
+            "URL reference to the user that created this place (user endpoint)."
+        )
+        result["properties"]["last_modified_by"]["description"] = (
+            "URL reference to the user that last modified this place (user endpoint)."
+        )
+        result["properties"]["email"]["description"] = (
+            "Contact email for the place, note that this is not multilingual."
+        )
+        result["properties"]["address_region"]["description"] = (
+            "Larger region for address (like states), not typically used in Finland."
+        )
+        result["properties"]["postal_code"]["description"] = (
+            "Postal code of the location (as used by traditional mail)."
+        )
+        result["properties"]["post_office_box_num"]["description"] = (
+            "PO box for traditional mail, in case mail is not delivered to the building."
+        )
+        result["properties"]["address_country"]["description"] = (
+            "Country for the place, not multilingual."
+        )
         result["properties"]["deleted"]["description"] = (
             "This place entry is not used anymore, but old events still reference it. This might "
             "be because of duplicate removal."
         )
-        result["properties"]["has_upcoming_events"][
-            "description"
-        ] = "Tells if this place entry has any upcoming events."
-        result["properties"]["n_events"][
-            "description"
-        ] = "Amount of events using this place entry as location."
-        result["properties"]["image"][
-            "description"
-        ] = "Id of the this place entry's image."
+        result["properties"]["has_upcoming_events"]["description"] = (
+            "Tells if this place entry has any upcoming events."
+        )
+        result["properties"]["n_events"]["description"] = (
+            "Amount of events using this place entry as location."
+        )
+        result["properties"]["image"]["description"] = (
+            "Id of the this place entry's image."
+        )
 
         result["properties"]["custom_data"] = get_custom_data_schema()
 
@@ -999,9 +999,9 @@ class VideoSerializerExtension(OpenApiSerializerExtension):
             "Links to videos that the event publisher considers related to this event."
         )
 
-        result["properties"]["name"][
-            "description"
-        ] = "Name describing contents of the video."
+        result["properties"]["name"]["description"] = (
+            "Name describing contents of the video."
+        )
         result["properties"]["url"]["description"] = "URL to the video."
         result["properties"]["alt_text"]["description"] = "The video alt text."
 

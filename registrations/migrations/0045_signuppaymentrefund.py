@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0044_signuppricegroup_external_order_item_id"),
     ]

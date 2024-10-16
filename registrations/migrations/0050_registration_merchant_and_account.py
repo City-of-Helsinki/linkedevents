@@ -51,7 +51,6 @@ def migrate_merchant_and_account_data(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0049_remove_webstoreaccount_vat_code_and_more"),
     ]
