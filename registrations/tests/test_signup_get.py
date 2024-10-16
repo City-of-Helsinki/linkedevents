@@ -1,6 +1,6 @@
 from collections import Counter
 from decimal import Decimal
-from unittest.mock import patch, PropertyMock
+from unittest.mock import PropertyMock, patch
 
 import pytest
 from django.conf import settings

@@ -9,9 +9,8 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, SearchRank
-from django.db.models import Case
+from django.db.models import Case, Exists, F, OuterRef, Q, When
 from django.db.models import DateTimeField as ModelDateTimeField
-from django.db.models import Exists, F, OuterRef, Q, When
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization

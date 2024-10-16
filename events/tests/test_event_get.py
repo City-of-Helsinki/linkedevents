@@ -7,7 +7,7 @@ from dateutil import parser
 from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point
-from django.db import connections, DEFAULT_DB_ALIAS
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.utils.timezone import localtime

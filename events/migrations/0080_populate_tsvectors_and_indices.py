@@ -2,8 +2,7 @@
 """This migration adds language-specific tsvector columns, triggers to update them and indices
    needed for the full-text search on events_event table.
 """
-from django.db import migrations, models
-from django.contrib.postgres.search import SearchVectorField
+from django.db import migrations
 
 
 class Migration(migrations.Migration):

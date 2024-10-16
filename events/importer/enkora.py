@@ -1230,7 +1230,7 @@ class EnkoraImporter(Importer):
         :return: documentation string
         """
         import git  # gitpython
-        from snakemd import Inline, MDList, new_doc, Paragraph
+        from snakemd import Inline, MDList, Paragraph, new_doc
 
         repo = git.Repo(search_parent_directories=True)
         commit_sha = repo.head.object.hexsha

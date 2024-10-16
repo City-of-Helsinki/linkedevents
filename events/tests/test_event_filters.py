@@ -81,21 +81,21 @@ def test_get_event_list_full_text(language):
         name_sv="Test Keyword", name_en="Something else", name_fi="Something else"
     )
     event_fi = EventFactory(
-        id=f"test:fi",
+        id="test:fi",
         name_fi="Test Event",
         name_en="Something else",
         name_sv="Something else",
         location=place_fi,
     )
     event_en = EventFactory(
-        id=f"test:en",
+        id="test:en",
         name_en="Test Event",
         name_fi="Something else",
         name_sv="Something else",
         location=place_en,
     )
     event_sv = EventFactory(
-        id=f"test:sv",
+        id="test:sv",
         name_sv="Test Event",
         name_en="Something else",
         name_fi="Something else",

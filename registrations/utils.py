@@ -8,9 +8,8 @@ from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
-from icalendar import Calendar
+from icalendar import Calendar, vText
 from icalendar import Event as CalendarEvent
-from icalendar import vText
 from requests import RequestException
 
 from registrations.exceptions import WebStoreAPIError, WebStoreRefundValidationError

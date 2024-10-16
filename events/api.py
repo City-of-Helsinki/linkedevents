@@ -1,9 +1,8 @@
 import logging
 import re
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 from datetime import time as datetime_time
-from datetime import timedelta
 from datetime import timezone as datetime_timezone
 from functools import partial, reduce
 from operator import or_
@@ -28,15 +27,15 @@ from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
 from drf_spectacular.utils import (
-    extend_schema,
-    inline_serializer,
     OpenApiParameter,
     OpenApiRequest,
     OpenApiResponse,
     OpenApiTypes,
+    extend_schema,
+    inline_serializer,
 )
 from haystack.query import AutoQuery
-from munigeo.api import build_bbox_filter, GeoModelAPIView, srid_to_srs
+from munigeo.api import GeoModelAPIView, build_bbox_filter, srid_to_srs
 from munigeo.models import AdministrativeDivision
 from rest_framework import (
     filters,
@@ -48,9 +47,8 @@ from rest_framework import (
     viewsets,
 )
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException, ParseError
+from rest_framework.exceptions import APIException, ParseError, ValidationError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
-from rest_framework.exceptions import ValidationError
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -68,9 +66,9 @@ from events.extensions import apply_select_and_prefetch, get_extensions_from_req
 from events.filters import (
     EventFilter,
     EventOrderingFilter,
-    filter_division,
     OrganizationFilter,
     PlaceFilter,
+    filter_division,
 )
 from events.models import (
     DataSource,
@@ -113,8 +111,8 @@ from events.serializers import (
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from linkedevents.registry import register_view
 from linkedevents.schema_utils import (
-    get_common_api_error_responses,
     IncludeOpenApiParameter,
+    get_common_api_error_responses,
 )
 from linkedevents.utils import get_fixed_lang_codes
 from registrations.exceptions import WebStoreAPIError

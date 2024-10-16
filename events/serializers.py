@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
-from drf_spectacular.utils import extend_schema_field, OpenApiTypes
+from drf_spectacular.utils import OpenApiTypes, extend_schema_field
 from munigeo.api import DEFAULT_SRS, GeoModelSerializer
 from munigeo.api import TranslatedModelSerializer as ParlerTranslatedModelSerializer
 from munigeo.models import AdministrativeDivision
@@ -41,6 +41,7 @@ from events.fields import (
     StringSlugRelatedField,
 )
 from events.models import (
+    PUBLICATION_STATUSES,
     DataSource,
     Event,
     EventLink,
@@ -52,7 +53,6 @@ from events.models import (
     License,
     Offer,
     Place,
-    PUBLICATION_STATUSES,
     PublicationStatus,
     Video,
 )

@@ -30,7 +30,7 @@ from events.models import (
 from linkedevents.tests.conftest import *  # noqa
 from registrations.models import Registration
 
-from ..models import License, PublicationStatus
+from ..models import PublicationStatus
 from .utils import versioned_reverse as reverse
 
 TEXT_FI = "testaus"

@@ -6,11 +6,11 @@ from django.utils.translation import gettext as _
 
 from registrations.enums import VatPercentage
 from registrations.models import (
+    VAT_PERCENTAGES,
     Registration,
     RegistrationPriceGroup,
     RegistrationWebStoreAccount,
     RegistrationWebStoreMerchant,
-    VAT_PERCENTAGES,
 )
 
 _PRODUCT_MAPPING_FIELDS = (

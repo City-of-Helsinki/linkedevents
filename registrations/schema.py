@@ -2,7 +2,7 @@ from django.conf import settings
 from drf_spectacular.extensions import OpenApiSerializerExtension
 
 from linkedevents.utils import get_fixed_lang_codes
-from registrations.models import PriceGroup, SignUpPayment, VAT_PERCENTAGES
+from registrations.models import VAT_PERCENTAGES, PriceGroup, SignUpPayment
 from registrations.notifications import NOTIFICATION_TYPES, NotificationType
 from registrations.serializers import (
     CreateSignUpsSerializer,

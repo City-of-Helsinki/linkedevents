@@ -21,13 +21,13 @@ from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
 from registrations.exceptions import PriceGroupValidationError
 from registrations.models import (
+    VAT_CODE_MAPPING,
     RegistrationPriceGroup,
     RegistrationWebStoreProductMapping,
     SignUp,
-    VAT_CODE_MAPPING,
-    web_store_price_group_meta_key,
     WebStoreAccount,
     WebStoreMerchant,
+    web_store_price_group_meta_key,
 )
 from registrations.notifications import SignUpNotificationType
 from registrations.tests.factories import (
