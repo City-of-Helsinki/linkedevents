@@ -68,7 +68,7 @@ class RegistrationSignUpsExportXLSX:
                 ),
             },
             {
-                "header": "Status",  # In the UI, this same word is used for all three languages
+                "header": "Status",  # In the UI, this same word is used for all three languages  # noqa: E501
                 "accessor": lambda signup: str(signup.get_attendee_status_display()),
             },
         ]
@@ -79,9 +79,9 @@ class RegistrationSignUpsExportXLSX:
             row,
             0,
             _(
-                "This material is subject to data protection. This material must be processed "
-                "in the manner required by data protection and only to verify \nthe participants "
-                "of the event. This list should be discarded when the event is over and the "
+                "This material is subject to data protection. This material must be processed "  # noqa: E501
+                "in the manner required by data protection and only to verify \nthe participants "  # noqa: E501
+                "of the event. This list should be discarded when the event is over and the "  # noqa: E501
                 "attendees have been entered into the system."
             ),
         )
@@ -91,7 +91,7 @@ class RegistrationSignUpsExportXLSX:
             row + 1,
             0,
             _(
-                "Please note that the participant and the participant's contact information "
+                "Please note that the participant and the participant's contact information "  # noqa: E501
                 "may be the information of different persons."
             ),
         )
@@ -166,7 +166,8 @@ class RegistrationSignUpsExportXLSX:
             # Add a table containing the signups' data.
             self._add_signups_table(worksheet, 6)
 
-            # Automatically try to adjust signup table column widths to make values visible in the columns.
+            # Automatically try to adjust signup table column widths to make values
+            # visible in the columns.
             worksheet.autofit()
 
             # Add info texts about data protection and contact information.

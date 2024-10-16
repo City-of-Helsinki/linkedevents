@@ -19,11 +19,11 @@ from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import SignUp, SignUpContactPerson, SignUpGroup, SignUpPayment
 from registrations.notifications import (
+    SignUpNotificationType,
     recurring_event_signup_email_texts,
     recurring_event_signup_notification_subjects,
     signup_email_texts,
     signup_notification_subjects,
-    SignUpNotificationType,
 )
 from registrations.tests.factories import (
     RegistrationFactory,
@@ -80,7 +80,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
     def setUp(self):
         self.client.force_authenticate(self.user)
 
-    def assertCancellationEmailsSent(self, contact_person_count):
+    def assertCancellationEmailsSent(self, contact_person_count):  # noqa: N802
         # Both event cancellation and signup cancellation emails will be sent
         # so two emails per each of the three contact persons.
         self.assertEqual(len(mail.outbox), contact_person_count * 2)
@@ -109,7 +109,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
                 )
                 self.assertTrue(str(notification_texts["text"]) in html_message)
 
-    def assertCancellationEmailsSentForRecurringEvent(self, contact_person_count):
+    def assertCancellationEmailsSentForRecurringEvent(self, contact_person_count):  # noqa: N802
         # Both event cancellation and signup cancellation emails will be sent
         # so two emails per each of the three contact persons.
         self.assertEqual(len(mail.outbox), contact_person_count * 2)
@@ -144,7 +144,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
                 )
                 self.assertTrue(str(notification_texts["text"]) in html_message)
 
-    def assertCancellationEmailsSentForRecurringSubEvent(self, contact_person_count):
+    def assertCancellationEmailsSentForRecurringSubEvent(self, contact_person_count):  # noqa: N802
         # Only sub-event cancellation emails are sent. Signups related to the recurring super-event
         # are not cancelled so no additional emails are sent about them.
         self.assertEqual(len(mail.outbox), contact_person_count)
@@ -185,7 +185,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
     ):
         assert number_of_signups <= len(cls.languages)
 
-        for idx in range(0, number_of_signups):
+        for idx in range(number_of_signups):
             signup = SignUpFactory(registration=registration)
             SignUpContactPersonFactory(
                 signup=signup,
@@ -829,7 +829,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
         ) as mocked_post_save_signal:
             mocked_post_save_signal.side_effect = Exception
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(Exception):  # noqa: B017
                 self.client.put(
                     self.event_detail_url,
                     complex_event_dict,

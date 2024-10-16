@@ -9,9 +9,8 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, SearchRank
-from django.db.models import Case
+from django.db.models import Case, Exists, F, OuterRef, Q, When
 from django.db.models import DateTimeField as ModelDateTimeField
-from django.db.models import Exists, F, OuterRef, Q, When
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
@@ -68,7 +67,7 @@ def _in_or_null_filter(field_name, queryset, name, value):
     """
     Supports filtering objects by several values in the same field; null or none will trigger
     isnull filter.
-    """
+    """  # noqa: E501
     q = Q()
 
     if "null" in value or "none" in value:
@@ -117,7 +116,7 @@ def filter_division(queryset, name: str, value: Iterable[str]):
         /event/?division=kunta:helsinki
         will match the Helsinki municipality, if correct country information is present in settings.
 
-    """
+    """  # noqa: E501
 
     ocd_ids = []
     names = []
@@ -187,7 +186,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         method=filter_division,
         help_text=_(
             "You may filter events by specific OCD division id, or by division name. "
-            "The latter query checks all divisions with the name, regardless of division type."
+            "The latter query checks all divisions with the name, regardless of division type."  # noqa: E501
         ),
     )
     super_event_type = django_filters.Filter(
@@ -204,7 +203,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         widget=django_filters.widgets.CSVWidget(),
         method=partial(_in_or_null_filter, "super_event"),
         help_text=_(
-            "Search for events with the given superevent as specified by id, including none. "
+            "Search for events with the given superevent as specified by id, including none. "  # noqa: E501
             "Multiple ids are separated by comma."
         ),
     )
@@ -215,7 +214,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         field_name="maximum_attendee_capacity",
         lookup_expr="gte",
         help_text=_(
-            "Search for events with maximum attendee capacity greater than or equal the "
+            "Search for events with maximum attendee capacity greater than or equal the "  # noqa: E501
             "applied parameter."
         ),
     )
@@ -223,7 +222,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         field_name="minimum_attendee_capacity",
         lookup_expr="gte",
         help_text=_(
-            "Search for events with minimum attendee capacity greater than or equal the "
+            "Search for events with minimum attendee capacity greater than or equal the "  # noqa: E501
             "applied parameter."
         ),
     )
@@ -231,7 +230,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         field_name="maximum_attendee_capacity",
         lookup_expr="lte",
         help_text=_(
-            "Search for events events with maximum attendee capacity less than or equal the "
+            "Search for events events with maximum attendee capacity less than or equal the "  # noqa: E501
             "applied parameter."
         ),
     )
@@ -239,14 +238,14 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         field_name="minimum_attendee_capacity",
         lookup_expr="lte",
         help_text=_(
-            "Search for events events with minimum attendee capacity less than or equal the "
+            "Search for events events with minimum attendee capacity less than or equal the "  # noqa: E501
             "applied parameter."
         ),
     )
     hide_recurring_children = django_filters.BooleanFilter(
         method="filter_hide_recurring_children",
         help_text=_(
-            "Hide all child events for super events which are of type <code>recurring</code>."
+            "Hide all child events for super events which are of type <code>recurring</code>."  # noqa: E501
         ),
     )
 
@@ -379,7 +378,7 @@ class OrganizationFilter(django_filters.rest_framework.FilterSet):
     dissolved = django_filters.BooleanFilter(
         method="filter_dissolved",
         help_text=_(
-            "Get or exclude dissolved organizations; <code>true</code> shows only dissolved and "
+            "Get or exclude dissolved organizations; <code>true</code> shows only dissolved and "  # noqa: E501
             "<code>false</code> excludes dissolved organizations."
         ),
     )
@@ -407,7 +406,7 @@ class PlaceFilter(django_filters.rest_framework.FilterSet):
         method="filter_divisions",
         help_text=_(
             "You may filter places by specific OCD division id, or by division name. "
-            "The latter query checks all divisions with the name, regardless of division type."
+            "The latter query checks all divisions with the name, regardless of division type."  # noqa: E501
         ),
     )
 

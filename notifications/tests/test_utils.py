@@ -3,7 +3,7 @@ import pytest
 from django.utils import translation
 from django.utils.timezone import localtime
 
-from notifications.exceptions import NotificationTemplateException
+from notifications.exceptions import NotificationTemplateError
 from notifications.utils import format_date, format_datetime
 
 
@@ -28,7 +28,7 @@ def test_format_datetime_according_to_language(language, expected_formatted_date
 def test_format_datetime_invalid_language(language):
     dt = localtime()
 
-    with pytest.raises(NotificationTemplateException):
+    with pytest.raises(NotificationTemplateError):
         format_datetime(dt, lang=language)
 
 
@@ -53,5 +53,5 @@ def test_format_date_according_to_language(language, expected_formatted_date):
 def test_format_date_invalid_language(language):
     dt = localtime()
 
-    with pytest.raises(NotificationTemplateException):
+    with pytest.raises(NotificationTemplateError):
         format_date(dt, lang=language)

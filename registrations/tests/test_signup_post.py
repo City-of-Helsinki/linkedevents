@@ -42,11 +42,11 @@ from registrations.tests.factories import (
 from registrations.tests.test_registration_post import hel_email
 from registrations.tests.test_signup_patch import description_fields
 from registrations.tests.utils import (
+    DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
     assert_attending_and_waitlisted_signups,
     assert_payment_link_email_sent,
     assert_signup_payment_data_is_correct,
     create_user_by_role,
-    DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
 )
 from web_store.tests.order.test_web_store_order_api_client import DEFAULT_GET_ORDER_DATA
 from web_store.tests.product.test_web_store_product_api_client import (

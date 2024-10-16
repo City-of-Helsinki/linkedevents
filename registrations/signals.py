@@ -48,7 +48,7 @@ def _recalculate_registration_capacities(registration_id: int) -> None:
         and old_remaining_attendee_capacity is not None
     ) and new_remaining_attendee_capacity > old_remaining_attendee_capacity:
         # Registration attendee capacity has been increased
-        # => it's possible to add more attending signups to the registration from the waiting list
+        # => it's possible to add more attending signups to the registration from the waiting list  # noqa: E501
         # => add as many as possible.
         move_waitlisted_to_attending(
             registration, count=new_remaining_attendee_capacity

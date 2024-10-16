@@ -3,7 +3,7 @@ import requests_mock
 from requests import RequestException
 from rest_framework import status
 
-from web_store.exceptions import WebStoreImproperlyConfiguredException
+from web_store.exceptions import WebStoreImproperlyConfiguredError
 from web_store.merchant.clients import WebStoreMerchantAPIClient
 
 DEFAULT_MERCHANT_ID = "ec3d83a2-a60c-4a0d-ae5e-55b37d95d059"
@@ -52,7 +52,7 @@ def test_merchant_client_mandatory_setting_missing_causes_right_exception(
 ):
     setattr(settings, setting_name, setting_value)
 
-    with pytest.raises(WebStoreImproperlyConfiguredException):
+    with pytest.raises(WebStoreImproperlyConfiguredError):
         WebStoreMerchantAPIClient()
 
 

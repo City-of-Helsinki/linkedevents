@@ -65,4 +65,4 @@ class Command(BaseCommand):
         if output_path := options["output_file"]:
             Path(output_path).write_text(doc_str)
         else:
-            print(doc_str)
+            print(doc_str)  # noqa: T201

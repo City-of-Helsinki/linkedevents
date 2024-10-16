@@ -1,14 +1,12 @@
 from datetime import timedelta
 from decimal import Decimal
 from typing import Optional
-from unittest.mock import Mock
 
 from django.conf import settings
 from django.core import mail
 from django.utils.html import conditional_escape
 from django.utils.timezone import localtime
 from django_orghierarchy.models import Organization
-from requests import RequestException
 from rest_framework import status
 
 from events.models import Event

@@ -6,6 +6,7 @@ import factory
 from events.tests.factories import EventFactory, OfferFactory, OrganizationFactory
 from registrations.enums import VatPercentage
 from registrations.models import (
+    VAT_CODE_MAPPING,
     OfferPriceGroup,
     PriceGroup,
     Registration,
@@ -24,7 +25,6 @@ from registrations.models import (
     SignUpPaymentRefund,
     SignUpPriceGroup,
     SignUpProtectedData,
-    VAT_CODE_MAPPING,
     WebStoreAccount,
     WebStoreMerchant,
 )

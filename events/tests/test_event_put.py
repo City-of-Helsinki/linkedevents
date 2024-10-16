@@ -46,14 +46,10 @@ def test__update_a_draft_with_put(api_client, minimal_event_dict, user):
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
     data2 = response.data
-    print("got the post response")
-    print(data2)
 
     # store updates
     event_id = data2.pop("@id")
     response2 = update_with_put(api_client, event_id, data2)
-    print("got the put response")
-    print(response2.data)
 
     # assert
     assert_event_data_is_equal(data2, response2.data)
@@ -137,16 +133,12 @@ def test__keyword_n_events_updated(
     call_command("update_n_events")
     assert Keyword.objects.get(id=data_source.id + ":test").n_events == 1
     data2 = response.data
-    print("got the post response")
-    print(data2)
 
     # change the keyword and add an audience
     event_id = data2.pop("@id")
     data2["keywords"] = [{"@id": make_keyword_id(data_source, organization, "test2")}]
     data2["audience"] = [{"@id": make_keyword_id(data_source, organization, "test3")}]
-    response2 = update_with_put(api_client, event_id, data2)
-    print("got the put response")
-    print(response2.data)
+    update_with_put(api_client, event_id, data2)
     call_command("update_n_events")
     assert Keyword.objects.get(id=data_source.id + ":test").n_events == 0
     assert Keyword.objects.get(id=data_source.id + ":test2").n_events == 1
@@ -170,15 +162,11 @@ def test__location_n_events_updated(
     call_command("update_n_events")
     assert Place.objects.get(id=data_source.id + ":test_location").n_events == 1
     data2 = response.data
-    print("got the post response")
-    print(data2)
 
     # change the location
     event_id = data2.pop("@id")
     data2["location"] = {"@id": make_location_id(place2)}
-    response2 = update_with_put(api_client, event_id, data2)
-    print("got the put response")
-    print(response2.data)
+    update_with_put(api_client, event_id, data2)
     call_command("update_n_events")
     assert Place.objects.get(id=data_source.id + ":test_location").n_events == 0
     assert Place.objects.get(id=other_data_source.id + ":test_location_2").n_events == 1

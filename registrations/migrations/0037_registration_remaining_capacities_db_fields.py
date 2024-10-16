@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import Optional
 
 from django.db import migrations, models, transaction
-from django.db.models import ExpressionWrapper, F, DateTimeField, Sum
+from django.db.models import DateTimeField, ExpressionWrapper, F, Sum
 from django.utils.timezone import localtime
 
 from registrations.models import SignUp

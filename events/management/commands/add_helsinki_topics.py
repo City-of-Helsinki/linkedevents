@@ -79,8 +79,9 @@ class Command(BaseCommand):
                 )
 
     def handle(self, *args, **options):
-        # Helsinki data source must be created if missing. Note that it is not necessarily the system data source.
-        # If we are creating it, it *may* still be the system data source, so it must be user editable!
+        # Helsinki data source must be created if missing. Note that it is not necessarily the system data source.  # noqa: E501
+        # If we are creating it, it *may* still be the system data source, so it
+        # must be user editable!
         helsinki_data_source_defaults = {
             "user_editable_resources": True,
             "user_editable_organizations": True,

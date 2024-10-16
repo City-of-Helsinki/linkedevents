@@ -124,7 +124,7 @@ env = environ.Env(
     MEDIA_ROOT=(environ.Path(), root("media")),
     MEDIA_URL=(str, "/media/"),
     # "helsinki_adfs" = Tunnistamo auth_backends.adfs.helsinki.HelsinkiADFS
-    # "helsinkiazuread" = Tunnistamo auth_backends.helsinki_azure_ad.HelsinkiAzureADTenantOAuth2
+    # "helsinkiazuread" = Tunnistamo auth_backends.helsinki_azure_ad.HelsinkiAzureADTenantOAuth2  # noqa: E501
     # "helsinkiad" Helsinki Keycloak AD authentication
     # "vantaalinkedevents" Vantaa AD authentication in Helsinki Keycloak
     NON_EXTERNAL_AUTHENTICATION_METHODS=(
@@ -179,7 +179,7 @@ BASE_DIR = root()
 env_file_path = os.path.join(BASE_DIR, CONFIG_FILE_NAME)
 if os.path.exists(env_file_path):
     # Logging configuration is not available at this point
-    print(f"Reading config from {env_file_path}")
+    print(f"Reading config from {env_file_path}")  # noqa: T201
     environ.Env.read_env(env_file_path)
 
 DEBUG = env("DEBUG")
@@ -314,7 +314,8 @@ if env("SENTRY_DSN"):
     )
 
 MIDDLEWARE = [
-    # CorsMiddleware should be placed as high as possible and above WhiteNoiseMiddleware in particular
+    # CorsMiddleware should be placed as high as possible and above
+    # WhiteNoiseMiddleware in particular
     "corsheaders.middleware.CorsMiddleware",
     # WhiteNoiseMiddleware should be placed as high as possible
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -519,7 +520,7 @@ def haystack_connection_for_lang(language_code):
         return {
             "default-fi": {
                 "ENGINE": "multilingual_haystack.backends.LanguageSearchEngine",
-                "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",
+                "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",  # noqa: E501
                 "URL": env("ELASTICSEARCH_URL"),
                 "INDEX_NAME": "linkedevents-fi",
                 "SETTINGS": {
@@ -539,7 +540,7 @@ def haystack_connection_for_lang(language_code):
         return {
             f"default-{language_code}": {
                 "ENGINE": "multilingual_haystack.backends.LanguageSearchEngine",
-                "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",
+                "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",  # noqa: E501
                 "URL": env("ELASTICSEARCH_URL"),
                 "INDEX_NAME": f"linkedevents-{language_code}",
             }
@@ -612,7 +613,7 @@ if "SECRET_KEY" not in locals():
             secret.close()
         except IOError:
             raise Exception(
-                "Please create a %s file with random characters to generate your secret key!"
+                "Please create a %s file with random characters to generate your secret key!"  # noqa: E501
                 % secret_file
             )
 
@@ -631,8 +632,8 @@ if EMAIL_HOST and EMAIL_PORT:
     MAILER_EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 else:
     if not DEBUG:
-        print(
-            "Warning: EMAIL_HOST and/or EMAIL_PORT not set, using console backend for sending "
+        print(  # noqa: T201
+            "Warning: EMAIL_HOST and/or EMAIL_PORT not set, using console backend for sending "  # noqa: E501
             "emails"
         )
     MAILER_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
@@ -758,16 +759,16 @@ SWAGGER_USE_STATIC_SCHEMA = env("SWAGGER_USE_STATIC_SCHEMA")
 SPECTACULAR_SETTINGS = {
     "TITLE": "Linked Events information API",
     "DESCRIPTION": (
-        "Linked Events provides categorized data on events and places using JSON-LD format."
+        "Linked Events provides categorized data on events and places using JSON-LD format."  # noqa: E501
         "\n\n"
-        "Events can be searched by date and location. Location can be exact address or larger "
+        "Events can be searched by date and location. Location can be exact address or larger "  # noqa: E501
         "area such as neighbourhood or borough."
         "\n\n"
-        "JSON-LD format is streamlined using include mechanism. API users can request that certain "
-        "fields are included directly into the result, instead of being hyperlinks to objects."
+        "JSON-LD format is streamlined using include mechanism. API users can request that certain "  # noqa: E501
+        "fields are included directly into the result, instead of being hyperlinks to objects."  # noqa: E501
         "\n\n"
-        "Several fields are multilingual. These are implemented as object with each language variant "
-        "as property. In this specification each multilingual field has (fi,sv,en) property triplet as "
+        "Several fields are multilingual. These are implemented as object with each language variant "  # noqa: E501
+        "as property. In this specification each multilingual field has (fi,sv,en) property triplet as "  # noqa: E501
         "example."
     ),
     "VERSION": None,

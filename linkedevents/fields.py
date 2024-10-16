@@ -40,7 +40,8 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
 
         if self.is_expanded():
             context = self.context.copy()
-            # To avoid infinite recursion, only include sub/super events one level at a time
+            # To avoid infinite recursion, only include sub/super events one level at
+            # a time
             if "include" in context:
                 context["include"] = [
                     x
@@ -75,7 +76,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
         return getattr(self, "expanded", False)
 
     def get_queryset(self):
-        #  For certain related fields we preload the queryset to avoid *.objects.all() query which can easily overload
+        #  For certain related fields we preload the queryset to avoid *.objects.all() query which can easily overload  # noqa: E501
         #  the memory as database grows.
         if isinstance(self._kwargs["serializer"], str):
             return super().get_queryset()

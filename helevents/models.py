@@ -70,11 +70,11 @@ class UserModelPermissionMixin:
         raise NotImplementedError()
 
     def is_registration_admin_of(self, publisher):
-        """Check if current user is a registration admin user of the publisher organization"""
+        """Check if current user is a registration admin user of the publisher organization"""  # noqa: E501
         raise NotImplementedError()
 
     def is_financial_admin_of(self, publisher):
-        """Check if current user is a financial admin user of the publisher organization"""
+        """Check if current user is a financial admin user of the publisher organization"""  # noqa: E501
         raise NotImplementedError()
 
     def is_regular_user_of(self, publisher):
@@ -131,11 +131,11 @@ class UserModelPermissionMixin:
         raise NotImplementedError()
 
     def can_create_event(self, publisher, publication_status):
-        """Check if current user can create an event with the given publisher and publication_status"""
+        """Check if current user can create an event with the given publisher and publication_status"""  # noqa: E501
         return self.can_edit_event(publisher, publication_status, created_by=self)
 
     def can_edit_event(self, publisher, publication_status, created_by=None):
-        """Check if current user can edit an event with the given publisher and publication_status"""
+        """Check if current user can edit an event with the given publisher and publication_status"""  # noqa: E501
         if self.is_admin_of(publisher):
             return True
 
@@ -144,7 +144,8 @@ class UserModelPermissionMixin:
             if settings.ENABLE_EXTERNAL_USER_EVENTS and (
                 publisher is None or publisher.id == settings.EXTERNAL_USER_PUBLISHER_ID
             ):
-                # External users can only edit their own drafts from the default organization.
+                # External users can only edit their own drafts from the default
+                # organization.
                 return self.is_external and created_by == self
             else:
                 # Regular users can edit drafts from organizations they are members of.
@@ -156,7 +157,8 @@ class UserModelPermissionMixin:
         """Get editable events queryset from given queryset for current user"""
         if self.is_external:
             if settings.ENABLE_EXTERNAL_USER_EVENTS:
-                # External users can only edit their own drafts from the default organization.
+                # External users can only edit their own drafts from the default
+                # organization.
                 return queryset.filter(
                     created_by=self,
                     publisher__id=settings.EXTERNAL_USER_PUBLISHER_ID,
@@ -205,7 +207,8 @@ class UserModelPermissionMixin:
         return self._get_admin_tree_ids(admin_queryset)
 
     def get_registration_admin_tree_ids(self):
-        # returns tree ids for all normal registration admin organizations and their replacements
+        # returns tree ids for all normal registration admin organizations and
+        # their replacements
         admin_queryset = self.registration_admin_organizations.filter(
             internal_type="normal"
         ).select_related("replaced_by")

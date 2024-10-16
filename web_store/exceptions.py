@@ -1,6 +1,6 @@
-class WebStoreException(Exception):
+class WebStoreError(Exception):
     pass
 
 
-class WebStoreImproperlyConfiguredException(WebStoreException):
+class WebStoreImproperlyConfiguredError(WebStoreError):
     pass

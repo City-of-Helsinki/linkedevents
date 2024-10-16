@@ -1,7 +1,7 @@
-from django.db import migrations, models
 import django.contrib.auth.models
 import django.core.validators
 import django.utils.timezone
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):

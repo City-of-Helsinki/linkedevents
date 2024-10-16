@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import CommandError
 from django.core.serializers.json import DjangoJSONEncoder
-from httmock import all_requests, HTTMock, response
+from httmock import HTTMock, all_requests, response
 from icalendar import Calendar
 from icalendar import Event as CalendarEvent
 
@@ -105,7 +105,7 @@ class CitySDKExporter(Exporter):
         )
         if session_response.status_code == 200:
             self.session_cookies = session_response.cookies
-            print("Authentication successful with response: %s" % session_response.text)
+            print("Authentication successful with response: %s" % session_response.text)  # noqa: T201
         else:
             raise CommandError(
                 "Authentication failed with credentials %s:%s" % ((username, password))
@@ -273,7 +273,7 @@ class CitySDKExporter(Exporter):
                     modify_response = self._do_req("post", url, data)
                     if modify_response.status_code == 200:
                         export_info.save()  # refresh last export date
-                        print(
+                        print(  # noqa: T201
                             "%s updated (original id: %s, target id: %s)"
                             % (model_name, model.pk, export_info.target_id)
                         )
@@ -290,7 +290,7 @@ class CitySDKExporter(Exporter):
                     )
                 if delete_response.status_code == 200:
                     export_info.delete()
-                    print(
+                    print(  # noqa: T201
                         "%s removed (original id: %d, target id: %s) "
                         "from target system"
                         % (model_name, export_info.object_id, export_info.target_id)
@@ -320,7 +320,7 @@ class CitySDKExporter(Exporter):
                 else:
                     new_id = new
                 if VERBOSE:
-                    print(
+                    print(  # noqa: T201
                         "%s exported (original id: %d, target id: %s)"
                         % (model_name, model.pk, new_id)
                     )
@@ -333,11 +333,11 @@ class CitySDKExporter(Exporter):
                 new_export_info.save()
                 new_count += 1
             else:
-                print("%s export failed (original id: %s)" % (model_name, model.pk))
+                print("%s export failed (original id: %s)" % (model_name, model.pk))  # noqa: T201
 
-        print(model_name + " items added: " + str(new_count))
-        print(model_name + " items modified: " + str(modify_count))
-        print(model_name + " items deleted: " + str(delete_count))
+        print(model_name + " items added: " + str(new_count))  # noqa: T201
+        print(model_name + " items modified: " + str(modify_count))  # noqa: T201
+        print(model_name + " items deleted: " + str(delete_count))  # noqa: T201
 
     def _do_req(self, method, url, data=None):
         kwargs = {"headers": self.response_headers, "cookies": self.session_cookies}
@@ -383,7 +383,7 @@ class CitySDKExporter(Exporter):
         response = self._do_req("delete", "%s/%s" % (url, resource.target_id))
         if response.status_code == 200:
             resource.delete()
-            print(
+            print(  # noqa: T201
                 "%s removed (original id: %d, target id: %s) from "
                 "target system"
                 % (
@@ -422,13 +422,13 @@ class CitySDKExporter(Exporter):
                 )
                 if category_response.status_code == 200:
                     category_info.delete()
-                    print(
+                    print(  # noqa: T201
                         "Category removed (original id: %d, target id: %s) "
                         "from target system"
                         % (category_info.object_id, category_info.target_id)
                     )
             except ObjectDoesNotExist:
-                print(
+                print(  # noqa: T201
                     "ERROR: Category (original id: %d) "
                     "does not exist in local database" % category_info.object_id
                 )

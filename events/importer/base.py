@@ -74,7 +74,8 @@ class Importer(object):
 
         self.setup()
 
-        # this has to be run after setup, as it relies on organization and data source being set
+        # this has to be run after setup, as it relies on organization and data
+        # source being set
         self._images = {
             obj.url: obj
             for obj in Image.objects.filter(
@@ -109,7 +110,7 @@ class Importer(object):
 
         image_url = image_data.get("url", "").strip()
         if not image_url:
-            print('Invalid image url "{}" obj {}'.format(image_data.get("url"), obj))
+            print('Invalid image url "{}" obj {}'.format(image_data.get("url"), obj))  # noqa: T201
             return
 
         image = self._get_image(image_url)
@@ -130,7 +131,7 @@ class Importer(object):
         for image_data in images_data:
             image_url = image_data.get("url", "").strip()
             if not image_url:
-                print(
+                print(  # noqa: T201
                     'Invalid image url "{}" obj {}'.format(image_data.get("url"), obj)
                 )
                 continue
@@ -236,7 +237,8 @@ class Importer(object):
         if obj_val == val:
             return
         # This prevents overwriting manually edited events with lower quality data
-        # Always update booleans tho, this will e.g. reinstate deleted events (deleted=False)
+        # Always update booleans tho, this will e.g. reinstate deleted events
+        # (deleted=False)
         if (
             hasattr(obj, "is_user_edited")
             and obj.is_user_edited()
@@ -253,7 +255,8 @@ class Importer(object):
         obj._changed_fields.append(field_name)
 
     def _save_field(self, obj, obj_field_name, info, info_field_name, max_length=None):
-        # atm only used by place importers, do some extra cleaning and validation before setting value
+        # atm only used by place importers, do some extra cleaning and validation
+        # before setting value
         if info_field_name in info:
             val = clean_text(info[info_field_name])
         else:
@@ -266,7 +269,8 @@ class Importer(object):
     def _save_translated_field(
         self, obj, obj_field_name, info, info_field_name, max_length=None
     ):
-        # atm only used by place importers, do some extra cleaning and validation before setting value
+        # atm only used by place importers, do some extra cleaning and validation
+        # before setting value
         for lang in self.supported_languages:
             key = "%s_%s" % (info_field_name, lang)
             obj_key = "%s_%s" % (obj_field_name, lang)
@@ -276,7 +280,8 @@ class Importer(object):
                 self._save_field(obj, obj_field_name, info, key, max_length)
 
     def _update_fields(self, obj, info, skip_fields):
-        # all non-place importers use this method, automatically takes care of translated fields
+        # all non-place importers use this method, automatically takes care of
+        # translated fields
         obj_fields = list(obj._meta.fields)
         trans_fields = translator.get_options_for_model(type(obj)).all_fields
         for field_name, lang_fields in trans_fields.items():
@@ -383,7 +388,8 @@ class Importer(object):
         if "has_end_time" not in info:
             info["has_end_time"] = True
 
-        # If end date is supplied but no time, the event ends at midnight of the following day.
+        # If end date is supplied but no time, the event ends at midnight of the
+        # following day.
         if not info["has_end_time"]:
             # Event end time is not exactly defined.
             # Use midnight in event timezone, or, if given in utc, local timezone
@@ -402,7 +408,8 @@ class Importer(object):
 
         if obj._created:
             # We have to save new objects here to be able to add related fields.
-            # Changed objects will be saved only *after* related fields have been changed.
+            # Changed objects will be saved only *after* related fields have been
+            # changed.
             try:
                 obj.save()
             except ValidationError as error:
@@ -467,7 +474,8 @@ class Importer(object):
 
         val = operator.methodcaller("simple_value")
         if set(map(val, offers)) != set(map(val, obj.offers.all())):
-            # this prevents overwriting manually added offers. do not update offers if we have added ones
+            # this prevents overwriting manually added offers. do not update offers if
+            # we have added ones
             if (
                 not obj.is_user_edited()
                 or len(set(map(val, offers))) >= obj.offers.count()
@@ -505,7 +513,7 @@ class Importer(object):
                 for link in new_links:
                     if len(link.url) > 200:
                         logger.error(
-                            f"{obj} required external link of length {len(link.url)}, current limit 200"
+                            f"{obj} required external link of length {len(link.url)}, current limit 200"  # noqa: E501
                         )
                         continue
                     new_link_objects.append(
@@ -559,12 +567,12 @@ class Importer(object):
             self._set_field(obj, "event_status", status)
 
         if obj._changed or obj._created:
-            # Finally, we must save the whole object, even when only related fields changed.
+            # Finally, we must save the whole object, even when only related fields changed.  # noqa: E501
             # Also, we want to log all that happened.
             try:
                 obj.save()
             except ValidationError as error:
-                print("Event " + str(obj) + " could not be saved: " + str(error))
+                print("Event " + str(obj) + " could not be saved: " + str(error))  # noqa: T201
                 raise
             if obj._created:
                 verb = "created"
@@ -613,7 +621,8 @@ class Importer(object):
             obj._changed = True
             obj.position = position
 
-        # we may end up reinstating deleted locations whenever they are imported back and forth
+        # we may end up reinstating deleted locations whenever they are imported
+        # back and forth
         if obj.deleted:
             obj.deleted = False
             obj._changed = True

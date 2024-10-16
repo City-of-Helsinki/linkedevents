@@ -18,9 +18,9 @@ class Command(BaseCommand):
         project_template_dir = os.path.join(
             settings.BASE_DIR, "templates/rest_framework/"
         )
-        print(city_template_dir)
+        print(city_template_dir)  # noqa: T201
         for file in os.listdir(city_template_dir):
-            print(file)
+            print(file)  # noqa: T201
             shutil.copyfile(
                 os.path.join(city_template_dir, file),
                 os.path.join(project_template_dir, file),

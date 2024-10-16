@@ -98,7 +98,7 @@ class SignUpBaseFilter(ActionDependingFilter):
         if not registrations:
             raise DRFPermissionDenied(
                 _(
-                    "Only the admins of the registration organizations have access rights."
+                    "Only the admins of the registration organizations have access rights."  # noqa: E501
                 )
             )
 
@@ -163,8 +163,8 @@ class SignUpFilter(SignUpBaseFilter):
     text = django_filters.CharFilter(
         method="filter_text",
         help_text=_(
-            "Search (case insensitive) through the text fields of a signup (first_name, last_name) "
-            "and the signup's contact person (email, membership_number and phone_number)."
+            "Search (case insensitive) through the text fields of a signup (first_name, last_name) "  # noqa: E501
+            "and the signup's contact person (email, membership_number and phone_number)."  # noqa: E501
         ),
     )
 
@@ -196,8 +196,8 @@ class SignUpGroupFilter(SignUpBaseFilter):
     text = django_filters.CharFilter(
         method="filter_text",
         help_text=_(
-            "Search (case insensitive) through the text fields of signups (first_name, last_name) "
-            "and the contact person (email, membership_number and phone_number) in a signup group."
+            "Search (case insensitive) through the text fields of signups (first_name, last_name) "  # noqa: E501
+            "and the contact person (email, membership_number and phone_number) in a signup group."  # noqa: E501
         ),
     )
 
@@ -216,7 +216,7 @@ class PriceGroupFilter(ActionDependingFilter):
         widget=django_filters.widgets.CSVWidget(),
         method="filter_publisher",
         help_text=_(
-            "Search for customer groups belonging to an organization as specified by id. "
+            "Search for customer groups belonging to an organization as specified by id. "  # noqa: E501
             "Multiple ids are separated by comma. Use the value <code>none</code> for "
             "default customer groups."
         ),
@@ -225,7 +225,7 @@ class PriceGroupFilter(ActionDependingFilter):
     description = django_filters.CharFilter(
         lookup_expr="icontains",
         help_text=_(
-            "Search (case insensitive) through customer groups' multilingual description field."
+            "Search (case insensitive) through customer groups' multilingual description field."  # noqa: E501
         ),
     )
 

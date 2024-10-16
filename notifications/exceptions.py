@@ -1,2 +1,2 @@
-class NotificationTemplateException(Exception):
+class NotificationTemplateError(Exception):
     pass

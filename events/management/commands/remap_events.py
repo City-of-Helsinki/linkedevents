@@ -7,7 +7,7 @@ from django.db import transaction
 from events.models import Event, Place
 
 
-class DryRun(Exception):
+class DryRun(Exception):  # noqa: N818
     pass
 
 

@@ -8,7 +8,7 @@ from jinja2 import StrictUndefined
 from jinja2.exceptions import TemplateError
 from jinja2.sandbox import SandboxedEnvironment
 
-from notifications.exceptions import NotificationTemplateException
+from notifications.exceptions import NotificationTemplateError
 from notifications.utils import DEFAULT_LANG, format_datetime
 
 logger = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ class NotificationTemplate(models.Model):
                 )
             return rendered_notification
         except TemplateError as e:
-            raise NotificationTemplateException(e) from e
+            raise NotificationTemplateError(e) from e
 
 
 def render_notification_template(
@@ -109,6 +109,6 @@ def render_notification_template(
     try:
         template = NotificationTemplate.objects.get(type=notification_type)
     except NotificationTemplate.DoesNotExist as e:
-        raise NotificationTemplateException(e) from e
+        raise NotificationTemplateError(e) from e
 
     return template.render(context, language_code)

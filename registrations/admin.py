@@ -15,6 +15,7 @@ from registrations.forms import (
     RegistrationWebStoreMerchantAdminForm,
 )
 from registrations.models import (
+    VAT_CODE_MAPPING,
     PriceGroup,
     Registration,
     RegistrationPriceGroup,
@@ -22,7 +23,6 @@ from registrations.models import (
     RegistrationWebStoreAccount,
     RegistrationWebStoreMerchant,
     RegistrationWebStoreProductMapping,
-    VAT_CODE_MAPPING,
 )
 
 

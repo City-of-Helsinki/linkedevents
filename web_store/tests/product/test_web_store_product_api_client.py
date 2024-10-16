@@ -4,7 +4,7 @@ from django.conf import settings as django_settings
 from requests import RequestException
 from rest_framework import status
 
-from web_store.exceptions import WebStoreImproperlyConfiguredException
+from web_store.exceptions import WebStoreImproperlyConfiguredError
 from web_store.product.clients import WebStoreProductAPIClient
 
 DEFAULT_PRODUCT_ID = "5aa48bcf-91a3-4c79-87e5-232f4006c5f2"
@@ -63,7 +63,7 @@ def test_product_api_mandatory_web_store_order_setting_missing_causes_right_exce
 ):
     setattr(settings, setting_name, setting_value)
 
-    with pytest.raises(WebStoreImproperlyConfiguredException):
+    with pytest.raises(WebStoreImproperlyConfiguredError):
         WebStoreProductAPIClient()
 
 
