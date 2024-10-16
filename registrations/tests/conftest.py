@@ -1,3 +1,4 @@
+import pytest
 from django.utils import translation
 
 from events.tests.conftest import *  # noqa

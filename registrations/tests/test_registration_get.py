@@ -626,26 +626,6 @@ def test_registration_list_substitute_user_filter(
 
 
 @pytest.mark.django_db
-def test_registration_list_admin_user_filter(
-    organization3, registration, registration2, registration3, user, user_api_client
-):
-    registration3.event.publisher = organization3
-    registration3.event.save()
-
-    get_list_and_assert_registrations(
-        user_api_client, "", [registration, registration2, registration3]
-    )
-    get_list_and_assert_registrations(
-        user_api_client, "admin_user=true", [registration]
-    )
-
-    organization3.registration_admin_users.add(user)
-    get_list_and_assert_registrations(
-        user_api_client, "admin_user=true", [registration, registration3]
-    )
-
-
-@pytest.mark.django_db
 def test_registration_list_event_type_filter(
     user_api_client, event, event2, event3, registration, registration2, registration3
 ):

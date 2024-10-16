@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 # 3rd party
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
 
