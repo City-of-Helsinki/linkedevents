@@ -1,16 +1,11 @@
 -c requirements.txt
 
 Werkzeug
-black
 django-anymail
 django-debug-toolbar
 django-extensions
 factory_boy
-flake8
-flake8-bugbear
 freezegun
-isort
-pep8-naming
 pip-tools
 pytest
 pytest-cov
