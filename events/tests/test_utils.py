@@ -153,7 +153,7 @@ def test_inconsistent_tz_default(api_client, minimal_event_dict, user, settings)
 
     minimal_event_dict["start_time"] = future_naive_dt_str
     minimal_event_dict["end_time"] = future_naive_dt_str
-    create_response = create_with_post(api_client, minimal_event_dict)
+    create_with_post(api_client, minimal_event_dict)
 
     list_with_original_create_dt = get_list(
         api_client,

@@ -1230,7 +1230,7 @@ class EnkoraImporter(Importer):
         :return: documentation string
         """
         import git  # gitpython
-        from snakemd import Inline, MDList, new_doc, Paragraph
+        from snakemd import Inline, MDList, Paragraph, new_doc
 
         repo = git.Repo(search_parent_directories=True)
         commit_sha = repo.head.object.hexsha
@@ -2454,8 +2454,9 @@ class Kurssidata(Enkora):
         # Sanity:
         if len(reservation_event_groups) != 1:
             raise RuntimeError(
-                "Getting reservation event group {} "
-                "resulted in {} items!".format(course_id, len(reservation_event_groups))
+                "Getting reservation event group {} " "resulted in {} items!".format(
+                    course_id, len(reservation_event_groups)
+                )
             )
         reservation_event_group = reservation_event_groups[0]
 

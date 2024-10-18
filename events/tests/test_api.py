@@ -13,7 +13,7 @@ from rest_framework.test import APITestCase
 
 from audit_log.models import AuditLogEntry
 
-from ..api import _terms_to_regex, EventSerializer, OrganizationListSerializer
+from ..api import EventSerializer, OrganizationListSerializer, _terms_to_regex
 from ..auth import ApiKeyAuth
 from ..models import DataSource, Image
 from ..utils import get_user_data_source_and_organization_from_request

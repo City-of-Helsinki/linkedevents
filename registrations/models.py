@@ -1,6 +1,6 @@
 import logging
 from datetime import timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID, uuid4
 
 from django.conf import settings
@@ -39,15 +39,15 @@ from registrations.exceptions import (
     WebStoreRefundValidationError,
 )
 from registrations.notifications import (
+    NOTIFICATION_TYPES,
+    NotificationType,
+    SignUpNotificationType,
     get_registration_user_access_invitation_subject,
     get_registration_user_access_invitation_texts,
     get_registration_user_access_invitation_variables,
     get_signup_notification_subject,
     get_signup_notification_texts,
     get_signup_notification_variables,
-    NOTIFICATION_TYPES,
-    NotificationType,
-    SignUpNotificationType,
 )
 from registrations.utils import (
     cancel_web_store_order,

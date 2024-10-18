@@ -12,10 +12,10 @@ from django.utils import translation
 from django.utils.timezone import localtime
 from django.utils.translation import gettext as _
 from drf_spectacular.utils import (
-    extend_schema,
     OpenApiParameter,
     OpenApiResponse,
     OpenApiTypes,
+    extend_schema,
 )
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
@@ -27,16 +27,16 @@ from rest_framework.serializers import ValidationError
 
 from audit_log.mixins import AuditLogApiViewMixin
 from events.api import (
-    _filter_event_queryset,
     JSONAPIViewMixin,
     UserDataSourceAndOrganizationMixin,
+    _filter_event_queryset,
 )
 from events.models import Event
 from events.permissions import OrganizationUserEditPermission
 from linkedevents.registry import register_view
 from linkedevents.schema_utils import (
-    get_common_api_error_responses,
     IncludeOpenApiParameter,
+    get_common_api_error_responses,
 )
 from registrations.auth import WebStoreWebhookAuthentication
 from registrations.exceptions import (

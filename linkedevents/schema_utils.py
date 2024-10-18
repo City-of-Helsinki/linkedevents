@@ -1,4 +1,4 @@
-from drf_spectacular.plumbing import get_lib_doc_excludes, ResolvedComponent
+from drf_spectacular.plumbing import ResolvedComponent, get_lib_doc_excludes
 from drf_spectacular.settings import spectacular_settings
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, OpenApiTypes
 

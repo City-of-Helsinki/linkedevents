@@ -8,7 +8,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
-from drf_spectacular.utils import extend_schema_field, OpenApiTypes
+from drf_spectacular.utils import OpenApiTypes, extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
@@ -30,6 +30,8 @@ from registrations.exceptions import (
     WebStoreProductMappingValidationError,
 )
 from registrations.models import (
+    VAT_CODE_MAPPING,
+    VAT_PERCENTAGES,
     OfferPriceGroup,
     PriceGroup,
     Registration,
@@ -49,8 +51,6 @@ from registrations.models import (
     SignUpPaymentRefund,
     SignUpPriceGroup,
     SignUpProtectedData,
-    VAT_CODE_MAPPING,
-    VAT_PERCENTAGES,
     WebStoreAccount,
     WebStoreMerchant,
 )
