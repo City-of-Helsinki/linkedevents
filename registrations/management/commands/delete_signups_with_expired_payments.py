@@ -8,7 +8,7 @@ from registrations.models import SignUpPayment
 
 class Command(BaseCommand):
     help = (
-        "Delete signups and signup groups that have payments that have expired at least the given "
+        "Delete signups and signup groups that have payments that have expired at least the given "  # noqa: E501
         "amount of days ago. The payments will be deleted along with the signups."
     )
 
@@ -17,7 +17,7 @@ class Command(BaseCommand):
             "--threshold_days",
             type=int,
             default=14,
-            help="How many days ago the payments should have expired before they are deleted."
+            help="How many days ago the payments should have expired before they are deleted."  # noqa: E501
             "Default = 14.",
         )
 

@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import CommandError
 from django.core.serializers.json import DjangoJSONEncoder
-from httmock import all_requests, HTTMock, response
+from httmock import HTTMock, all_requests, response
 from icalendar import Calendar
 from icalendar import Event as CalendarEvent
 

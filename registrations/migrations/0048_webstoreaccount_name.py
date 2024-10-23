@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("registrations", "0047_alter_registrationwebstoreproductmapping_merchant_id"),
     ]

@@ -1,6 +1,6 @@
 import logging
 from datetime import timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID, uuid4
 
 from django.conf import settings
@@ -39,15 +39,15 @@ from registrations.exceptions import (
     WebStoreRefundValidationError,
 )
 from registrations.notifications import (
+    NOTIFICATION_TYPES,
+    NotificationType,
+    SignUpNotificationType,
     get_registration_user_access_invitation_subject,
     get_registration_user_access_invitation_texts,
     get_registration_user_access_invitation_variables,
     get_signup_notification_subject,
     get_signup_notification_texts,
     get_signup_notification_variables,
-    NOTIFICATION_TYPES,
-    NotificationType,
-    SignUpNotificationType,
 )
 from registrations.utils import (
     cancel_web_store_order,
@@ -351,7 +351,7 @@ class WebStoreMerchant(CreatedModifiedBaseModel):
                 old_instance
                 and old_instance.paytrail_merchant_id != self.paytrail_merchant_id
             ):
-                # Whenever Paytrail merchant ID is changed, the merchant needs a new secret key
+                # Whenever Paytrail merchant ID is changed, the merchant needs a new secret key  # noqa: E501
                 # mapping in Talpa and this requires the merchant to be re-created.
                 created = True
 
@@ -362,7 +362,7 @@ class PriceGroup(CreatedModifiedBaseModel):
     """Price group / pricing category that is selectable when creating a registration. These can be
     created and managed by admins for publishers / organizations. Default price groups do not have a
     publisher, but are system-wide default groups.
-    """
+    """  # noqa: E501
 
     publisher = models.ForeignKey(
         "django_orghierarchy.Organization",
@@ -411,7 +411,7 @@ class PriceGroup(CreatedModifiedBaseModel):
         if not self.publisher_is_valid:
             raise PriceGroupValidationError(
                 _(
-                    "You may not change the publisher of a price group that has been used "
+                    "You may not change the publisher of a price group that has been used "  # noqa: E501
                     "in registrations."
                 )
             )
@@ -607,7 +607,7 @@ class Registration(CreatedModifiedBaseModel):
             )
         except (ValidationError, AttributeError) as exc:
             logger.error(
-                f"Failed to create payment when moving waitlisted signup #{first_on_list.pk} "
+                f"Failed to create payment when moving waitlisted signup #{first_on_list.pk} "  # noqa: E501
                 f"to attending: {exc}"
             )
             return
@@ -685,7 +685,7 @@ class Registration(CreatedModifiedBaseModel):
         if not (merchant := getattr(self, "registration_merchant", None)):
             raise WebStoreProductMappingValidationError(
                 _(
-                    "A WebStoreMerchant is required to create a product mapping in Talpa."
+                    "A WebStoreMerchant is required to create a product mapping in Talpa."  # noqa: E501
                 )
             )
 
@@ -699,7 +699,7 @@ class Registration(CreatedModifiedBaseModel):
         if not (account := getattr(self, "registration_account", None)):
             raise WebStoreProductMappingValidationError(
                 _(
-                    "A WebStoreAccount is required to create product accounting in Talpa."
+                    "A WebStoreAccount is required to create product accounting in Talpa."  # noqa: E501
                 )
             )
 
@@ -811,7 +811,7 @@ class OfferPriceGroup(RegistrationPriceGroupBaseModel):
 
 
 class RegistrationPriceGroup(RegistrationPriceGroupBaseModel):
-    """Price group selections for SignUps (= what the end-user doing a signup can choose from)."""
+    """Price group selections for SignUps (= what the end-user doing a signup can choose from)."""  # noqa: E501
 
     registration = models.ForeignKey(
         Registration,
@@ -896,7 +896,7 @@ class SignUpMixin:
             raise exception
 
         error_message_with_signup_id = _(
-            "Payment refund or cancellation failed for %(class_name)s with ID %(object_id)s."
+            "Payment refund or cancellation failed for %(class_name)s with ID %(object_id)s."  # noqa: E501
         ) % {"class_name": self.__class__.__name__, "object_id": self.pk}
         messages = [error_message_with_signup_id]
         messages.extend(exception.messages)
@@ -917,7 +917,7 @@ class SignUpMixin:
             and registration_merchant.external_merchant_id
             != registration_merchant.merchant.merchant_id
         ):
-            # New merchant has been created in Talpa because of an updated Paytrail merchant ID,
+            # New merchant has been created in Talpa because of an updated Paytrail merchant ID,  # noqa: E501
             # and the registration hasn't been updated after that
             # => need to update product mapping here.
             self.registration.create_or_update_web_store_product_mapping_and_accounting()
@@ -1099,7 +1099,7 @@ class SignUpMixin:
             class_name = self.__class__.__name__
             logger.info(
                 f"{class_name} delete: "
-                f"cancellation created for payment with order ID {payment.external_order_id} "
+                f"cancellation created for payment with order ID {payment.external_order_id} "  # noqa: E501
                 f"({class_name} ID: {self.pk})."
             )
             return False, True
@@ -1154,7 +1154,8 @@ class SignUpGroup(
             )
 
         if (payment_refunded or payment_cancelled) and not bypass_web_store_api_calls:
-            # Signup group will be deleted after the refund or cancellation webhook arrives.
+            # Signup group will be deleted after the refund or cancellation webhook
+            # arrives.
             return
 
         super().delete(*args, **kwargs)
@@ -1504,7 +1505,7 @@ class SignUp(
         return []
 
     def partially_refund_signup_group_web_store_payment(self, signup_group):
-        """Returns True if the signup group's payment was partially refunded, False otherwise."""
+        """Returns True if the signup group's payment was partially refunded, False otherwise."""  # noqa: E501
 
         if (
             not (group_payment := getattr(signup_group, "payment", None))
@@ -1528,7 +1529,7 @@ class SignUp(
             class_name = self.__class__.__name__
             logger.info(
                 f"{class_name} delete: partial refund created for payment with "
-                f"order ID {group_payment.external_order_id} ({class_name} ID: {signup_group.pk})"
+                f"order ID {group_payment.external_order_id} ({class_name} ID: {signup_group.pk})"  # noqa: E501
             )
             return True
 
@@ -2006,7 +2007,7 @@ class SeatReservationCode(models.Model):
 class SignUpPriceGroup(RegistrationPriceGroupBaseModel, SoftDeletableBaseModel):
     """When a registration price group is selected when creating a signup for a registration,
     the pricing information that existed at that moment is stored into this model/table.
-    """
+    """  # noqa: E501
 
     signup = models.OneToOneField(
         SignUp,

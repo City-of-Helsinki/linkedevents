@@ -8,7 +8,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
-from drf_spectacular.utils import extend_schema_field, OpenApiTypes
+from drf_spectacular.utils import OpenApiTypes, extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
@@ -30,6 +30,8 @@ from registrations.exceptions import (
     WebStoreProductMappingValidationError,
 )
 from registrations.models import (
+    VAT_CODE_MAPPING,
+    VAT_PERCENTAGES,
     OfferPriceGroup,
     PriceGroup,
     Registration,
@@ -49,8 +51,6 @@ from registrations.models import (
     SignUpPaymentRefund,
     SignUpPriceGroup,
     SignUpProtectedData,
-    VAT_CODE_MAPPING,
-    VAT_PERCENTAGES,
     WebStoreAccount,
     WebStoreMerchant,
 )
@@ -106,7 +106,7 @@ def _notify_contact_person(
             if payment_link
             else SignUpNotificationType.CONFIRMATION
         ),
-        SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,
+        SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,  # noqa: E501
     }
 
     access_code = (
@@ -483,8 +483,9 @@ class SignUpSerializer(
             and signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
             and not signup.signup_group_id
         ):
-            # Payment can only be created here for an attending signup that is not part of a group.
-            # A group will have a single shared payment that is created in the group serializer.
+            # Payment can only be created here for an attending signup that is not part of a group.  # noqa: E501
+            # A group will have a single shared payment that is created in the group
+            # serializer.
             payment = self._create_payment(signup)
 
         if signup:
@@ -532,7 +533,7 @@ class SignUpSerializer(
 
         contact_person = getattr(instance, "contact_person", None)
         if instance.signup_group_id and contact_person:
-            # A signup in a group should never have a contact person - it's the group that has it,
+            # A signup in a group should never have a contact person - it's the group that has it,  # noqa: E501
             # so delete the individual signup's contact person.
             contact_person.delete()
         elif not instance.signup_group_id:
@@ -545,7 +546,8 @@ class SignUpSerializer(
 
         for field in registration.mandatory_fields:
             if self.partial and field not in validated_data.keys():
-                # Don't validate field if request method is PATCH and field is missing from the payload.
+                # Don't validate field if request method is PATCH and field is missing
+                # from the payload.
                 continue
             elif validated_data.get(field) in falsy_values:
                 errors[field] = _("This field must be specified.")
@@ -559,7 +561,7 @@ class SignUpSerializer(
         ):
             # Don't validate date_of_birth if one of the following is true:
             # - audience_min_age and registration.audience_max_age are not defined
-            # - request method is PATCH and field "date_of_birth" is missing from the payload
+            # - request method is PATCH and field "date_of_birth" is missing from the payload  # noqa: E501
             return
 
         date_of_birth = validated_data.get("date_of_birth")
@@ -617,7 +619,7 @@ class SignUpSerializer(
             registration_price_group := price_group.get("registration_price_group")
         ) and registration_price_group.registration_id != registration.pk:
             errors["price_group"] = _(
-                "Price group is not one of the allowed price groups for this registration."
+                "Price group is not one of the allowed price groups for this registration."  # noqa: E501
             )
 
     def validate(self, data):
@@ -780,7 +782,7 @@ class RegistrationUserAccessCreateSerializer(serializers.ModelSerializer):
             "is_substitute_user"
         ) and not has_allowed_substitute_user_email_domain(email):
             errors["is_substitute_user"] = _(
-                "The user's email domain is not one of the allowed domains for substitute users."
+                "The user's email domain is not one of the allowed domains for substitute users."  # noqa: E501
             )
 
         if errors:
@@ -1004,14 +1006,16 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
 
     @extend_schema_field(Optional[int])
     def get_remaining_attendee_capacity(self, obj):
-        # Because there can be slight delay with capacity calculations in case of seat expiration,
-        # calculate the current value on the fly so that front-end gets the most recent information.
+        # Because there can be slight delay with capacity calculations in case of seat expiration,  # noqa: E501
+        # calculate the current value on the fly so that front-end gets the most
+        # recent information.
         return obj.calculate_remaining_attendee_capacity()
 
     @extend_schema_field(Optional[int])
     def get_remaining_waiting_list_capacity(self, obj):
-        # Because there can be slight delay with capacity calculations in case of seat expiration,
-        # calculate the current value on the fly so that front-end gets the most recent information.
+        # Because there can be slight delay with capacity calculations in case of seat expiration,  # noqa: E501
+        # calculate the current value on the fly so that front-end gets the most
+        # recent information.
         return obj.calculate_remaining_waiting_list_capacity()
 
     @extend_schema_field(OpenApiTypes.STR)
@@ -1070,7 +1074,7 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
                             "registration_user_accesses": [
                                 ErrorDetail(
                                     _(
-                                        "Registration user access with email %(email)s already exists."
+                                        "Registration user access with email %(email)s already exists."  # noqa: E501
                                     )
                                     % {"email": data["email"]},
                                     code="unique",
@@ -1150,7 +1154,8 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
     def create(self, validated_data):
         user = self.request.user
         if isinstance(user, ApiKeyUser):
-            # allow creating a registration only if the api key matches event data source
+            # allow creating a registration only if the api key matches event data
+            # source
             if (
                 "event" in validated_data
                 and validated_data["event"].data_source != user.data_source
@@ -1281,7 +1286,7 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
         def duplicate_error_detail_callback(price_group):
             return ErrorDetail(
                 _(
-                    "Registration price group with price_group %(price_group)s already exists."
+                    "Registration price group with price_group %(price_group)s already exists."  # noqa: E501
                 )
                 % {"price_group": price_group},
                 code="unique",
@@ -1302,7 +1307,7 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
                     "price_group": [
                         ErrorDetail(
                             _(
-                                "All registration price groups must have the same VAT percentage."
+                                "All registration price groups must have the same VAT percentage."  # noqa: E501
                             ),
                             code="vat_percentage",
                         )
@@ -1468,7 +1473,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
                 {
                     "signups": ErrorDetail(
                         _(
-                            "Amount of signups is greater than maximum group size: {max_group_size}."
+                            "Amount of signups is greater than maximum group size: {max_group_size}."  # noqa: E501
                         ).format(max_group_size=maximum_group_size),
                         code="max_group_size",
                     )
@@ -1490,7 +1495,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "signups": _(
-                        "Only one signup is supported when creating a Talpa web store payment."
+                        "Only one signup is supported when creating a Talpa web store payment."  # noqa: E501
                     )
                 }
             )
@@ -1880,7 +1885,7 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
         if validated_data["seats"] > maximum_group_size:
             errors["seats"] = ErrorDetail(
                 _(
-                    "Amount of seats is greater than maximum group size: {max_group_size}."
+                    "Amount of seats is greater than maximum group size: {max_group_size}."  # noqa: E501
                 ).format(max_group_size=maximum_group_size),
                 code="max_group_size",
             )
@@ -1911,19 +1916,19 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
                     capacity_left=max(attendee_capacity_left - reserved_seats_amount, 0)
                 )
         elif (waiting_list_capacity := registration.waiting_list_capacity) is not None:
-            # Validate waiting list capacity only if waiting_list_capacity is defined and
+            # Validate waiting list capacity only if waiting_list_capacity is defined and  # noqa: E501
             # all seats in the event are used.
             waiting_list_count = registration.current_waiting_list_count
             waiting_list_capacity_left = waiting_list_capacity - waiting_list_count
 
-            # Prevent to reserve seats to waiting list if all available seats in waiting list
+            # Prevent to reserve seats to waiting list if all available seats in waiting list  # noqa: E501
             # are already reserved
             if (
                 validated_data["seats"]
                 > waiting_list_capacity_left - reserved_seats_amount
             ):
                 errors["seats"] = _(
-                    "Not enough capacity in the waiting list. Capacity left: {capacity_left}."
+                    "Not enough capacity in the waiting list. Capacity left: {capacity_left}."  # noqa: E501
                 ).format(
                     capacity_left=max(
                         waiting_list_capacity_left - reserved_seats_amount, 0
@@ -2019,7 +2024,7 @@ class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSeriali
         Description is considered valid if
         1. request is PATCH without any description fields given in data, OR
         2. any of the description fields have a valid value.
-        """
+        """  # noqa: E501
 
         description_fields = ["description_fi", "description_en", "description_sv"]
 
@@ -2127,7 +2132,8 @@ class WebStoreMerchantSerializer(CreatedModifiedBaseSerializer):
                 user.is_authenticated
                 and (user.is_superuser or user.is_financial_admin_of(organization))
             ):
-                # Show Paytrail and merchant ID fields only to superusers and financial admins.
+                # Show Paytrail and merchant ID fields only to superusers and financial
+                # admins.
                 for field in self.admin_only_fields:
                     self.fields.pop(field, None)
 

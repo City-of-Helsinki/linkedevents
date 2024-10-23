@@ -9,7 +9,7 @@ from registrations.models import RegistrationUserAccess
 
 
 class Command(BaseCommand):
-    help = "Remove unused admin and registration user permissions after expiration time has passed."
+    help = "Remove unused admin and registration user permissions after expiration time has passed."  # noqa: E501
 
     @staticmethod
     def _handle_event_admins(datetime_now):

@@ -17,7 +17,7 @@ def get_user_for_gdpr_api(user: get_user_model()) -> get_user_model():
 
     :param user: the User instance whose GDPR data is being queried
     :return: the same User instance
-    """
+    """  # noqa: E501
     return user
 
 
@@ -32,18 +32,19 @@ def delete_user_and_gdpr_data(
 
     :param  user: the User instance to be deleted along with related GDPR data
     :param dry_run: a boolean telling if this is a dry run of the function or not
-    """
+    """  # noqa: E501
 
     if settings.GDPR_DISABLE_API_DELETION:
-        # Delete user is disabled. Returns 403 FORBIDDEN so that the GDPR view handles it correctly.
+        # Delete user is disabled. Returns 403 FORBIDDEN so that the GDPR view
+        # handles it correctly.
         return ErrorResponse(
             [
                 Error(
                     "GDPR_DISABLE_API_DELETION=1",
                     {
-                        "fi": "GDPR poistopyynnöt on estetty toistaiseksi Linked Events -palvelussa",
-                        "en": "GDPR removal requests are temporarily unavailable in Linked Events",
-                        "sv": "GDPR-borttagning begäran är tillfälligt inte tillgänglig i Linked Events",
+                        "fi": "GDPR poistopyynnöt on estetty toistaiseksi Linked Events -palvelussa",  # noqa: E501
+                        "en": "GDPR removal requests are temporarily unavailable in Linked Events",  # noqa: E501
+                        "sv": "GDPR-borttagning begäran är tillfälligt inte tillgänglig i Linked Events",  # noqa: E501
                     },
                 )
             ]
@@ -63,9 +64,9 @@ def delete_user_and_gdpr_data(
                 Error(
                     "UPCOMING_SIGNUPS",
                     {
-                        "fi": "Käyttäjällä on tulevia ilmoittautumisia, joten tietoja ei voida poistaa.",
+                        "fi": "Käyttäjällä on tulevia ilmoittautumisia, joten tietoja ei voida poistaa.",  # noqa: E501
                         "en": "User has upcoming signups, so data cannot be deleted.",
-                        "sv": "Användaren har kommande registreringar, så data kan inte raderas.",
+                        "sv": "Användaren har kommande registreringar, så data kan inte raderas.",  # noqa: E501
                     },
                 )
             ]
@@ -90,9 +91,9 @@ def delete_user_and_gdpr_data(
                 Error(
                     "ONGOING_PAYMENTS",
                     {
-                        "fi": "Käyttäjällä on avoimia maksuja, joten tietoja ei voida poistaa.",
+                        "fi": "Käyttäjällä on avoimia maksuja, joten tietoja ei voida poistaa.",  # noqa: E501
                         "en": "User has ongoing payments, so data cannot be deleted.",
-                        "sv": "Användaren har pågående betalningar, så data kan inte raderas.",
+                        "sv": "Användaren har pågående betalningar, så data kan inte raderas.",  # noqa: E501
                     },
                 )
             ]

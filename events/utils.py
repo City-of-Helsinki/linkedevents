@@ -133,7 +133,8 @@ def parse_time(time_str: str, default_tz=pytz.utc) -> (datetime, bool):
     try:
         # Handle all other times through dateutil.
         dt = dateutil_parse(time_str)
-        # Dateutil may allow dates with too large negative tzoffset, crashing psycopg later
+        # Dateutil may allow dates with too large negative tzoffset, crashing
+        # psycopg later
         if dt.tzinfo and abs(dt.tzinfo.utcoffset(dt)) > timedelta(hours=15):
             raise ParseError(f"Time zone given in timestamp {dt} out of bounds.")
 
@@ -257,8 +258,9 @@ def get_user_data_source_and_organization_from_request(
         if not publisher:
             raise PermissionDenied(_("Data source doesn't belong to any organization"))
     else:
-        # objects *created* by api are marked coming from the system data source unless api_key is provided
-        # we must optionally create the system data source here, as the settings may have changed at any time
+        # objects *created* by api are marked coming from the system data source unless api_key is provided  # noqa: E501
+        # we must optionally create the system data source here, as the settings
+        # may have changed at any time
         system_data_source_defaults = {
             "user_editable_resources": True,
             "user_editable_organizations": True,
@@ -272,7 +274,8 @@ def get_user_data_source_and_organization_from_request(
             publisher = user.get_default_organization()
         else:
             publisher = None
-        # no sense in doing the replacement check later, the authenticated publisher must be current to begin with
+        # no sense in doing the replacement check later, the authenticated
+        # publisher must be current to begin with
         if publisher and publisher.replaced_by:
             publisher = publisher.replaced_by
     return data_source, publisher

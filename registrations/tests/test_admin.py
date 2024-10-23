@@ -16,6 +16,7 @@ from registrations.admin import RegistrationAdmin
 from registrations.enums import VatPercentage
 from registrations.exceptions import WebStoreAPIError
 from registrations.models import (
+    VAT_CODE_MAPPING,
     Event,
     PriceGroup,
     Registration,
@@ -24,7 +25,6 @@ from registrations.models import (
     RegistrationWebStoreAccount,
     RegistrationWebStoreMerchant,
     RegistrationWebStoreProductMapping,
-    VAT_CODE_MAPPING,
 )
 from registrations.tests.factories import (
     PriceGroupFactory,

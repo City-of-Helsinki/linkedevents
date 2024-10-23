@@ -10,7 +10,7 @@ class EventExtension(object):
     #: The identifier for the extension (as referred to in the `extensions` argument)
     identifier = None
 
-    #: The `related_name` for this extension's Event extension model. This will be added to
+    #: The `related_name` for this extension's Event extension model. This will be added to  # noqa: E501
     #: `select_related` queries done over the API.
     related_name = None
 
@@ -42,7 +42,7 @@ class EventExtension(object):
 
         :return: The serializer.
         :rtype: rest_framework.serializers.Serializer
-        """
+        """  # noqa: E501
 
     def post_create_event(self, request, event, data):  # pragma: no cover
         """

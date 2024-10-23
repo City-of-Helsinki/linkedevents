@@ -2,7 +2,7 @@ from copy import deepcopy
 from datetime import timedelta
 from decimal import Decimal
 from typing import Optional
-from unittest.mock import patch, PropertyMock
+from unittest.mock import PropertyMock, patch
 
 import pytest
 import requests_mock

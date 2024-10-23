@@ -46,7 +46,8 @@ class OsoiteImporter(Importer):
             self.mark_deleted = self.delete_and_replace
 
     def get_street_address(self, address, language):
-        # returns the address sans municipality in the desired language, or Finnish as fallback
+        # returns the address sans municipality in the desired language, or
+        # Finnish as fallback
         address.street.set_current_language(language)
         street = address.street.name
         s = "%s %s" % (street, address.number)
@@ -72,16 +73,17 @@ class OsoiteImporter(Importer):
     def delete_and_replace(self, obj):
         obj.deleted = True
         obj.save(update_fields=["deleted"])
-        # we won't stand idly by and watch kymp delete used addresses willy-nilly without raising a ruckus!
+        # we won't stand idly by and watch kymp delete used addresses willy-nilly
+        # without raising a ruckus!
         if obj.events.count() > 0:
-            # sadly, addresses are identified by, well, address alone. Therefore we have no other data that
+            # sadly, addresses are identified by, well, address alone. Therefore we have no other data that  # noqa: E501
             # could be used to find out if there is a replacement location.
             logger.warning(
-                "Osoiteluettelo deleted address %s (%s) with events. This means that the street in "
-                "question has probably changed address numbers, as they do. Please check all "
-                "addresses on the street for events and save any new address numbers in the "
-                "replaced_by field. If several addresses have changed on the street, you may have to "
-                "manually move the events instead. Until then, events will stay mapped to the old "
+                "Osoiteluettelo deleted address %s (%s) with events. This means that the street in "  # noqa: E501
+                "question has probably changed address numbers, as they do. Please check all "  # noqa: E501
+                "addresses on the street for events and save any new address numbers in the "  # noqa: E501
+                "replaced_by field. If several addresses have changed on the street, you may have to "  # noqa: E501
+                "manually move the events instead. Until then, events will stay mapped to the old "  # noqa: E501
                 "addresses." % (obj.id, str(obj))
             )
         return True
@@ -150,7 +152,7 @@ class OsoiteImporter(Importer):
         if obj.deleted:
             obj.deleted = False
             # address has been reinstated, hip hip hooray!
-            # there's no way we can find any events from other addresses that should now be in this address
+            # there's no way we can find any events from other addresses that should now be in this address  # noqa: E501
             # so we cannot do address replace here (the way we do with tprek units)
             obj._changed_fields.append("deleted")
             obj._changed = True
@@ -167,7 +169,8 @@ class OsoiteImporter(Importer):
 
     def import_places(self):
         # munigeo saves addresses in local db, we just create Places from them.
-        # note that the addresses only change daily and the import is time-consuming, so we should not run this hourly
+        # note that the addresses only change daily and the import is
+        # time-consuming, so we should not run this hourly
 
         # addresses require the municipalities to be present in the db
         call_command("geo_import", "finland", municipalities=True)

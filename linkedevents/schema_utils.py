@@ -1,4 +1,4 @@
-from drf_spectacular.plumbing import get_lib_doc_excludes, ResolvedComponent
+from drf_spectacular.plumbing import ResolvedComponent, get_lib_doc_excludes
 from drf_spectacular.settings import spectacular_settings
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, OpenApiTypes
 
@@ -6,7 +6,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, OpenApiType
 def swagger_endpoint_filter(endpoints) -> list:
     """
     Ensure that only the wanted Linked Events API endpoints are included in the Swagger schema.
-    """
+    """  # noqa: E501
     filtered = []
 
     for path, path_regex, method, callback in endpoints:
@@ -41,8 +41,8 @@ def swagger_postprocessing_hook(result, generator, request, public):
             },
         },
         "description": (
-            "Meta record for result pagination. All results from API are paginated, ie. "
-            "delivered in chunks of X results. This records describes how many results there "
+            "Meta record for result pagination. All results from API are paginated, ie. "  # noqa: E501
+            "delivered in chunks of X results. This records describes how many results there "  # noqa: E501
             "are in total, and how to access previous and next pages."
         ),
     }
@@ -132,7 +132,7 @@ class IncludeOpenApiParameter(OpenApiParameter):
         kwargs.setdefault(
             "description",
             (
-                "Embed given reference-type fields, comma-separated if several, directly into "
+                "Embed given reference-type fields, comma-separated if several, directly into "  # noqa: E501
                 "the response, otherwise they are returned as URI references."
             ),
         )

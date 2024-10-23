@@ -476,7 +476,7 @@ def _get_signups_profile_data(signups_qs: QuerySet[SignUp]) -> list[dict]:
 
 
 def _get_user_data(user: User, expect_event_user_data: bool = True) -> list[dict]:
-    ext_event = Event.objects.filter(
+    Event.objects.filter(
         user_email=user.email, publisher=settings.EXTERNAL_USER_PUBLISHER_ID
     ).first()
 

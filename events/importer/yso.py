@@ -19,10 +19,13 @@ yso = rdflib.Namespace("http://www.yso.fi/onto/yso/")
 URL = "https://finto.fi/rest/v1/yso/data"
 
 YSO_DEPRECATED_MAPS = {
-    "yso:p12262": "yso:p4354",  # lapset (kooste) -> lapset (ikään liittyvä rooli), missing YSO replacement
-    "yso:p21160": "yso:p8113",  # kirjallisuus (erikoisala) -> kirjallisuus (taidelajit), wrong YSO replacement
-    "yso:p27158": "yso:p508707",  # Suvilahti -> Suvilahti (Helsinki), missing YSO replacement
-    "yso:p21315": "yso:p508301",  # Marskenttä -> Campus Martius, missing YSO replacement
+    # lapset (kooste) -> lapset (ikään liittyvä rooli), missing YSO replacement
+    "yso:p12262": "yso:p4354",
+    # kirjallisuus (erikoisala) -> kirjallisuus (taidelajit), wrong YSO replacement
+    "yso:p21160": "yso:p8113",
+    # Suvilahti -> Suvilahti (Helsinki), missing YSO replacement
+    "yso:p27158": "yso:p508707",
+    "yso:p21315": "yso:p508301",  # Marskenttä -> Campus Martius, missing YSO replacement  # noqa: E501
 }
 
 # yso keywords for the importers to automatically include in the audience field as well
@@ -122,7 +125,8 @@ def deprecate_and_replace(graph, keyword):
     new_keyword = None
     if replacement_subject:
         try:
-            # not all the replacements are valid keywords. yso has some data quality issues
+            # not all the replacements are valid keywords. yso has some data quality
+            # issues
             new_keyword = Keyword.objects.get(id=get_yso_id(replacement_subject))
         except Keyword.DoesNotExist:
             pass

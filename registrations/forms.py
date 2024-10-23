@@ -6,11 +6,11 @@ from django.utils.translation import gettext as _
 
 from registrations.enums import VatPercentage
 from registrations.models import (
+    VAT_PERCENTAGES,
     Registration,
     RegistrationPriceGroup,
     RegistrationWebStoreAccount,
     RegistrationWebStoreMerchant,
-    VAT_PERCENTAGES,
 )
 
 _PRODUCT_MAPPING_FIELDS = (
@@ -114,9 +114,9 @@ class RegistrationAdminForm(forms.ModelForm):
         self.fields["maximum_attendee_capacity"].required = True
         self.fields["maximum_attendee_capacity"].help_text = _(
             "If the attendee capacity for the event is not restricted, please give a "
-            "rough estimate of at least the maximum attendee capacity. The information will be "
-            "used for statistical purposes. Maximum attendee capacity is a measure in the city "
-            "strategy that monitors the volumes of events held in the city. The estimate may be "
+            "rough estimate of at least the maximum attendee capacity. The information will be "  # noqa: E501
+            "used for statistical purposes. Maximum attendee capacity is a measure in the city "  # noqa: E501
+            "strategy that monitors the volumes of events held in the city. The estimate may be "  # noqa: E501
             "changed later if it is uncertain at the moment."
         )
 

@@ -1,6 +1,6 @@
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
-from drf_spectacular.utils import extend_schema_field, inline_serializer, OpenApiTypes
+from drf_spectacular.utils import OpenApiTypes, extend_schema_field, inline_serializer
 from isodate import Duration, duration_isoformat, parse_duration
 from parler import appsettings as parler_appsettings
 from rest_framework import serializers

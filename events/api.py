@@ -1,9 +1,8 @@
 import logging
 import re
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 from datetime import time as datetime_time
-from datetime import timedelta
 from datetime import timezone as datetime_timezone
 from functools import partial, reduce
 from operator import or_
@@ -28,15 +27,15 @@ from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
 from drf_spectacular.utils import (
-    extend_schema,
-    inline_serializer,
     OpenApiParameter,
     OpenApiRequest,
     OpenApiResponse,
     OpenApiTypes,
+    extend_schema,
+    inline_serializer,
 )
 from haystack.query import AutoQuery
-from munigeo.api import build_bbox_filter, GeoModelAPIView, srid_to_srs
+from munigeo.api import GeoModelAPIView, build_bbox_filter, srid_to_srs
 from munigeo.models import AdministrativeDivision
 from rest_framework import (
     filters,
@@ -48,9 +47,8 @@ from rest_framework import (
     viewsets,
 )
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException, ParseError
+from rest_framework.exceptions import APIException, ParseError, ValidationError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
-from rest_framework.exceptions import ValidationError
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -68,9 +66,9 @@ from events.extensions import apply_select_and_prefetch, get_extensions_from_req
 from events.filters import (
     EventFilter,
     EventOrderingFilter,
-    filter_division,
     OrganizationFilter,
     PlaceFilter,
+    filter_division,
 )
 from events.models import (
     DataSource,
@@ -113,8 +111,8 @@ from events.serializers import (
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from linkedevents.registry import register_view
 from linkedevents.schema_utils import (
-    get_common_api_error_responses,
     IncludeOpenApiParameter,
+    get_common_api_error_responses,
 )
 from linkedevents.utils import get_fixed_lang_codes
 from registrations.exceptions import WebStoreAPIError
@@ -193,7 +191,7 @@ def parse_hours(val, param):
         )
     if not (0 <= hour <= 23):
         raise ParseError(
-            f"Hours should be between 0 and 23 in {param}, for example: 16:00. You have passed {hour}."
+            f"Hours should be between 0 and 23 in {param}, for example: 16:00. You have passed {hour}."  # noqa: E501
         )
     if len(val) == 2 and val[1]:
         try:
@@ -204,7 +202,7 @@ def parse_hours(val, param):
             )
         if not (0 <= minute <= 59):
             raise ParseError(
-                f"Minutes should be between 0 and 59 in {param} as in 16:20. You passed {minute}."
+                f"Minutes should be between 0 and 59 in {param} as in 16:20. You passed {minute}."  # noqa: E501
             )
         return hour, minute
     return hour, 0
@@ -258,7 +256,8 @@ class JSONAPIViewMixin(object):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        # user admin ids must be injected to the context for nested serializers, to avoid duplicating work
+        # user admin ids must be injected to the context for nested serializers,
+        # to avoid duplicating work
         user = context["request"].user
         admin_tree_ids = set()
         if user and user.is_authenticated:
@@ -291,9 +290,9 @@ class KeywordViewSet(
     @extend_schema(
         summary="Update a keyword",
         description=(
-            "Keyword can be updated if the user has appropriate access permissions. The original "
-            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
-            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "Keyword can be updated if the user has appropriate access permissions. The original "  # noqa: E501
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "  # noqa: E501
+            "its value is retained in database. In order to ensure consistent behaviour, users "  # noqa: E501
             "should always supply every field in PUT call."
         ),
         responses={
@@ -328,7 +327,7 @@ class KeywordViewSet(
 
     @extend_schema(
         summary="Delete a keyword",
-        description="Keyword can be deleted if the user has appropriate access permissions.",
+        description="Keyword can be deleted if the user has appropriate access permissions.",  # noqa: E501
         responses={
             204: OpenApiResponse(
                 description="Keyword has been successfully deleted.",
@@ -420,7 +419,7 @@ class KeywordListViewSet(
                 name="data_source",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for keywords (<b>note</b>: NOT events) that come from the specified "
+                    "Search for keywords (<b>note</b>: NOT events) that come from the specified "  # noqa: E501
                     "data source (see data source in keyword definition)."
                 ),
             ),
@@ -429,8 +428,8 @@ class KeywordListViewSet(
                 name="text",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for keywords (<b>note</b>: NOT events) that contain the given string. "
-                    "This applies even when <code>show_all_keywords</code> is specified. "
+                    "Search for keywords (<b>note</b>: NOT events) that contain the given string. "  # noqa: E501
+                    "This applies even when <code>show_all_keywords</code> is specified. "  # noqa: E501
                     "Alternative name for the parameter is <code>filter</code>."
                 ),
             ),
@@ -438,8 +437,8 @@ class KeywordListViewSet(
                 name="free_text",
                 type=OpenApiTypes.STR,
                 description=(
-                    "While the <code>text</code> search is looking for the keywords containg "
-                    "exact matches of the search string, <code>free_text</code> retrieves keywords "
+                    "While the <code>text</code> search is looking for the keywords containg "  # noqa: E501
+                    "exact matches of the search string, <code>free_text</code> retrieves keywords "  # noqa: E501
                     "on the basis of similarity. Results are sorted by similarity."
                 ),
             ),
@@ -447,7 +446,7 @@ class KeywordListViewSet(
                 name="has_upcoming_events",
                 type=OpenApiTypes.BOOL,
                 description=(
-                    "To show only the keywords which are used in the upcoming events supply the "
+                    "To show only the keywords which are used in the upcoming events supply the "  # noqa: E501
                     "<code>has_upcoming_events</code> query parameter."
                 ),
             ),
@@ -455,9 +454,9 @@ class KeywordListViewSet(
                 name="show_all_keywords",
                 type=OpenApiTypes.BOOL,
                 description=(
-                    "Show all keywords, including those that are not associated with any events. "
-                    "Otherwise such keywords are hidden. When <code>show_all_keywords</code> is "
-                    "specified, no other filter is applied, <b>except</b> <code>filter</code> and "
+                    "Show all keywords, including those that are not associated with any events. "  # noqa: E501
+                    "Otherwise such keywords are hidden. When <code>show_all_keywords</code> is "  # noqa: E501
+                    "specified, no other filter is applied, <b>except</b> <code>filter</code> and "  # noqa: E501
                     "<code>text</code> (match for keywords beginning with string)."
                 ),
             ),
@@ -465,8 +464,8 @@ class KeywordListViewSet(
                 name="show_deprecated",
                 type=OpenApiTypes.BOOL,
                 description=(
-                    "Show all keywords, including those that are deprecated. By default such "
-                    "keywords are hidden. When <code>show_all_keywords</code> is specified, no "
+                    "Show all keywords, including those that are deprecated. By default such "  # noqa: E501
+                    "keywords are hidden. When <code>show_all_keywords</code> is specified, no "  # noqa: E501
                     "other filter is applied, <b>except</b> <code>filter</code> and "
                     "<code>text</code> (match for keywords beginning with string)."
                 ),
@@ -475,9 +474,9 @@ class KeywordListViewSet(
                 name="sort",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Sort the returned keywords in the given order. Possible sorting criteria are "
+                    "Sort the returned keywords in the given order. Possible sorting criteria are "  # noqa: E501
                     "<code>n_events</code>, <code>id</code>, <code>name</code> and "
-                    "<code>data_source</code>. The default ordering is <code>-data_source</code>, "
+                    "<code>data_source</code>. The default ordering is <code>-data_source</code>, "  # noqa: E501
                     "<code>-n_events</code>, <code>name</code>."
                 ),
             ),
@@ -499,7 +498,7 @@ class KeywordListViewSet(
         filter (only keywords containing the specified string are included)
         show_all_keywords (keywords without events are included)
         show_deprecated (deprecated keywords are included)
-        """
+        """  # noqa: E501
 
         queryset = self.queryset
         data_source = self.request.query_params.get("data_source")
@@ -522,7 +521,7 @@ class KeywordListViewSet(
             # no need to search English if there are accented letters
             langs = (
                 ["fi", "sv"]
-                if re.search("[\u00C0-\u00FF]", val)
+                if re.search("[\u00c0-\u00ff]", val)
                 else ["fi", "sv", "en"]
             )
             tri = [TrigramSimilarity(f"name_{i}", val) for i in langs]
@@ -577,9 +576,9 @@ class KeywordSetViewSet(
     @extend_schema(
         summary="Update a keyword set",
         description=(
-            "Keyword set can be updated if the user has appropriate access permissions. The "
-            "original implementation behaves like PATCH, ie. if some field is left out from the "
-            "PUT call, its value is retained in database. In order to ensure consistent "
+            "Keyword set can be updated if the user has appropriate access permissions. The "  # noqa: E501
+            "original implementation behaves like PATCH, ie. if some field is left out from the "  # noqa: E501
+            "PUT call, its value is retained in database. In order to ensure consistent "  # noqa: E501
             "behaviour, users should always supply every field in PUT call."
         ),
         responses={
@@ -614,7 +613,7 @@ class KeywordSetViewSet(
 
     @extend_schema(
         summary="Delete a keyword set",
-        description="Keyword set can be deleted if the user has appropriate access permissions.",
+        description="Keyword set can be deleted if the user has appropriate access permissions.",  # noqa: E501
         responses={
             204: OpenApiResponse(
                 description="Keyword set has been successfully deleted.",
@@ -637,15 +636,15 @@ class KeywordSetViewSet(
                 name="text",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for keyword sets that contain the given string in name or id fields."
+                    "Search for keyword sets that contain the given string in name or id fields."  # noqa: E501
                 ),
             ),
             OpenApiParameter(
                 name="sort",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Sort the returned keyword sets in the given order. Possible sorting criteria "
-                    "are <code>name</code>, <code>usage</code> and <code>data_source.</code>"
+                    "Sort the returned keyword sets in the given order. Possible sorting criteria "  # noqa: E501
+                    "are <code>name</code>, <code>usage</code> and <code>data_source.</code>"  # noqa: E501
                 ),
             ),
         ],
@@ -697,7 +696,7 @@ class KeywordSetViewSet(
             unallowed_params = set(vals) - allowed_fields
             if unallowed_params:
                 raise ParseError(
-                    f"It is possible to sort with the following params only: {allowed_fields}"
+                    f"It is possible to sort with the following params only: {allowed_fields}"  # noqa: E501
                 )
             qset = qset.order_by(*vals)
         return qset
@@ -731,9 +730,9 @@ class PlaceRetrieveViewSet(
     @extend_schema(
         summary="Update a place",
         description=(
-            "Place can be updated if the user has appropriate access permissions. The original "
-            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
-            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "Place can be updated if the user has appropriate access permissions. The original "  # noqa: E501
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "  # noqa: E501
+            "its value is retained in database. In order to ensure consistent behaviour, users "  # noqa: E501
             "should always supply every field in PUT call."
         ),
         responses={
@@ -768,7 +767,7 @@ class PlaceRetrieveViewSet(
 
     @extend_schema(
         summary="Delete a place",
-        description="Place can be deleted if the user has appropriate access permissions.",
+        description="Place can be deleted if the user has appropriate access permissions.",  # noqa: E501
         responses={
             404: OpenApiResponse(
                 description="Place was not found.",
@@ -862,8 +861,8 @@ class PlaceListViewSet(
                 name="text",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for places that contain the given string. This applies even when "
-                    "show_all_places is specified. Alternative name for the parameter is "
+                    "Search for places that contain the given string. This applies even when "  # noqa: E501
+                    "show_all_places is specified. Alternative name for the parameter is "  # noqa: E501
                     "<code>filter</code>."
                 ),
             ),
@@ -871,7 +870,7 @@ class PlaceListViewSet(
                 name="has_upcoming_events",
                 type=OpenApiTypes.BOOL,
                 description=(
-                    "To show only the places which are used in the upcoming events supply the "
+                    "To show only the places which are used in the upcoming events supply the "  # noqa: E501
                     "<code>has_upcoming_events</code> query parameter."
                 ),
             ),
@@ -880,7 +879,7 @@ class PlaceListViewSet(
                 type=OpenApiTypes.BOOL,
                 description=(
                     "Show all places, including those that are not hosting any events. "
-                    "Otherwise such places are hidden. When show_all_places is specified, "
+                    "Otherwise such places are hidden. When show_all_places is specified, "  # noqa: E501
                     "no other filter is applied."
                 ),
             ),
@@ -896,7 +895,7 @@ class PlaceListViewSet(
                 name="sort",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Sort the returned places in the given order. Possible sorting criteria are "
+                    "Sort the returned places in the given order. Possible sorting criteria are "  # noqa: E501
                     "<code>n_events</code>, <code>id</code>, <code>name</code>, "
                     "<code>street_address</code> and <code>postal_code</code>. "
                     "The default ordering is <code>-n_events</code>."
@@ -933,7 +932,7 @@ class PlaceListViewSet(
         filter (only places containing the specified string are included)
         show_all_places (places without events are included)
         show_deleted (deleted places are included)
-        """
+        """  # noqa: E501
         queryset = Place.objects.select_related(
             "data_source",  # Select related to support ordering
         ).prefetch_related(
@@ -992,7 +991,7 @@ class LanguageViewSet(
     filterset_fields = ("service_language",)
 
     @extend_schema(
-        summary="Return a list of languages used for describing events and registrations",
+        summary="Return a list of languages used for describing events and registrations",  # noqa: E501
         description=render_to_string("swagger/language_list_description.html"),
         auth=[],
         parameters=[
@@ -1000,7 +999,7 @@ class LanguageViewSet(
                 name="service_language",
                 type=OpenApiTypes.BOOL,
                 description=(
-                    "Show only service languages or languages that are not service languages."
+                    "Show only service languages or languages that are not service languages."  # noqa: E501
                 ),
             ),
         ],
@@ -1048,7 +1047,7 @@ class OrganizationViewSet(
                 name="parent",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Get all suborganizations and their descendants for the given organization id."
+                    "Get all suborganizations and their descendants for the given organization id."  # noqa: E501
                 ),
             ),
         ],
@@ -1072,9 +1071,9 @@ class OrganizationViewSet(
     @extend_schema(
         summary="Update an organization",
         description=(
-            "Organization can be updated if the user has appropriate access permissions. "
-            "The original implementation behaves like PATCH, ie. if some field is left out from "
-            "the PUT call, its value is retained in database. In order to ensure consistent "
+            "Organization can be updated if the user has appropriate access permissions. "  # noqa: E501
+            "The original implementation behaves like PATCH, ie. if some field is left out from "  # noqa: E501
+            "the PUT call, its value is retained in database. In order to ensure consistent "  # noqa: E501
             "behaviour, users should always supply every field in PUT call."
         ),
         responses={
@@ -1109,7 +1108,7 @@ class OrganizationViewSet(
 
     @extend_schema(
         summary="Delete an organization",
-        description="Organization can be deleted if the user has appropriate access permissions.",
+        description="Organization can be deleted if the user has appropriate access permissions.",  # noqa: E501
         responses={
             204: OpenApiResponse(
                 description="Organization has been successfully deleted.",
@@ -1155,16 +1154,12 @@ class OrganizationViewSet(
         ).prefetch_related(
             Prefetch(
                 "children",
-                queryset=Organization.objects.filter(
-                    internal_type="normal"
-                ),  # noqa E501
+                queryset=Organization.objects.filter(internal_type="normal"),  # noqa E501
                 to_attr="sub_organizations",
             ),
             Prefetch(
                 "children",
-                queryset=Organization.objects.filter(
-                    internal_type="affiliated"
-                ),  # noqa E501
+                queryset=Organization.objects.filter(internal_type="affiliated"),  # noqa E501
                 to_attr="affiliated_organizations",
             ),
         )
@@ -1196,8 +1191,8 @@ class OrganizationViewSet(
         operation_id="organization_merchants_list",
         summary="Return a list of merchants for an organization",
         description=(
-            "Returns a list of merchants for an organization. If the organization itself does not "
-            "have merchants, they will be returned from the closest ancestor that has them. "
+            "Returns a list of merchants for an organization. If the organization itself does not "  # noqa: E501
+            "have merchants, they will be returned from the closest ancestor that has them. "  # noqa: E501
             "Only admin users are allowed to use this endpoint."
         ),
         responses={
@@ -1238,8 +1233,8 @@ class OrganizationViewSet(
         operation_id="organization_accounts_list",
         summary="Return a list of accounts for an organization",
         description=(
-            "Returns a list of accounts for an organization. If the organization itself does not "
-            "have accounts, they will be returned from the closest ancestor that has them. "
+            "Returns a list of accounts for an organization. If the organization itself does not "  # noqa: E501
+            "have accounts, they will be returned from the closest ancestor that has them. "  # noqa: E501
             "Only admin users are allowed to use this endpoint."
         ),
         responses={
@@ -1287,7 +1282,7 @@ class DataSourceViewSet(
     @extend_schema(
         summary="Return a list of data sources",
         description=(
-            "The returned list describes data sources. Only admin users are allowed to use "
+            "The returned list describes data sources. Only admin users are allowed to use "  # noqa: E501
             "this endpoint."
         ),
     )
@@ -1297,7 +1292,7 @@ class DataSourceViewSet(
     @extend_schema(
         summary="Return information for a single data source",
         description=(
-            "Can be used to retrieve a single data source. Only admin users are allowed to "
+            "Can be used to retrieve a single data source. Only admin users are allowed to "  # noqa: E501
             "use this endpoint."
         ),
     )
@@ -1330,7 +1325,7 @@ class OrganizationClassViewSet(
     @extend_schema(
         summary="Return information for a single organization class",
         description=(
-            "Can be used to retrieve a single organization class. Only admin users are allowed "
+            "Can be used to retrieve a single organization class. Only admin users are allowed "  # noqa: E501
             "to use this endpoint"
         ),
     )
@@ -1377,7 +1372,7 @@ class ImageViewSet(
                 name="publisher",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for images published by the given organization as specified by id. "
+                    "Search for images published by the given organization as specified by id. "  # noqa: E501
                     "Multiple ids are separated by comma."
                 ),
             ),
@@ -1398,8 +1393,8 @@ class ImageViewSet(
                 name="sort",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Default ordering is descending order by <code>-last_modified_time</code>. "
-                    "You may also order results by <code>id</code> and <code>name</code>."
+                    "Default ordering is descending order by <code>-last_modified_time</code>. "  # noqa: E501
+                    "You may also order results by <code>id</code> and <code>name</code>."  # noqa: E501
                 ),
             ),
         ],
@@ -1410,9 +1405,9 @@ class ImageViewSet(
     @extend_schema(
         summary="Create a new image",
         description=(
-            "There are two ways to create an image object. The image file can be posted as a "
-            "multipart request, but the endpoint also accepts a simple JSON object with an "
-            "external url in the url field. This allows using external images for events without "
+            "There are two ways to create an image object. The image file can be posted as a "  # noqa: E501
+            "multipart request, but the endpoint also accepts a simple JSON object with an "  # noqa: E501
+            "external url in the url field. This allows using external images for events without "  # noqa: E501
             "saving them on the API server."
         ),
         request={
@@ -1439,9 +1434,9 @@ class ImageViewSet(
     @extend_schema(
         summary="Update an image",
         description=(
-            "Image can be updated if the user has appropriate access permissions. The original "
-            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
-            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "Image can be updated if the user has appropriate access permissions. The original "  # noqa: E501
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "  # noqa: E501
+            "its value is retained in database. In order to ensure consistent behaviour, users "  # noqa: E501
             "should always supply every field in PUT call."
         ),
         responses={
@@ -1476,7 +1471,7 @@ class ImageViewSet(
 
     @extend_schema(
         summary="Delete an image",
-        description="Image can be deleted if the user has appropriate access permissions.",
+        description="Image can be deleted if the user has appropriate access permissions.",  # noqa: E501
         responses={
             204: OpenApiResponse(
                 description="Image has been successfully deleted.",
@@ -1547,7 +1542,8 @@ class ImageViewSet(
             if instance.data_source != user.data_source:
                 raise PermissionDenied()
         else:
-            # without api key, data_source should have user_editable_resources set to True
+            # without api key, data_source should have user_editable_resources set to
+            # True
             if not instance.is_user_editable_resources():
                 raise PermissionDenied()
 
@@ -1735,7 +1731,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         langs = settings.FULLTEXT_SEARCH_LANGUAGES
         if language not in langs.keys():
             raise ParseError(
-                f"{language} not supported. Supported options are: {' '.join(langs.values())}"
+                f"{language} not supported. Supported options are: {' '.join(langs.values())}"  # noqa: E501
             )
 
         val = val.replace(",", " ")
@@ -1915,7 +1911,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
 
             langs = (
                 ["fi", "sv"]
-                if re.search("[\u00C0-\u00FF]", val)
+                if re.search("[\u00c0-\u00ff]", val)
                 else ["fi", "sv", "en"]
             )
             tri = [TrigramSimilarity(f"name_{i}", val) for i in langs]
@@ -2010,7 +2006,8 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         end = (today + timedelta(days=days)).isoformat()
 
     if not end:
-        # postponed events are considered to be "far" in the future and should be included if end is *not* given
+        # postponed events are considered to be "far" in the future and should be
+        # included if end is *not* given
         postponed_q = Q(event_status=Event.Status.POSTPONED)
     else:
         postponed_q = Q()
@@ -2019,8 +2016,9 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         # Inconsistent behaviour, see test_inconsistent_tz_default
         dt = utils.parse_time(start, default_tz=pytz.timezone(settings.TIME_ZONE))[0]
 
-        # only return events with specified end times, or unspecified start times, during the whole of the event
-        # this gets of rid pesky one-day events with no known end time (but known start) after they started
+        # only return events with specified end times, or unspecified start times, during the whole of the event  # noqa: E501
+        # this gets of rid pesky one-day events with no known end time (but known
+        # start) after they started
         queryset = queryset.filter(
             Q(end_time__gt=dt, has_end_time=True)
             | Q(end_time__gt=dt, has_start_time=False)
@@ -2108,8 +2106,8 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             # same as ?super_event_type=recurring
             queryset = queryset.filter(super_event_type=Event.SuperEventType.RECURRING)
         elif val == "sub":
-            # same as ?super_event_type=none,umbrella, weirdly yielding non-sub events too.
-            # don't know if users want this to remain tho. do we want that or is there a need
+            # same as ?super_event_type=none,umbrella, weirdly yielding non-sub events too.  # noqa: E501
+            # don't know if users want this to remain tho. do we want that or is there a need  # noqa: E501
             # to change this to actually filter only subevents of recurring events?
             queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING)
 
@@ -2307,8 +2305,8 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             queryset = queryset.exclude(offers__is_free=True)
 
     val = params.get("suitable_for", None)
-    # Excludes all the events that have max age limit below or min age limit above the age or age range specified.
-    # Suitable events with just one age boundary specified are returned, events with no age limits specified are
+    # Excludes all the events that have max age limit below or min age limit above the age or age range specified.  # noqa: E501
+    # Suitable events with just one age boundary specified are returned, events with no age limits specified are  # noqa: E501
     # excluded.
 
     if val:
@@ -2506,10 +2504,12 @@ class EventViewSet(
                 )
             # by default, only public events are shown in the event list
             queryset = public_queryset
-            # however, certain query parameters allow customizing the listing for authenticated users
+            # however, certain query parameters allow customizing the listing for
+            # authenticated users
             show_all = self.request.query_params.get("show_all")
             if show_all:
-                # displays all editable events, including drafts, and public non-editable events
+                # displays all editable events, including drafts, and public
+                # non-editable events
                 queryset = editable_queryset | public_queryset
 
             admin_user = self.request.query_params.get("admin_user")
@@ -2522,7 +2522,8 @@ class EventViewSet(
                 )
 
             if admin_user:
-                # displays all editable events, including drafts, but no other public events
+                # displays all editable events, including drafts, but no other public
+                # events
                 queryset = editable_queryset
 
             created_by = self.request.query_params.get("created_by")
@@ -2536,7 +2537,8 @@ class EventViewSet(
                 queryset, self.request.query_params, srs=self.srs
             )
         elif self.request.method not in permissions.SAFE_METHODS:
-            # prevent changing events user does not have write permissions (for bulk operations)
+            # prevent changing events user does not have write permissions (for bulk
+            # operations)
             if isinstance(self.request.data, list):
                 try:
                     original_queryset = Event.objects.filter(
@@ -2555,9 +2557,9 @@ class EventViewSet(
     @extend_schema(
         summary="Update an event",
         description=(
-            "Events can be updated if the user has appropriate access permissions. The original "
-            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
-            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "Events can be updated if the user has appropriate access permissions. The original "  # noqa: E501
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "  # noqa: E501
+            "its value is retained in database. In order to ensure consistent behaviour, users "  # noqa: E501
             "should always supply every field in PUT call."
         ),
         responses={
@@ -2610,7 +2612,8 @@ class EventViewSet(
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
 
-        # Prevent changing existing events to a state that user does not have write permissions
+        # Prevent changing existing events to a state that user does not have
+        # write permissions
         for event_data in serializer.validated_data:
             try:
                 instance = serializer.instance.get(id=event_data["id"])
@@ -2635,9 +2638,9 @@ class EventViewSet(
         operation_id="event_bulk_update",
         summary="Bulk update several events",
         description=(
-            "Events can be updated if the user has appropriate access permissions. The original "
-            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "
-            "its value is retained in database. In order to ensure consistent behaviour, users "
+            "Events can be updated if the user has appropriate access permissions. The original "  # noqa: E501
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "  # noqa: E501
+            "its value is retained in database. In order to ensure consistent behaviour, users "  # noqa: E501
             "should always supply every field in PUT call."
         ),
         request=EventSerializer(many=True),
@@ -2787,7 +2790,7 @@ class EventViewSet(
 
     @extend_schema(
         summary="Delete an event",
-        description="Event can be deleted if the user has appropriate access permissions.",
+        description="Event can be deleted if the user has appropriate access permissions.",  # noqa: E501
         responses={
             204: OpenApiResponse(
                 description="Event has been successfully deleted.",
@@ -2872,7 +2875,7 @@ class EventViewSet(
                 name="internet_ongoing_AND",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for internet events that are upcoming or have not ended yet. "
+                    "Search for internet events that are upcoming or have not ended yet. "  # noqa: E501
                     "Multiple search terms are separated by comma."
                 ),
             ),
@@ -2880,7 +2883,7 @@ class EventViewSet(
                 name="internet_ongoing_OR",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for internet events that are upcoming or have not ended yet. "
+                    "Search for internet events that are upcoming or have not ended yet. "  # noqa: E501
                     "Multiple search terms are separated by comma."
                 ),
             ),
@@ -2888,7 +2891,7 @@ class EventViewSet(
                 name="all_ongoing_AND",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for local and internet events that are upcoming or have not ended yet. "
+                    "Search for local and internet events that are upcoming or have not ended yet. "  # noqa: E501
                     "Multiple search terms are separated by comma."
                 ),
             ),
@@ -2896,7 +2899,7 @@ class EventViewSet(
                 name="all_ongoing_OR",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for local and internet events that are upcoming or have not ended yet. "
+                    "Search for local and internet events that are upcoming or have not ended yet. "  # noqa: E501
                     "Multiple search terms are separated by comma."
                 ),
             ),
@@ -2909,8 +2912,8 @@ class EventViewSet(
                 name="start",
                 type=OpenApiTypes.DATETIME,
                 description=(
-                    "Search for events beginning or ending after this time. Dates can be "
-                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+                    "Search for events beginning or ending after this time. Dates can be "  # noqa: E501
+                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "  # noqa: E501
                     "<code>today</code> and <code>now</code>."
                 ),
             ),
@@ -2918,8 +2921,8 @@ class EventViewSet(
                 name="end",
                 type=OpenApiTypes.DATETIME,
                 description=(
-                    "Search for events beginning or ending before this time. Dates can be "
-                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+                    "Search for events beginning or ending before this time. Dates can be "  # noqa: E501
+                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "  # noqa: E501
                     "<code>today</code> and <code>now</code>."
                 ),
             ),
@@ -2927,7 +2930,7 @@ class EventViewSet(
                 name="days",
                 type=OpenApiTypes.INT,
                 description=(
-                    "Search for events that intersect with the current time and specified "
+                    "Search for events that intersect with the current time and specified "  # noqa: E501
                     "amount of days from current time."
                 ),
             ),
@@ -2969,8 +2972,8 @@ class EventViewSet(
                 name="bbox",
                 type={"type": "array", "items": {"type": "string"}},
                 description=(
-                    "Search for events that are within this bounding box. Decimal coordinates "
-                    "are given in order west, south, east, north. Period is used as decimal "
+                    "Search for events that are within this bounding box. Decimal coordinates "  # noqa: E501
+                    "are given in order west, south, east, north. Period is used as decimal "  # noqa: E501
                     "separator. Coordinate system is EPSG:4326."
                 ),
             ),
@@ -2986,7 +2989,7 @@ class EventViewSet(
                 name="dwithin_origin",
                 type={"type": "array", "items": {"type": "string"}},
                 description=(
-                    "To restrict the retrieved events to a certain distance from a point, use "
+                    "To restrict the retrieved events to a certain distance from a point, use "  # noqa: E501
                     "the query parameters <code>dwithin_origin</code> and "
                     "<code>dwithin_metres</code> in the format "
                     "<code>dwithin_origin=lon,lat&dwithin_metres=distance</code>."
@@ -2996,7 +2999,7 @@ class EventViewSet(
                 name="dwithin_meters",
                 type=OpenApiTypes.INT,
                 description=(
-                    "To restrict the retrieved events to a certain distance from a point, use "
+                    "To restrict the retrieved events to a certain distance from a point, use "  # noqa: E501
                     "the query parameters <code>dwithin_origin</code> and "
                     "<code>dwithin_metres</code> in the format "
                     "<code>dwithin_origin=lon,lat&dwithin_metres=distance</code>."
@@ -3022,7 +3025,7 @@ class EventViewSet(
                 name="keyword!",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events with given keywords not to be present as specified by id. "
+                    "Search for events with given keywords not to be present as specified by id. "  # noqa: E501
                     "Multiple ids are separated by comma."
                 ),
             ),
@@ -3030,7 +3033,7 @@ class EventViewSet(
                 name="keyword_set_AND",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events that contains any of the keywords of defined keyword set. "
+                    "Search for events that contains any of the keywords of defined keyword set. "  # noqa: E501
                     "Multiple keyword sets are separated by comma."
                 ),
             ),
@@ -3038,7 +3041,7 @@ class EventViewSet(
                 name="keyword_set_OR",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events that contains any of the keywords of defined keyword set. "
+                    "Search for events that contains any of the keywords of defined keyword set. "  # noqa: E501
                     "Multiple keyword sets are separated by comma."
                 ),
             ),
@@ -3058,7 +3061,7 @@ class EventViewSet(
                 name="ids",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events with specific id, separating values by commas if you wish "
+                    "Search for events with specific id, separating values by commas if you wish "  # noqa: E501
                     "to query for several event ids."
                 ),
             ),
@@ -3074,7 +3077,7 @@ class EventViewSet(
                 name="event_type",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events with the specified type in the <code>type_id</code> field."
+                    "Search for events with the specified type in the <code>type_id</code> field."  # noqa: E501
                 ),
             ),
             OpenApiParameter(
@@ -3083,15 +3086,15 @@ class EventViewSet(
                 description=(
                     "Search (case insensitive) through all multilingual text fields "
                     "(name, description, short_description, info_url) of an event "
-                    "(every language). Multilingual fields contain the text that users are "
-                    "expected to care about, thus multilinguality is useful discriminator."
+                    "(every language). Multilingual fields contain the text that users are "  # noqa: E501
+                    "expected to care about, thus multilinguality is useful discriminator."  # noqa: E501
                 ),
             ),
             OpenApiParameter(
                 name="combined_text",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events with exact text match for event text fields but retrieves "
+                    "Search for events with exact text match for event text fields but retrieves "  # noqa: E501
                     "expected keywords on the basis of similarity."
                 ),
             ),
@@ -3106,7 +3109,7 @@ class EventViewSet(
                 name="language",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events that have data or are organized in this language."
+                    "Search for events that have data or are organized in this language."  # noqa: E501
                 ),
             ),
             OpenApiParameter(
@@ -3155,21 +3158,21 @@ class EventViewSet(
                 name="suitable_for",
                 type=OpenApiTypes.INT,
                 description=(
-                    "Search for events that are suitable for the age or age range specified."
+                    "Search for events that are suitable for the age or age range specified."  # noqa: E501
                 ),
             ),
             OpenApiParameter(
                 name="publisher",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events published by the given organization as specified by id."
+                    "Search for events published by the given organization as specified by id."  # noqa: E501
                 ),
             ),
             OpenApiParameter(
                 name="publisher_ancestor",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events published by any suborganization under the given "
+                    "Search for events published by any suborganization under the given "  # noqa: E501
                     "organization as specified by id."
                 ),
             ),
@@ -3205,7 +3208,7 @@ class EventViewSet(
                 name="registration__remaining_attendee_capacity__gte",
                 type=OpenApiTypes.INT,
                 description=(
-                    "Search for events where the remaining registration attendee capacity is "
+                    "Search for events where the remaining registration attendee capacity is "  # noqa: E501
                     "greater than or equal to the applied parameter."
                 ),
             ),
@@ -3213,7 +3216,7 @@ class EventViewSet(
                 name="registration__remaining_attendee_capacity__isnull",
                 type=OpenApiTypes.BOOL,
                 description=(
-                    "Search for events where the remaining registration attendee capacity is or "
+                    "Search for events where the remaining registration attendee capacity is or "  # noqa: E501
                     "is not NULL."
                 ),
             ),
@@ -3221,7 +3224,7 @@ class EventViewSet(
                 name="registration__remaining_waiting_list_capacity__gte",
                 type=OpenApiTypes.INT,
                 description=(
-                    "Search for events where the remaining registration waiting_list capacity is "
+                    "Search for events where the remaining registration waiting_list capacity is "  # noqa: E501
                     "greater than or equal to the applied parameter."
                 ),
             ),
@@ -3229,7 +3232,7 @@ class EventViewSet(
                 name="registration__remaining_waiting_list_capacity__isnull",
                 type=OpenApiTypes.BOOL,
                 description=(
-                    "Search for events where the remaining registration waiting_list capacity is "
+                    "Search for events where the remaining registration waiting_list capacity is "  # noqa: E501
                     "or is not NULL."
                 ),
             ),
@@ -3237,7 +3240,7 @@ class EventViewSet(
                 name="show_all",
                 type=OpenApiTypes.BOOL,
                 description=(
-                    "Search for events that authenticated user can edit, including drafts, "
+                    "Search for events that authenticated user can edit, including drafts, "  # noqa: E501
                     "and public non-editable events."
                 ),
             ),
@@ -3253,7 +3256,7 @@ class EventViewSet(
                 name="admin_user",
                 type=OpenApiTypes.BOOL,
                 description=(
-                    "Search for events that authenticated user can edit, including drafts, "
+                    "Search for events that authenticated user can edit, including drafts, "  # noqa: E501
                     "but no other public events."
                 ),
             ),
@@ -3267,12 +3270,12 @@ class EventViewSet(
                 name="sort",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Sort the returned events in the given order. Possible sorting criteria are "
-                    "<code>start_time</code>, <code>end_time</code>, <code>name</code>, "
+                    "Sort the returned events in the given order. Possible sorting criteria are "  # noqa: E501
+                    "<code>start_time</code>, <code>end_time</code>, <code>name</code>, "  # noqa: E501
                     "<code>duration</code>, <code>last_modified_time</code>, "
-                    "<code>enrolment_start_time</code>, <code>enrolment_end_time</code>, "
+                    "<code>enrolment_start_time</code>, <code>enrolment_end_time</code>, "  # noqa: E501
                     "<code>registration__enrolment_start_time</code>, "
-                    "<code>registration__enrolment_end_time</code>, <code>enrolment_start</code> "
+                    "<code>registration__enrolment_end_time</code>, <code>enrolment_start</code> "  # noqa: E501
                     "and <code>enrolment_end</code>. The default ordering is "
                     "<code>-last_modified_time</code>."
                 ),
@@ -3336,8 +3339,8 @@ class SearchViewSet(
                 name="type",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Comma-separated list of resource types to search for. Currently allowed "
-                    "values are <code>event</code> and <code>place</code>. <code>type=event</code> "
+                    "Comma-separated list of resource types to search for. Currently allowed "  # noqa: E501
+                    "values are <code>event</code> and <code>place</code>. <code>type=event</code> "  # noqa: E501
                     "must be specified for event date filtering and relevancy sorting."
                 ),
             ),
@@ -3345,7 +3348,7 @@ class SearchViewSet(
                 name="q",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Search for events and places matching this string. Mutually exclusive with "
+                    "Search for events and places matching this string. Mutually exclusive with "  # noqa: E501
                     "<code>input</code> typeahead search."
                 ),
             ),
@@ -3353,7 +3356,7 @@ class SearchViewSet(
                 name="input",
                 type=OpenApiTypes.STR,
                 description=(
-                    "Return autocompletition suggestions for this string. Mutually exclusive with "
+                    "Return autocompletition suggestions for this string. Mutually exclusive with "  # noqa: E501
                     "<code>q</code> full-text search."
                 ),
             ),
@@ -3361,8 +3364,8 @@ class SearchViewSet(
                 name="start",
                 type=OpenApiTypes.DATETIME,
                 description=(
-                    "Search for events beginning or ending after this time. Dates can be "
-                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+                    "Search for events beginning or ending after this time. Dates can be "  # noqa: E501
+                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "  # noqa: E501
                     "<code>today</code> and <code>now</code>."
                 ),
             ),
@@ -3370,8 +3373,8 @@ class SearchViewSet(
                 name="end",
                 type=OpenApiTypes.DATETIME,
                 description=(
-                    "Search for events beginning or ending before this time. Dates can be "
-                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+                    "Search for events beginning or ending before this time. Dates can be "  # noqa: E501
+                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "  # noqa: E501
                     "<code>today</code> and <code>now</code>."
                 ),
             ),

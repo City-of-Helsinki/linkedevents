@@ -94,7 +94,7 @@ def _get_target(request):
 
 def commit_to_audit_log(request, response):
     current_time = timezone.now()
-    iso_8601_datetime = f"{current_time.replace(tzinfo=None).isoformat(sep='T', timespec='milliseconds')}Z"
+    iso_8601_datetime = f"{current_time.replace(tzinfo=None).isoformat(sep='T', timespec='milliseconds')}Z"  # noqa: E501
 
     message = {
         "audit_event": {

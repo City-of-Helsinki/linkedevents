@@ -46,7 +46,7 @@ class Command(BaseCommand):
 
                 if invalid_keyword_ids:
                     self.log_problems(
-                        f"{len(invalid_keyword_ids)} replacement keywords do not exist in DB:",
+                        f"{len(invalid_keyword_ids)} replacement keywords do not exist in DB:",  # noqa: E501
                         invalid_keyword_ids,
                     )
 
@@ -92,7 +92,7 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(
-            f"Found {len(deprecated_keywords_without_replacement)} deprecated keywords without replacements"
+            f"Found {len(deprecated_keywords_without_replacement)} deprecated keywords without replacements"  # noqa: E501
         )
 
         if len(deprecated_keywords_without_replacement) == 0:
@@ -123,7 +123,7 @@ class Command(BaseCommand):
 
         if invalid_yso_id_replacements_ids:
             self.log_problems(
-                f"Invalid replacement yso id for {len(invalid_yso_id_replacements_ids)} keywords:",
+                f"Invalid replacement yso id for {len(invalid_yso_id_replacements_ids)} keywords:",  # noqa: E501
                 invalid_yso_id_replacements_ids,
             )
         return replacements

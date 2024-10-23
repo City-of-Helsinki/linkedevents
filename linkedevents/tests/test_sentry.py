@@ -1,3 +1,4 @@
+# ruff: noqa: F841
 import pytest
 from django.conf import settings as django_settings
 from sentry_sdk import capture_exception

@@ -181,7 +181,7 @@ class OrganizationEditPermission(BasePermission):
             return any([request_data.get(key) for key in user_keys])
 
         # Existing organization => can add or remove users
-        # => check if usernames are equal between request data and the organization's user relations.
+        # => check if usernames are equal between request data and the organization's user relations.  # noqa: E501
         return any(
             [
                 key in request_data
@@ -197,7 +197,7 @@ class OrganizationEditPermission(BasePermission):
                 # User must be a superuser to add users to a new organization.
                 return request.user.is_authenticated and request.user.is_superuser
             elif self._is_editing_web_store_merchants_or_accounts(request.data):
-                # User must be a superuser or a financial admin with organization admin rights to
+                # User must be a superuser or a financial admin with organization admin rights to  # noqa: E501
                 # add web store merchants or accounts to a new organization.
                 return request.user.is_authenticated and (
                     request.user.is_superuser
@@ -220,10 +220,11 @@ class OrganizationEditPermission(BasePermission):
 
         if request.method in ("PUT", "PATCH"):
             if self._is_editing_organization_users(request.data, obj):
-                # User must a superuser to add or remove an existing organization's users.
+                # User must a superuser to add or remove an existing organization's
+                # users.
                 return request.user.is_authenticated and request.user.is_superuser
             elif self._is_editing_web_store_merchants_or_accounts(request.data):
-                # User must be a superuser or a financial admin to edit an existing organization's
+                # User must be a superuser or a financial admin to edit an existing organization's  # noqa: E501
                 # web store merchants or accounts.
                 financial_perms = (
                     request.user.is_superuser or request.user.is_financial_admin_of(obj)
@@ -232,7 +233,7 @@ class OrganizationEditPermission(BasePermission):
                 if set(request.data.keys()).difference(
                     {"web_store_merchants", "web_store_accounts"}
                 ):
-                    # If other organization data is also edited, organization admin rights are also
+                    # If other organization data is also edited, organization admin rights are also  # noqa: E501
                     # required from a financial admin.
                     return financial_perms and utils.organization_can_be_edited_by(
                         obj, request.user

@@ -122,7 +122,7 @@ def _build_pre_map(mapping: dict[str, str]) -> PreMapper:
     :param mapping: a map of origin object values to target object values
 
     :return: a pre field mapper function
-    """
+    """  # noqa: E501
 
     def pre_map(
         field_name, field_data: Optional[Union[str, dict]], data: dict
@@ -135,7 +135,7 @@ def _build_pre_map(mapping: dict[str, str]) -> PreMapper:
         :param data: target object data
 
         :return: updated target object data with the field mapped
-        """
+        """  # noqa: E501
         if field_data is None:
             return {**data}
         # If the field is a dict, we map the id field to the target field
@@ -159,7 +159,7 @@ def _build_pre_map_to_id(mapping: dict[str, str]) -> PreMapper:
     Build a pre field mapper that maps the origin object field value to a target object id.
 
     :param mapping: a map of origin object ids to target (local) object ids
-    """
+    """  # noqa: E501
     pre_mapper = _build_pre_map(mapping)
 
     def pre_map_to_id(
@@ -355,7 +355,7 @@ def _import_origin_objs(
     post_field_mappers: fields that are mapped after saving all the model instances (source -> target)
     auto_id: set True for models that use AutoField pk
     syncher_key:
-    """
+    """  # noqa: E501
     logger.info(f"Importing related Espoo {model.__name__}s")
 
     def origin_id(instance):
@@ -480,7 +480,7 @@ def purge_orphans(events_data: list[dict], skip_log=False) -> list[dict]:
     if drop:
         if not skip_log:
             logger.info(
-                f"Events referenced as super events are missing from the data: {', '.join(sorted(drop))}"
+                f"Events referenced as super events are missing from the data: {', '.join(sorted(drop))}"  # noqa: E501
             )
         return purge_orphans(keep, skip_log=True)
 
@@ -556,7 +556,8 @@ class EspooImporter(Importer):
 
         # Grab all relevant events from origin
         # Using include=keywords,audience,location and restrict events starting from
-        # configured days (defaulting to 180) back to reduce the number of needed requests.
+        # configured days (defaulting to 180) back to reduce the number of needed
+        # requests.
         events_data = _list_data(
             _build_url("v1/event/"),
             params={
@@ -615,7 +616,8 @@ class EspooImporter(Importer):
             copy_fields=["name"],
         )
 
-        # Mark Organizations which are referenced in older Espoo events to avoid deletion.
+        # Mark Organizations which are referenced in older Espoo events to avoid
+        # deletion.
         for org in Organization.objects.filter(
             data_source=self.data_source, published_events__in=old_event_ids
         ).iterator():

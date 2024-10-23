@@ -541,7 +541,7 @@ def test_get_web_store_order_status_request_exception(status_code):
 @pytest.mark.parametrize(
     "payment_status", [payment_status.value for payment_status in WebStorePaymentStatus]
 )
-def test_get_web_store_order_status(order_id, payment_status):
+def test_get_web_store_payment_status(order_id, payment_status):
     payment_response_json = DEFAULT_GET_PAYMENT_DATA.copy()
     payment_response_json["status"] = payment_status
 

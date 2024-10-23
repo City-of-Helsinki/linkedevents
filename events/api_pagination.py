@@ -12,7 +12,7 @@ class CustomPagination(pagination.PageNumberPagination):
 
     page_size_query_param = "page_size"
     page_size_query_description = _(
-        "Number of results to return per page. %(max_page_size)s is the maximum value for page_size."
+        "Number of results to return per page. %(max_page_size)s is the maximum value for page_size."  # noqa: E501
     ) % {"max_page_size": max_page_size}
 
     def get_paginated_response(self, data):
@@ -65,5 +65,5 @@ class LargeResultsSetPagination(CustomPagination):
 
     page_size = 1000
     page_size_query_description = _(
-        "Number of results to return per page. %(max_page_size)s is the maximum value for page_size."
+        "Number of results to return per page. %(max_page_size)s is the maximum value for page_size."  # noqa: E501
     ) % {"max_page_size": max_page_size}

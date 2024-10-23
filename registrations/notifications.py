@@ -60,7 +60,7 @@ signup_notification_subjects = {
     SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
         "Registration confirmation - %(event_name)s"
     ),
-    SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING,
+    SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING,  # noqa: E501
     SignUpNotificationType.PAYMENT_EXPIRED: _(
         "Registration payment expired - %(event_name)s"
     ),
@@ -79,13 +79,13 @@ signup_email_texts = {
         "heading": REGISTRATION_CANCELLED_HEADING,
         "secondary_heading": {
             Event.TypeId.GENERAL: _(
-                "%(username)s, registration to the event %(event_name)s has been cancelled."
+                "%(username)s, registration to the event %(event_name)s has been cancelled."  # noqa: E501
             ),
             Event.TypeId.COURSE: _(
-                "%(username)s, registration to the course %(event_name)s has been cancelled."
+                "%(username)s, registration to the course %(event_name)s has been cancelled."  # noqa: E501
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "%(username)s, registration to the volunteering %(event_name)s has been cancelled."
+                "%(username)s, registration to the volunteering %(event_name)s has been cancelled."  # noqa: E501
             ),
         },
         "secondary_heading_without_username": {
@@ -101,25 +101,25 @@ signup_email_texts = {
         },
         "text": {
             Event.TypeId.GENERAL: _(
-                "You have successfully cancelled your registration to the event <strong>%(event_name)s</strong>."
+                "You have successfully cancelled your registration to the event <strong>%(event_name)s</strong>."  # noqa: E501
             ),
             Event.TypeId.COURSE: _(
-                "You have successfully cancelled your registration to the course <strong>%(event_name)s</strong>."
+                "You have successfully cancelled your registration to the course <strong>%(event_name)s</strong>."  # noqa: E501
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "You have successfully cancelled your registration to the volunteering <strong>%(event_name)s</strong>."
+                "You have successfully cancelled your registration to the volunteering <strong>%(event_name)s</strong>."  # noqa: E501
             ),
         },
         "payment_cancelled": {
             "text": {
                 Event.TypeId.GENERAL: _(
-                    "Your registration and payment for the event <strong>%(event_name)s</strong> have been cancelled."
+                    "Your registration and payment for the event <strong>%(event_name)s</strong> have been cancelled."  # noqa: E501
                 ),
                 Event.TypeId.COURSE: _(
-                    "Your registration and payment for the course <strong>%(event_name)s</strong> have been cancelled."
+                    "Your registration and payment for the course <strong>%(event_name)s</strong> have been cancelled."  # noqa: E501
                 ),
                 Event.TypeId.VOLUNTEERING: _(
-                    "Your registration to the volunteering <strong>%(event_name)s</strong> has been cancelled."
+                    "Your registration to the volunteering <strong>%(event_name)s</strong> has been cancelled."  # noqa: E501
                 ),
             },
         },
@@ -127,17 +127,17 @@ signup_email_texts = {
             "text": {
                 Event.TypeId.GENERAL: _(
                     "You have successfully cancelled your registration to the event "
-                    "<strong>%(event_name)s</strong>. Your payment for the registration "
+                    "<strong>%(event_name)s</strong>. Your payment for the registration "  # noqa: E501
                     "has been refunded."
                 ),
                 Event.TypeId.COURSE: _(
                     "You have successfully cancelled your registration to the course "
-                    "<strong>%(event_name)s</strong>. Your payment for the registration "
+                    "<strong>%(event_name)s</strong>. Your payment for the registration "  # noqa: E501
                     "has been refunded."
                 ),
                 Event.TypeId.VOLUNTEERING: _(
-                    "You have successfully cancelled your registration to the volunteering "
-                    "<strong>%(event_name)s</strong>. Your payment for the registration "
+                    "You have successfully cancelled your registration to the volunteering "  # noqa: E501
+                    "<strong>%(event_name)s</strong>. Your payment for the registration "  # noqa: E501
                     "has been refunded."
                 ),
             },
@@ -146,17 +146,17 @@ signup_email_texts = {
             "text": {
                 Event.TypeId.GENERAL: _(
                     "You have successfully cancelled a registration to the event "
-                    "<strong>%(event_name)s</strong>. Your payment has been partially refunded "
+                    "<strong>%(event_name)s</strong>. Your payment has been partially refunded "  # noqa: E501
                     "for the amount of the cancelled registration."
                 ),
                 Event.TypeId.COURSE: _(
                     "You have successfully cancelled a registration to the course "
-                    "<strong>%(event_name)s</strong>. Your payment has been partially refunded "
+                    "<strong>%(event_name)s</strong>. Your payment has been partially refunded "  # noqa: E501
                     "for the amount of the cancelled registration."
                 ),
                 Event.TypeId.VOLUNTEERING: _(
-                    "You have successfully cancelled a registration to the volunteering "
-                    "<strong>%(event_name)s</strong>. Your payment has been partially refunded "
+                    "You have successfully cancelled a registration to the volunteering "  # noqa: E501
+                    "<strong>%(event_name)s</strong>. Your payment has been partially refunded "  # noqa: E501
                     "for the amount of the cancelled registration."
                 ),
             },
@@ -178,10 +178,10 @@ signup_email_texts = {
         },
         "text": {
             Event.TypeId.GENERAL: _(
-                "Congratulations! Your registration has been confirmed for the event <strong>%(event_name)s</strong>."
+                "Congratulations! Your registration has been confirmed for the event <strong>%(event_name)s</strong>."  # noqa: E501
             ),
             Event.TypeId.COURSE: _(
-                "Congratulations! Your registration has been confirmed for the course <strong>%(event_name)s</strong>."
+                "Congratulations! Your registration has been confirmed for the course <strong>%(event_name)s</strong>."  # noqa: E501
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "Congratulations! Your registration has been confirmed for the volunteering <strong>%(event_name)s</strong>."  # noqa E501
@@ -197,7 +197,7 @@ signup_email_texts = {
                     "Group registration to the course %(event_name)s has been saved."
                 ),
                 Event.TypeId.VOLUNTEERING: _(
-                    "Group registration to the volunteering %(event_name)s has been saved."
+                    "Group registration to the volunteering %(event_name)s has been saved."  # noqa: E501
                 ),
             },
         },
@@ -207,10 +207,10 @@ signup_email_texts = {
         "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
         "secondary_heading": {
             Event.TypeId.GENERAL: _(
-                "Payment is required to confirm your registration to the event %(event_name)s."
+                "Payment is required to confirm your registration to the event %(event_name)s."  # noqa: E501
             ),
             Event.TypeId.COURSE: _(
-                "Payment is required to confirm your registration to the course %(event_name)s."
+                "Payment is required to confirm your registration to the course %(event_name)s."  # noqa: E501
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "Payment is required to confirm your registration to the volunteering "
@@ -219,17 +219,17 @@ signup_email_texts = {
         },
         "text": {
             Event.TypeId.GENERAL: _(
-                "Please use the payment link to confirm your registration for the event "
+                "Please use the payment link to confirm your registration for the event "  # noqa: E501
                 "<strong>%(event_name)s</strong>. The payment link expires in "
                 "%(expiration_hours)s hours."
             ),
             Event.TypeId.COURSE: _(
-                "Please use the payment link to confirm your registration for the course "
+                "Please use the payment link to confirm your registration for the course "  # noqa: E501
                 "<strong>%(event_name)s</strong>. The payment link expires in "
                 "%(expiration_hours)s hours."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "Please use the payment link to confirm your registration for the volunteering "
+                "Please use the payment link to confirm your registration for the volunteering "  # noqa: E501
                 "<strong>%(event_name)s</strong>. The payment link expires in "
                 "%(expiration_hours)s hours."
             ),
@@ -238,15 +238,15 @@ signup_email_texts = {
             "heading": CONFIRMATION_HEADING_WITHOUT_USERNAME,
             "secondary_heading": {
                 Event.TypeId.GENERAL: _(
-                    "Payment is required to confirm your group registration to the event "
+                    "Payment is required to confirm your group registration to the event "  # noqa: E501
                     "%(event_name)s."
                 ),
                 Event.TypeId.COURSE: _(
-                    "Payment is required to confirm your group registration to the course "
+                    "Payment is required to confirm your group registration to the course "  # noqa: E501
                     "%(event_name)s."
                 ),
                 Event.TypeId.VOLUNTEERING: _(
-                    "Payment is required to confirm your group registration to the volunteering "
+                    "Payment is required to confirm your group registration to the volunteering "  # noqa: E501
                     "%(event_name)s."
                 ),
             },
@@ -256,36 +256,36 @@ signup_email_texts = {
         "heading": CONFIRMATION_TO_WAITING_LIST_HEADING,
         "text": {
             Event.TypeId.GENERAL: _(
-                "You have successfully registered for the event <strong>%(event_name)s</strong> waiting list."
+                "You have successfully registered for the event <strong>%(event_name)s</strong> waiting list."  # noqa: E501
             ),
             Event.TypeId.COURSE: _(
-                "You have successfully registered for the course <strong>%(event_name)s</strong> waiting list."
+                "You have successfully registered for the course <strong>%(event_name)s</strong> waiting list."  # noqa: E501
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "You have successfully registered for the volunteering <strong>%(event_name)s</strong> waiting list."
+                "You have successfully registered for the volunteering <strong>%(event_name)s</strong> waiting list."  # noqa: E501
             ),
         },
         "secondary_text": {
             Event.TypeId.GENERAL: _(
-                "You will be automatically transferred as an event participant if a seat becomes available."
+                "You will be automatically transferred as an event participant if a seat becomes available."  # noqa: E501
             ),
             Event.TypeId.COURSE: _(
-                "You will be automatically transferred as a course participant if a seat becomes available."
+                "You will be automatically transferred as a course participant if a seat becomes available."  # noqa: E501
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "You will be automatically transferred as a volunteering participant if a seat becomes available."
+                "You will be automatically transferred as a volunteering participant if a seat becomes available."  # noqa: E501
             ),
         },
         "group": {
             "text": {
                 Event.TypeId.GENERAL: _(
-                    "The registration for the event <strong>%(event_name)s</strong> waiting list was successful."
+                    "The registration for the event <strong>%(event_name)s</strong> waiting list was successful."  # noqa: E501
                 ),
                 Event.TypeId.COURSE: _(
-                    "The registration for the course <strong>%(event_name)s</strong> waiting list was successful."
+                    "The registration for the course <strong>%(event_name)s</strong> waiting list was successful."  # noqa: E501
                 ),
                 Event.TypeId.VOLUNTEERING: _(
-                    "The registration for the volunteering <strong>%(event_name)s</strong> waiting list was successful."
+                    "The registration for the volunteering <strong>%(event_name)s</strong> waiting list was successful."  # noqa: E501
                 ),
             },
             "secondary_text": {
@@ -326,19 +326,19 @@ signup_email_texts = {
             Event.TypeId.GENERAL: _(
                 "You have been selected to be moved from the waiting list of the event "
                 "<strong>%(event_name)s</strong> to a participant. Please use the "
-                "payment link to confirm your participation. The payment link expires in "
+                "payment link to confirm your participation. The payment link expires in "  # noqa: E501
                 "%(expiration_hours)s hours."
             ),
             Event.TypeId.COURSE: _(
-                "You have been selected to be moved from the waiting list of the course "
+                "You have been selected to be moved from the waiting list of the course "  # noqa: E501
                 "<strong>%(event_name)s</strong> to a participant. Please use the "
-                "payment link to confirm your participation. The payment link expires in "
+                "payment link to confirm your participation. The payment link expires in "  # noqa: E501
                 "%(expiration_hours)s hours."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "You have been selected to be moved from the waiting list of the volunteering "
+                "You have been selected to be moved from the waiting list of the volunteering "  # noqa: E501
                 "<strong>%(event_name)s</strong> to a participant. Please use the "
-                "payment link to confirm your participation. The payment link expires in "
+                "payment link to confirm your participation. The payment link expires in "  # noqa: E501
                 "%(expiration_hours)s hours."
             ),
         },
@@ -347,29 +347,29 @@ signup_email_texts = {
         "heading": PAYMENT_EXPIRED_HEADING,
         "secondary_heading": {
             Event.TypeId.GENERAL: _(
-                "Registration to the event %(event_name)s has been cancelled due to an expired "
+                "Registration to the event %(event_name)s has been cancelled due to an expired "  # noqa: E501
                 "payment."
             ),
             Event.TypeId.COURSE: _(
-                "Registration to the course %(event_name)s has been cancelled due to an expired "
+                "Registration to the course %(event_name)s has been cancelled due to an expired "  # noqa: E501
                 "payment."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "Registration to the volunteering %(event_name)s has been cancelled due to an "
+                "Registration to the volunteering %(event_name)s has been cancelled due to an "  # noqa: E501
                 "expired payment."
             ),
         },
         "text": {
             Event.TypeId.GENERAL: _(
-                "Your registration to the event <strong>%(event_name)s</strong> has been "
+                "Your registration to the event <strong>%(event_name)s</strong> has been "  # noqa: E501
                 "cancelled due no payment received within the payment period."
             ),
             Event.TypeId.COURSE: _(
-                "Your registration to the course <strong>%(event_name)s</strong> has been "
+                "Your registration to the course <strong>%(event_name)s</strong> has been "  # noqa: E501
                 "cancelled due no payment received within the payment period."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "Your registration to the volunteering <strong>%(event_name)s</strong> has been "
+                "Your registration to the volunteering <strong>%(event_name)s</strong> has been "  # noqa: E501
                 "cancelled due no payment received within the payment period."
             ),
         },
@@ -387,14 +387,14 @@ recurring_event_signup_notification_subjects = {
     SignUpNotificationType.CONFIRMATION: _(
         "Registration confirmation - Recurring: %(event_name)s"
     ),
-    SignUpNotificationType.CONFIRMATION_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING_RECURRING,
+    SignUpNotificationType.CONFIRMATION_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING_RECURRING,  # noqa: E501
     SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST: _(
         "Waiting list seat reserved - Recurring: %(event_name)s"
     ),
     SignUpNotificationType.TRANSFERRED_AS_PARTICIPANT: _(
         "Registration confirmation - Recurring: %(event_name)s"
     ),
-    SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING_RECURRING,
+    SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT: CONFIRMATION_WITH_PAYMENT_HEADING_RECURRING,  # noqa: E501
     SignUpNotificationType.PAYMENT_EXPIRED: _(
         "Registration payment expired - Recurring: %(event_name)s"
     ),
@@ -420,7 +420,7 @@ recurring_event_signup_email_texts = {
                 "%(event_period)s has been cancelled."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "%(username)s, registration to the recurring volunteering %(event_name)s "
+                "%(username)s, registration to the recurring volunteering %(event_name)s "  # noqa: E501
                 "%(event_period)s has been cancelled."
             ),
         },
@@ -434,21 +434,21 @@ recurring_event_signup_email_texts = {
                 "has been cancelled."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "Registration to the recurring volunteering %(event_name)s %(event_period)s "
+                "Registration to the recurring volunteering %(event_name)s %(event_period)s "  # noqa: E501
                 "has been cancelled."
             ),
         },
         "text": {
             Event.TypeId.GENERAL: _(
-                "You have successfully cancelled your registration to the recurring event "
+                "You have successfully cancelled your registration to the recurring event "  # noqa: E501
                 "<strong>%(event_name)s %(event_period)s</strong>."
             ),
             Event.TypeId.COURSE: _(
-                "You have successfully cancelled your registration to the recurring course "
+                "You have successfully cancelled your registration to the recurring course "  # noqa: E501
                 "<strong>%(event_name)s %(event_period)s</strong>."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "You have successfully cancelled your registration to the recurring volunteering "
+                "You have successfully cancelled your registration to the recurring volunteering "  # noqa: E501
                 "<strong>%(event_name)s %(event_period)s</strong>."
             ),
         },
@@ -456,32 +456,32 @@ recurring_event_signup_email_texts = {
             "text": {
                 Event.TypeId.GENERAL: _(
                     "Your registration and payment for the recurring event "
-                    "<strong>%(event_name)s %(event_period)s</strong> have been cancelled."
+                    "<strong>%(event_name)s %(event_period)s</strong> have been cancelled."  # noqa: E501
                 ),
                 Event.TypeId.COURSE: _(
                     "Your registration and payment for the recurring course "
-                    "<strong>%(event_name)s %(event_period)s</strong> have been cancelled."
+                    "<strong>%(event_name)s %(event_period)s</strong> have been cancelled."  # noqa: E501
                 ),
                 Event.TypeId.VOLUNTEERING: _(
                     "Your registration to the recurring volunteering "
-                    "<strong>%(event_name)s %(event_period)s</strong> has been cancelled."
+                    "<strong>%(event_name)s %(event_period)s</strong> has been cancelled."  # noqa: E501
                 ),
             },
         },
         "payment_refunded": {
             "text": {
                 Event.TypeId.GENERAL: _(
-                    "You have successfully cancelled your registration to the recurring "
+                    "You have successfully cancelled your registration to the recurring "  # noqa: E501
                     "event <strong>%(event_name)s %(event_period)s</strong>. "
                     "Your payment for the registration has been refunded."
                 ),
                 Event.TypeId.COURSE: _(
-                    "You have successfully cancelled your registration to the recurring "
+                    "You have successfully cancelled your registration to the recurring "  # noqa: E501
                     "course <strong>%(event_name)s %(event_period)s</strong>. "
                     "Your payment for the registration has been refunded."
                 ),
                 Event.TypeId.VOLUNTEERING: _(
-                    "You have successfully cancelled your registration to the recurring "
+                    "You have successfully cancelled your registration to the recurring "  # noqa: E501
                     "volunteering <strong>%(event_name)s %(event_period)s</strong>. "
                     "Your payment for the registration has been refunded."
                 ),
@@ -490,18 +490,18 @@ recurring_event_signup_email_texts = {
         "payment_partially_refunded": {
             "text": {
                 Event.TypeId.GENERAL: _(
-                    "You have successfully cancelled a registration to the recurring event "
-                    "<strong>%(event_name)s %(event_period)s</strong>. Your payment has been "
+                    "You have successfully cancelled a registration to the recurring event "  # noqa: E501
+                    "<strong>%(event_name)s %(event_period)s</strong>. Your payment has been "  # noqa: E501
                     "partially refunded for the amount of the cancelled registration."
                 ),
                 Event.TypeId.COURSE: _(
-                    "You have successfully cancelled a registration to the recurring course "
-                    "<strong>%(event_name)s %(event_period)s</strong>. Your payment has been "
+                    "You have successfully cancelled a registration to the recurring course "  # noqa: E501
+                    "<strong>%(event_name)s %(event_period)s</strong>. Your payment has been "  # noqa: E501
                     "partially refunded for the amount of the cancelled registration."
                 ),
                 Event.TypeId.VOLUNTEERING: _(
-                    "You have successfully cancelled a registration to the recurring volunteering "
-                    "<strong>%(event_name)s %(event_period)s</strong>. Your payment has been "
+                    "You have successfully cancelled a registration to the recurring volunteering "  # noqa: E501
+                    "<strong>%(event_name)s %(event_period)s</strong>. Your payment has been "  # noqa: E501
                     "partially refunded for the amount of the cancelled registration."
                 ),
             },
@@ -520,21 +520,21 @@ recurring_event_signup_email_texts = {
                 "has been saved."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "Registration to the recurring volunteering %(event_name)s %(event_period)s "
+                "Registration to the recurring volunteering %(event_name)s %(event_period)s "  # noqa: E501
                 "has been saved."
             ),
         },
         "text": {
             Event.TypeId.GENERAL: _(
-                "Congratulations! Your registration has been confirmed for the recurring event "
+                "Congratulations! Your registration has been confirmed for the recurring event "  # noqa: E501
                 "<strong>%(event_name)s %(event_period)s</strong>."
             ),
             Event.TypeId.COURSE: _(
-                "Congratulations! Your registration has been confirmed for the recurring course "
+                "Congratulations! Your registration has been confirmed for the recurring course "  # noqa: E501
                 "<strong>%(event_name)s %(event_period)s</strong>."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "Congratulations! Your registration has been confirmed for the recurring "
+                "Congratulations! Your registration has been confirmed for the recurring "  # noqa: E501
                 "volunteering <strong>%(event_name)s %(event_period)s</strong>."
             ),
         },
@@ -542,11 +542,11 @@ recurring_event_signup_email_texts = {
             "heading": CONFIRMATION_HEADING_WITHOUT_USERNAME,
             "secondary_heading": {
                 Event.TypeId.GENERAL: _(
-                    "Group registration to the recurring event %(event_name)s %(event_period)s "
+                    "Group registration to the recurring event %(event_name)s %(event_period)s "  # noqa: E501
                     "has been saved."
                 ),
                 Event.TypeId.COURSE: _(
-                    "Group registration to the recurring course %(event_name)s %(event_period)s "
+                    "Group registration to the recurring course %(event_name)s %(event_period)s "  # noqa: E501
                     "has been saved."
                 ),
                 Event.TypeId.VOLUNTEERING: _(
@@ -561,32 +561,32 @@ recurring_event_signup_email_texts = {
         "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
         "secondary_heading": {
             Event.TypeId.GENERAL: _(
-                "Payment is required to confirm your registration to the recurring event "
+                "Payment is required to confirm your registration to the recurring event "  # noqa: E501
                 "%(event_name)s %(event_period)s."
             ),
             Event.TypeId.COURSE: _(
-                "Payment is required to confirm your registration to the recurring course "
+                "Payment is required to confirm your registration to the recurring course "  # noqa: E501
                 "%(event_name)s %(event_period)s."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "Payment is required to confirm your registration to the recurring volunteering "
+                "Payment is required to confirm your registration to the recurring volunteering "  # noqa: E501
                 "%(event_name)s %(event_period)s."
             ),
         },
         "text": {
             Event.TypeId.GENERAL: _(
-                "Please use the payment link to confirm your registration for the recurring event "
-                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "
+                "Please use the payment link to confirm your registration for the recurring event "  # noqa: E501
+                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "  # noqa: E501
                 "%(expiration_hours)s hours."
             ),
             Event.TypeId.COURSE: _(
-                "Please use the payment link to confirm your registration for the recurring course "
-                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "
+                "Please use the payment link to confirm your registration for the recurring course "  # noqa: E501
+                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "  # noqa: E501
                 "%(expiration_hours)s hours."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "Please use the payment link to confirm your registration for the recurring "
-                "volunteering <strong>%(event_name)s %(event_period)s</strong>. The payment link "
+                "Please use the payment link to confirm your registration for the recurring "  # noqa: E501
+                "volunteering <strong>%(event_name)s %(event_period)s</strong>. The payment link "  # noqa: E501
                 "expires in %(expiration_hours)s hours."
             ),
         },
@@ -594,15 +594,15 @@ recurring_event_signup_email_texts = {
             "heading": CONFIRMATION_HEADING_WITHOUT_USERNAME,
             "secondary_heading": {
                 Event.TypeId.GENERAL: _(
-                    "Payment is required to confirm your group registration to the recurring "
+                    "Payment is required to confirm your group registration to the recurring "  # noqa: E501
                     "event %(event_name)s %(event_period)s."
                 ),
                 Event.TypeId.COURSE: _(
-                    "Payment is required to confirm your group registration to the recurring "
+                    "Payment is required to confirm your group registration to the recurring "  # noqa: E501
                     "course %(event_name)s %(event_period)s."
                 ),
                 Event.TypeId.VOLUNTEERING: _(
-                    "Payment is required to confirm your group registration to the recurring "
+                    "Payment is required to confirm your group registration to the recurring "  # noqa: E501
                     "volunteering %(event_name)s %(event_period)s."
                 ),
             },
@@ -631,15 +631,15 @@ recurring_event_signup_email_texts = {
             "text": {
                 Event.TypeId.GENERAL: _(
                     "The registration for the recurring event "
-                    "<strong>%(event_name)s %(event_period)s</strong> waiting list was successful."
+                    "<strong>%(event_name)s %(event_period)s</strong> waiting list was successful."  # noqa: E501
                 ),
                 Event.TypeId.COURSE: _(
                     "The registration for the recurring course "
-                    "<strong>%(event_name)s %(event_period)s</strong> waiting list was successful."
+                    "<strong>%(event_name)s %(event_period)s</strong> waiting list was successful."  # noqa: E501
                 ),
                 Event.TypeId.VOLUNTEERING: _(
                     "The registration for the recurring volunteering "
-                    "<strong>%(event_name)s %(event_period)s</strong> waiting list was successful."
+                    "<strong>%(event_name)s %(event_period)s</strong> waiting list was successful."  # noqa: E501
                 ),
             },
             "secondary_text": signup_email_texts[
@@ -660,7 +660,7 @@ recurring_event_signup_email_texts = {
                 "<strong>%(event_name)s %(event_period)s</strong> to a participant."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "You have been moved from the waiting list of the recurring volunteering "
+                "You have been moved from the waiting list of the recurring volunteering "  # noqa: E501
                 "<strong>%(event_name)s %(event_period)s</strong> to a participant."
             ),
         },
@@ -670,21 +670,21 @@ recurring_event_signup_email_texts = {
         "heading_without_username": CONFIRMATION_HEADING_WITHOUT_USERNAME,
         "text": {
             Event.TypeId.GENERAL: _(
-                "You have been selected to be moved from the waiting list of the recurring "
-                "event <strong>%(event_name)s %(event_period)s</strong> to a participant. "
-                "Please use the payment link to confirm your participation. The payment link "
+                "You have been selected to be moved from the waiting list of the recurring "  # noqa: E501
+                "event <strong>%(event_name)s %(event_period)s</strong> to a participant. "  # noqa: E501
+                "Please use the payment link to confirm your participation. The payment link "  # noqa: E501
                 "expires in %(expiration_hours)s hours."
             ),
             Event.TypeId.COURSE: _(
-                "You have been selected to be moved from the waiting list of the recurring "
-                "course <strong>%(event_name)s %(event_period)s</strong> to a participant. "
-                "Please use the payment link to confirm your participation. The payment link "
+                "You have been selected to be moved from the waiting list of the recurring "  # noqa: E501
+                "course <strong>%(event_name)s %(event_period)s</strong> to a participant. "  # noqa: E501
+                "Please use the payment link to confirm your participation. The payment link "  # noqa: E501
                 "expires in %(expiration_hours)s hours."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "You have been selected to be moved from the waiting list of the recurring "
-                "volunteering <strong>%(event_name)s %(event_period)s</strong> to a participant. "
-                "Please use the payment link to confirm your participation. The payment link "
+                "You have been selected to be moved from the waiting list of the recurring "  # noqa: E501
+                "volunteering <strong>%(event_name)s %(event_period)s</strong> to a participant. "  # noqa: E501
+                "Please use the payment link to confirm your participation. The payment link "  # noqa: E501
                 "expires in %(expiration_hours)s hours."
             ),
         },
@@ -701,24 +701,24 @@ recurring_event_signup_email_texts = {
                 "has been cancelled due to an expired payment."
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "Registration to the recurring volunteering %(event_name)s %(event_period)s "
+                "Registration to the recurring volunteering %(event_name)s %(event_period)s "  # noqa: E501
                 "has been cancelled due to an expired payment."
             ),
         },
         "text": {
             Event.TypeId.GENERAL: _(
                 "Your registration to the recurring event "
-                "<strong>%(event_name)s %(event_period)s</strong> has been cancelled due no "
+                "<strong>%(event_name)s %(event_period)s</strong> has been cancelled due no "  # noqa: E501
                 "payment received within the payment period."
             ),
             Event.TypeId.COURSE: _(
                 "Your registration to the recurring course "
-                "<strong>%(event_name)s %(event_period)s</strong> has been cancelled due no "
+                "<strong>%(event_name)s %(event_period)s</strong> has been cancelled due no "  # noqa: E501
                 "payment received within the payment period."
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "Your registration to the recurring volunteering "
-                "<strong>%(event_name)s %(event_period)s</strong> has been cancelled due no "
+                "<strong>%(event_name)s %(event_period)s</strong> has been cancelled due no "  # noqa: E501
                 "payment received within the payment period."
             ),
         },
@@ -740,19 +740,19 @@ registration_user_access_invitation_texts = {
     "registration_user_access": {
         "text": {
             Event.TypeId.GENERAL: _(
-                "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
-                "read the participant list of the event <strong>%(event_name)s</strong>. Using "
-                "the Suomi.fi identification is required to be able to read the participant list."
+                "The e-mail address <strong>%(email)s</strong> has been granted the rights to "  # noqa: E501
+                "read the participant list of the event <strong>%(event_name)s</strong>. Using "  # noqa: E501
+                "the Suomi.fi identification is required to be able to read the participant list."  # noqa: E501
             ),
             Event.TypeId.COURSE: _(
-                "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
-                "read the participant list of the course <strong>%(event_name)s</strong>. Using "
-                "the Suomi.fi identification is required to be able to read the participant list."
+                "The e-mail address <strong>%(email)s</strong> has been granted the rights to "  # noqa: E501
+                "read the participant list of the course <strong>%(event_name)s</strong>. Using "  # noqa: E501
+                "the Suomi.fi identification is required to be able to read the participant list."  # noqa: E501
             ),
             Event.TypeId.VOLUNTEERING: _(
-                "The e-mail address <strong>%(email)s</strong> has been granted the rights to "
-                "read the participant list of the volunteering <strong>%(event_name)s</strong>. "
-                "Using the Suomi.fi identification is required to be able to read the participant "
+                "The e-mail address <strong>%(email)s</strong> has been granted the rights to "  # noqa: E501
+                "read the participant list of the volunteering <strong>%(event_name)s</strong>. "  # noqa: E501
+                "Using the Suomi.fi identification is required to be able to read the participant "  # noqa: E501
                 "list."
             ),
         }
@@ -948,7 +948,8 @@ def get_signup_notification_texts(
             lang=service_lang, date_only=True
         )
     else:
-        # Signup or cancellation for a normal event (or for a sub-event of a super event).
+        # Signup or cancellation for a normal event (or for a sub-event of a super
+        # event).
         text_options = signup_email_texts[notification_type]
         event_period = None
 
@@ -1032,7 +1033,8 @@ def get_signup_notification_subject(
                 % subject_format_kwargs
             )
         else:
-            # Signup or cancellation for a normal event (or for a sub-event of a super event).
+            # Signup or cancellation for a normal event (or for a sub-event of a super
+            # event).
             notification_subject = (
                 signup_notification_subjects[notification_type] % subject_format_kwargs
             )

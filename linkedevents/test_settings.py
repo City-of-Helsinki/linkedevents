@@ -2,6 +2,7 @@
 """
 Django settings module for pytest
 """
+
 from .settings import *
 
 

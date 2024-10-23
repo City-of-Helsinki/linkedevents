@@ -19,11 +19,11 @@ from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.models import SignUp, SignUpContactPerson, SignUpGroup, SignUpPayment
 from registrations.notifications import (
+    SignUpNotificationType,
     recurring_event_signup_email_texts,
     recurring_event_signup_notification_subjects,
     signup_email_texts,
     signup_notification_subjects,
-    SignUpNotificationType,
 )
 from registrations.tests.factories import (
     RegistrationFactory,

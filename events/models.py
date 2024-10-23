@@ -537,7 +537,7 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin, TranslatableSerializableMi
         if self._has_circular_replacement():
             raise ValidationError(
                 _(
-                    "Trying to replace this keyword with a keyword that is replaced by this keyword. "
+                    "Trying to replace this keyword with a keyword that is replaced by this keyword. "  # noqa: E501
                     "Please refrain from creating circular replacements and"
                     "remove one of the replacements."
                 )
@@ -748,8 +748,8 @@ class Place(
         if self._has_circular_replacement():
             raise ValidationError(
                 _(
-                    "Trying to replace this place with a place that is replaced by this place. "
-                    "Please refrain from creating circular replacements and remove one of the "
+                    "Trying to replace this place with a place that is replaced by this place. "  # noqa: E501
+                    "Please refrain from creating circular replacements and remove one of the "  # noqa: E501
                     "replacements. We don't want homeless events."
                 )
             )
@@ -1008,8 +1008,8 @@ class Event(
         verbose_name=_("Event status"), choices=STATUSES, default=Status.SCHEDULED
     )
 
-    # Whether or not this data about the event is ready to be viewed by the general public.
-    # DRAFT means the data is considered incomplete or is otherwise undergoing refinement --
+    # Whether or not this data about the event is ready to be viewed by the general public.  # noqa: E501
+    # DRAFT means the data is considered incomplete or is otherwise undergoing refinement --  # noqa: E501
     # or just waiting to be published for other reasons.
     publication_status = models.SmallIntegerField(
         verbose_name=_("Event data publication status"),
@@ -1105,7 +1105,8 @@ class Event(
         Keyword, related_name="audience_events", blank=True
     )
 
-    # this field is redundant, but allows to avoid expensive joins when searching for local events
+    # this field is redundant, but allows to avoid expensive joins when
+    # searching for local events
     local = models.BooleanField(default=False)
 
     # these fields are populated and kept up to date by the db. See migration 0080
@@ -1125,7 +1126,7 @@ class Event(
         if self._has_circular_replacement():
             raise ValidationError(
                 _(
-                    "Trying to replace this event with an event that is replaced by this event. "
+                    "Trying to replace this event with an event that is replaced by this event. "  # noqa: E501
                     "Please refrain from creating circular replacements and "
                     "remove one of the replacements."
                 )
@@ -1225,7 +1226,7 @@ class Event(
 
         if event_deleted or event_cancelled:
             # If there weren't any Talpa payments, cancel the registration or notify the
-            # contact persons in the event transaction so that all changes can be reverted
+            # contact persons in the event transaction so that all changes can be reverted  # noqa: E501
             # in case of an exception.
             self.cancel_registration_signups_or_notify_contact_person(
                 registration_to_cancel
@@ -1379,7 +1380,7 @@ class Event(
             return (
                 f"{formatter_func(self.start_time, lang)}"
                 if self.start_time.date() == self.end_time.date() and date_only
-                else f"{formatter_func(self.start_time, lang)} - {formatter_func(self.end_time, lang)}"
+                else f"{formatter_func(self.start_time, lang)} - {formatter_func(self.end_time, lang)}"  # noqa: E501
             )
         elif self.start_time:
             return f"{formatter_func(self.start_time, lang)} -"
