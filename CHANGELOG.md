@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.0...linkedevents-v3.9.1) (2024-10-25)
+
+
+### Bug Fixes
+
+* Use django's static root in swagger schema url config ([ea21c23](https://github.com/City-of-Helsinki/linkedevents/commit/ea21c231d76e3506b1b1a2af6c38e3bafc57215a))
+
 ## [3.9.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.8.0...linkedevents-v3.9.0) (2024-10-10)
 
 
