@@ -1,122 +1,19 @@
-name: linkedevents-ci
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-env:
-  SECRET_KEY: topsecret123
-  POSTGRES_DB: test_linkedevents
-  POSTGRES_USER: postgres
-  POSTGRES_PASSWORD: postgres
-  DATABASE_URL: "postgis://postgres:postgres@localhost/test_linkedevents"
-  FIELD_ENCRYPTION_KEYS: c87a6669a1ded2834f1dfd0830d86ef6cdd20372ac83e8c7c23feffe87e6a051
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: [3.9]
-    services:
-      postgres:
-        image: postgis/postgis:14-3.2-alpine
-        env:
-          # Note: not redundant, parent env is not applied to service
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_linkedevents
-        ports:
-          - 5432:5432
-        # needed because the postgres container does not provide a healthcheck
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          # Required by Sonar
-          fetch-depth: 0
-
-      - name: Update apt
-        run: sudo apt-get update
-
-      - name: psycopg2 prerequisites
-        run: sudo apt-get install libpq-dev
-
-      - name: System requirements for Django
-        run: sudo apt-get install gdal-bin gettext postgresql-client
-
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python }}
-          cache: pip
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
-
-      - name: Configure sysctl limits
-        run: |
-          sudo swapoff -a
-          sudo sysctl -w vm.swappiness=1
-          sudo sysctl -w fs.file-max=262144
-          sudo sysctl -w vm.max_map_count=262144
-
-      - name: Check migrations
-        run: |
-          python manage.py makemigrations --dry-run --check
-
-      - name: Apply migrations
-        run: |
-          python manage.py migrate
-
-      - name: Compile translations
-        run: |
-          django-admin compilemessages
-
-      - name: Check OpenAPI schema
-        run: |
-          python manage.py spectacular --lang en --validate --fail-on-warn --api-version v1
-
-      - name: Run Ruff lint
-        uses: astral-sh/ruff-action@v1
-        with:
-          version: 0.7.1
-
-      - name: Run Ruff format check
-        uses: astral-sh/ruff-action@v1
-        with:
-          version: 0.7.1
-          args: "format --check"
-
-      - name: Check commitlint
-        uses: wagoid/commitlint-github-action@0d749a1a91d4770e983a7b8f83d4a3f0e7e0874e  # v5.4.4
-
-      # With pytest-cov use: --cov=.
-      # Some errors, skipping --doctest-modules for now
-      - name: Run tests
-        uses: liskin/gh-problem-matcher-wrap@v2
-        with:
-          linters: pytest
-          run: pytest -ra -vvv --cov=.
-
-      - name: Codecov
-        uses: codecov/codecov-action@v3
-
-      # Without this workaround Sonar reports a warning about an incorrect source path
-      - name: Override coverage report source path for Sonar
-        run: sed -i 's@'$GITHUB_WORKSPACE'@/github/workspace/@g' coverage.xml
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  common:
+    uses: City-of-Helsinki/.github/.github/workflows/ci-django-api.yml@main
+    secrets: inherit
+    with:
+      python-version: 3.9
+      postgres-major-version: 14
+      use-postgis: true
+      extra-commands: |
+        python manage.py spectacular --lang en --validate --fail-on-warn --api-version v1
