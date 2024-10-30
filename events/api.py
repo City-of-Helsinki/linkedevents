@@ -1553,32 +1553,6 @@ class ImageViewSet(
 register_view(ImageViewSet, "image", base_name="image")
 
 
-def parse_duration_string(duration):
-    """
-    Parse duration string expressed in format
-    86400 or 86400s (24 hours)
-    180m or 3h (3 hours)
-    3d (3 days)
-    """
-    m = re.match(r"(\d+)\s*(d|h|m|s)?$", duration.strip().lower())
-    if not m:
-        raise ParseError("Invalid duration supplied. Try '1d', '2h' or '180m'.")
-    val, unit = m.groups()
-    if not unit:
-        unit = "s"
-
-    if unit == "s":
-        mul = 1
-    elif unit == "m":
-        mul = 60
-    elif unit == "h":
-        mul = 3600
-    elif unit == "d":
-        mul = 24 * 3600
-
-    return int(val) * mul
-
-
 def _terms_to_regex(terms, operator: Literal["AND", "OR"]):
     """
     Create a compiled regex from of the provided terms of the form
@@ -2110,18 +2084,6 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
             # don't know if users want this to remain tho. do we want that or is there a need  # noqa: E501
             # to change this to actually filter only subevents of recurring events?
             queryset = queryset.exclude(super_event_type=Event.SuperEventType.RECURRING)
-
-    val = params.get("max_duration", None)
-    if val:
-        dur = parse_duration_string(val)
-        cond = "end_time - start_time <= %s :: interval"
-        queryset = queryset.extra(where=[cond], params=[str(dur)])
-
-    val = params.get("min_duration", None)
-    if val:
-        dur = parse_duration_string(val)
-        cond = "end_time - start_time >= %s :: interval"
-        queryset = queryset.extra(where=[cond], params=[str(dur)])
 
     # Filter by publisher, multiple sources separated by comma
     val = params.get("publisher", None)

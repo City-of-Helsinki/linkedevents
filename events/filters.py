@@ -1,4 +1,5 @@
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from datetime import timezone as datetime_timezone
 from functools import partial
 from typing import Iterable, Optional
@@ -9,7 +10,16 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, SearchRank
-from django.db.models import Case, Exists, F, OuterRef, Q, When
+from django.db.models import (
+    Case,
+    DurationField,
+    Exists,
+    ExpressionWrapper,
+    F,
+    OuterRef,
+    Q,
+    When,
+)
 from django.db.models import DateTimeField as ModelDateTimeField
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -157,6 +167,32 @@ def filter_division(queryset, name: str, value: Iterable[str]):
             return queryset.filter(**{name + "__name__in": names})
 
 
+def parse_duration_string(duration) -> timedelta:
+    """
+    Parse duration string expressed in format
+    86400 or 86400s (24 hours)
+    180m or 3h (3 hours)
+    3d (3 days)
+    """
+    m = re.match(r"(\d+)\s*(d|h|m|s)?$", duration.strip().lower())
+    if not m:
+        raise ParseError("Invalid duration supplied. Try '1d', '2h' or '180m'.")
+    val, unit = m.groups()
+    if not unit:
+        unit = "s"
+
+    if unit == "s":
+        mul = 1
+    elif unit == "m":
+        mul = 60
+    elif unit == "h":
+        mul = 3600
+    elif unit == "d":
+        mul = 24 * 3600
+
+    return timedelta(seconds=int(val) * mul)
+
+
 class EventOrderingFilter(LinkedEventsOrderingFilter):
     def filter_queryset(self, request, queryset, view):
         ordering = self.get_ordering(request, queryset, view)
@@ -264,6 +300,16 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             "Search for events where enrolment is open on a given date or datetime."
         ),
     )
+    min_duration = django_filters.CharFilter(
+        method="filter_min_duration",
+        help_text=_("Search for events that are at least as long as given duration."),
+    )
+    max_duration = django_filters.CharFilter(
+        method="filter_max_duration",
+        help_text=_(
+            "Search for events that are at most as long as the given duration."
+        ),
+    )
 
     class Meta:
         model = Event
@@ -271,6 +317,28 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             "registration__remaining_attendee_capacity": ["gte", "isnull"],
             "registration__remaining_waiting_list_capacity": ["gte", "isnull"],
         }
+
+    def filter_max_duration(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        max_duration = parse_duration_string(value)
+        return queryset.annotate(
+            duration=ExpressionWrapper(
+                F("end_time") - F("start_time"), output_field=DurationField()
+            )
+        ).filter(duration__lte=max_duration)
+
+    def filter_min_duration(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        min_duration = parse_duration_string(value)
+        return queryset.annotate(
+            duration=ExpressionWrapper(
+                F("end_time") - F("start_time"), output_field=DurationField()
+            )
+        ).filter(duration__gte=min_duration)
 
     def filter_enrolment_open_on(self, queryset, name, value: datetime):
         value = value.astimezone(ZoneInfo(settings.TIME_ZONE))
