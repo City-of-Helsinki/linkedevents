@@ -10,6 +10,7 @@ from django.contrib.gis.geos import Point
 from django.db import DEFAULT_DB_ALIAS, connections
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
 from django.utils.timezone import localtime
 from freezegun import freeze_time
 from rest_framework import status
@@ -18,7 +19,12 @@ from audit_log.models import AuditLogEntry
 from events.models import Event, Language, PublicationStatus
 from events.tests.conftest import APIClient
 from events.tests.factories import EventFactory, OfferFactory
-from events.tests.utils import assert_fields_exist, datetime_zone_aware, get
+from events.tests.utils import (
+    assert_fields_exist,
+    create_super_event,
+    datetime_zone_aware,
+    get,
+)
 from events.tests.utils import versioned_reverse as reverse
 from registrations.tests.factories import OfferPriceGroupFactory, RegistrationFactory
 
@@ -695,6 +701,32 @@ def test_publication_status_filter(
     event2.save()
     get_list_and_assert_events(
         "show_all=true&publication_status=draft", [event2], api_client
+    )
+
+
+@pytest.mark.django_db
+def test_get_event_list_max_duration_with_hide_recurring_children(
+    api_client, event, event2
+):
+    """
+    When there are hide_recurring_children filter it makes joins which with previous
+    solution caused malformed sql query. This test makes sure that the query is valid
+    and returns correct results with max_duration with hide_recurring_children filters.
+    """
+    event.start_time = timezone.now() + timedelta(days=10)
+    event.end_time = event.start_time + timedelta(days=10, hours=1)
+    event.super_event_type = Event.SuperEventType.RECURRING
+    event2.data_source = event.data_source
+    event2.start_time = timezone.now() + timedelta(days=20)
+    event2.end_time = timezone.now() + timedelta(days=20, hours=1)
+    event2.save()
+    super_event = create_super_event([event, event2], event.data_source)
+    super_event.start_time = timezone.now() + timedelta(hours=1)
+    super_event.end_time = timezone.now() + timedelta(hours=2)
+    super_event.save()
+
+    get_list_and_assert_events(
+        "max_duration=2h&hide_recurring_children=true", [super_event]
     )
 
 

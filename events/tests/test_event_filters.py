@@ -147,3 +147,33 @@ def test_get_event_list_ongoing(ongoing):
         assert event_end_after in qs
     else:
         assert event_end_before in qs
+
+
+@pytest.mark.django_db
+def test_get_event_list_min_duration():
+    EventFactory(start_time=timezone.now(), end_time=timezone.now())
+    event_long = EventFactory(
+        start_time=timezone.now(), end_time=timezone.now() + timedelta(hours=1)
+    )
+
+    filter_set = EventFilter()
+
+    qs = filter_set.filter_min_duration(Event.objects.all(), "min_duration", "1h")
+
+    assert qs.count() == 1
+    assert event_long in qs
+
+
+@pytest.mark.django_db
+def test_get_event_list_max_duration():
+    event_short = EventFactory(start_time=timezone.now(), end_time=timezone.now())
+    EventFactory(
+        start_time=timezone.now(), end_time=timezone.now() + timedelta(hours=1)
+    )
+
+    filter_set = EventFilter()
+
+    qs = filter_set.filter_max_duration(Event.objects.all(), "max_duration", "1h")
+
+    assert qs.count() == 1
+    assert event_short in qs
