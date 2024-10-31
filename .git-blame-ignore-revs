@@ -2,3 +2,5 @@
 0363cb1f8201fcfa521de7eb205da46607c3a634
 # Remove code smells
 a1103d293315605ce0bf09f457cd976596f430fb
+# style: run Ruff format, apply lint fixes and add noqas
+c42293679d30562b6de7fad8efcc39ca071dc66b
