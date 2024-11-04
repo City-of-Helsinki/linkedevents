@@ -8,11 +8,11 @@
 trigger: none
 
 # Pull request (PR) triggers cause a pipeline to run whenever a pull request is
-# opened with one of the specified target branches, or when updates are made to 
+# opened with one of the specified target branches, or when updates are made to
 # such a pull request.
 #
-# GitHub creates a new ref when a pull request is created. The ref points to a 
-# merge commit, which is the merged code between the source and target branches 
+# GitHub creates a new ref when a pull request is created. The ref points to a
+# merge commit, which is the merged code between the source and target branches
 # of the pull request.
 #
 # Opt out of pull request validation
