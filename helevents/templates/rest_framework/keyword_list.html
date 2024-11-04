@@ -1,13 +1,13 @@
 <div class="panel panel-default">
     <div class="panel-body">
         <h2 id="using-keyword-endpoint">Using the keyword endpoint</h2>
-        <p>Here, categories for events are listed. Events in each category can be found at the 
+        <p>Here, categories for events are listed. Events in each category can be found at the
             <code>event</code> endpoint using the query parameter <code>keyword</code>. The common keywords
             used in all events originate from the <a href="https://finto.fi/yso/en/">general Finnish ontology (yso)</a>,
             hence the format <code>yso:p4354</code>. Default ordering is decreasing order by the number of events found.</p>
-        <p>The most common event categories are listed in the two keyword sets 
-        <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:topics/">helsinki:topics</a> and 
-        <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:audiences/">helsinki:audiences</a>, 
+        <p>The most common event categories are listed in the two keyword sets
+        <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:topics/">helsinki:topics</a> and
+        <a href="https://api.hel.fi/linkedevents/v1/keyword_set/helsinki:audiences/">helsinki:audiences</a>,
         which list the YSO keywords that are present in most events to specify event main topic and audience.</p>
 
         <h4 id="keyword-text">Keyword text</h4>
@@ -17,7 +17,7 @@
         <p><a href="?text=lapset" title="json">See the result</a></p>
 
         <h4 id="keyword-free-text">Free text</h4>
-        <p>While the previous search is looking for the keywords containg exact matches of the search string, 
+        <p>While the previous search is looking for the keywords containg exact matches of the search string,
             <code>free_text</code> retrieves keywords on the basis of similarity. Results are
             sorted by similarity.</p>
         <p>Example:</p>
@@ -31,14 +31,14 @@
         <p><a href="?data_source=yso" title="json">See the result</a></p>
 
         <h4 id="show-keywords-with-upcoming-events">Show only keywords with the upcoming events</h4>
-        <p>To show only the keywords which are used in the upcoming events supply the 
+        <p>To show only the keywords which are used in the upcoming events supply the
             <code>has_upcoming_events</code> query parameter.</p>
         <p>For example:</p>
         <pre><code>keyword/?has_upcoming_events=True</code></pre>
         <p><a href="?has_upcoming_events=True" title="json">See the result</a></p>
-        
+
         <h4 id="showing-all-keyword">Showing all keywords</h4>
-        <p>By default, only those keywords which have listed events are 
+        <p>By default, only those keywords which have listed events are
             displayed. You may display keywords with zero <code>n_events</code> with the
             query parameter <code>show_all_keywords</code>.</p>
         <p>For example:</p>
@@ -46,7 +46,7 @@
         <p><a href="?show_all_keywords=True" title="json">See the result</a></p>
 
         <h4 id="showing-deprecated-keyword">Showing deprecated keywords</h4>
-        <p>By default, deprecated keywords are not displayed. You may also display deprecated keywords with the 
+        <p>By default, deprecated keywords are not displayed. You may also display deprecated keywords with the
             query parameter <code>show_deprecated</code>.</p>
         <p>For example:</p>
         <pre><code>keyword/?show_deprecated=True</code></pre>
