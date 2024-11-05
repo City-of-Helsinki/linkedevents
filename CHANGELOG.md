@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.9.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.0...linkedevents-v3.9.1) (2024-11-05)
+
+
+### Bug Fixes
+
+* **events:** Use django qs functions in max_* and min_duration filters ([07b27b3](https://github.com/City-of-Helsinki/linkedevents/commit/07b27b38a2a1b31090b749efe2dbffdc19131c80))
+* Use django's static root in swagger schema url config ([ea21c23](https://github.com/City-of-Helsinki/linkedevents/commit/ea21c231d76e3506b1b1a2af6c38e3bafc57215a))
+
+
+### Dependencies
+
+* Bump werkzeug from 3.0.4 to 3.0.6 ([c1f7909](https://github.com/City-of-Helsinki/linkedevents/commit/c1f7909e4b28f7ee3098dc2672d8b5e55fcafc18))
+
 ## [3.9.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.8.0...linkedevents-v3.9.0) (2024-10-10)
 
 
