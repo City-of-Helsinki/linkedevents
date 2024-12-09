@@ -802,7 +802,7 @@ def test_signup_list_assert_attendee_status_filter(api_client, registration):
 
 
 @pytest.mark.django_db
-def test_signup_list_orders_by_id_by_default(api_client, registration):
+def test_signup_list_orders_by_id_desc_by_default(api_client, registration):
     user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
@@ -824,15 +824,18 @@ def test_signup_list_orders_by_id_by_default(api_client, registration):
         last_name="Attendee",
         attendee_status=SignUp.AttendeeStatus.ATTENDING,
     )
+    expected_order = [
+        signup_third.id,
+        signup_second.id,
+        signup_first.id,
+    ]
 
     response = get_list(
         api_client,
         query_string=f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING}",
     )
     data = response.data["data"]
-    assert data[0]["id"] == signup_first.id
-    assert data[1]["id"] == signup_second.id
-    assert data[2]["id"] == signup_third.id
+    assert [item["id"] for item in data] == expected_order
 
 
 @pytest.mark.django_db
@@ -1089,6 +1092,7 @@ def test_signups_list_ordering(
             last_name=None,
         ),
     ]
+    signups.reverse()
 
     page_size = 3
     page_start = 0
@@ -1101,8 +1105,9 @@ def test_signups_list_ordering(
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["data"]) == page_size
 
-        for index, signup in enumerate(signups[page_start:page_end]):
-            assert response.data["data"][index]["id"] == signup.id
+        assert [item["id"] for item in response.data["data"]] == [
+            signup.id for signup in signups[page_start:page_end]
+        ]
 
         page_start += page_size
         page_end += page_size
