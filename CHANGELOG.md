@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.9.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.1...linkedevents-v3.9.2) (2024-12-11)
+
+
+### Bug Fixes
+
+* **registrations:** Order signups in descending order ([7b8c47f](https://github.com/City-of-Helsinki/linkedevents/commit/7b8c47ff5af05fcd2ca255f8e401ba83551d13ce))
+
+
+### Dependencies
+
+* Bump django from 4.2.16 to 4.2.17 ([ed18f6a](https://github.com/City-of-Helsinki/linkedevents/commit/ed18f6a7080bc9c3da30e439b1219ccc0a6e311c))
+
 ## [3.9.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.0...linkedevents-v3.9.1) (2024-11-05)
 
 
