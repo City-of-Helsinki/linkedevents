@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.1...linkedevents-v3.9.2) (2024-12-11)
+
+
+### Dependencies
+
+* Bump django from 4.2.16 to 4.2.17 ([ed18f6a](https://github.com/City-of-Helsinki/linkedevents/commit/ed18f6a7080bc9c3da30e439b1219ccc0a6e311c))
+
 ## [3.9.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.0...linkedevents-v3.9.1) (2024-11-05)
 
 
