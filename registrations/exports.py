@@ -20,7 +20,7 @@ class RegistrationSignUpsExportXLSX:
             .select_related(
                 "contact_person", "signup_group__contact_person", "protected_data"
             )
-            .order_by("attendee_status", "first_name", "last_name")
+            .order_by("attendee_status", "id")
             .only(
                 "first_name",
                 "last_name",
@@ -44,7 +44,12 @@ class RegistrationSignUpsExportXLSX:
     @staticmethod
     def _get_columns() -> list[dict]:
         return [
-            {"header": _("Name"), "accessor": "full_name"},
+            {
+                "header": _("Name"),
+                "accessor": lambda signup: (
+                    f"{signup.last_name or ''} {signup.first_name or ''}".strip()
+                ),
+            },
             {
                 "header": _("Date of birth"),
                 "accessor": "date_of_birth",
