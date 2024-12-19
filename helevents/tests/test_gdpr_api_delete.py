@@ -3,7 +3,6 @@ from uuid import UUID
 
 import pytest
 import requests_mock
-from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -105,7 +104,6 @@ def _assert_gdpr_delete(
 
 
 @pytest.mark.django_db
-@override_settings(GDPR_DISABLE_API_DELETION=False)
 def test_authenticated_user_can_delete_own_data(
     api_client, settings, django_capture_on_commit_callbacks
 ):
@@ -142,7 +140,6 @@ def test_authenticated_user_can_delete_own_data(
 
 
 @pytest.mark.django_db
-@override_settings(GDPR_DISABLE_API_DELETION=False)
 def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
     api_client, settings, django_capture_on_commit_callbacks
 ):
@@ -181,7 +178,6 @@ def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
 
 
 @pytest.mark.django_db
-@override_settings(GDPR_DISABLE_API_DELETION=False)
 def test_authenticated_user_cannot_delete_own_data_with_upcoming_signups_in_group(
     api_client, settings, django_capture_on_commit_callbacks
 ):
@@ -225,7 +221,6 @@ def test_authenticated_user_cannot_delete_own_data_with_upcoming_signups_in_grou
 
 
 @pytest.mark.django_db
-@override_settings(GDPR_DISABLE_API_DELETION=False)
 def test_authenticated_user_cannot_delete_own_data_with_upcoming_signups(
     api_client, settings, django_capture_on_commit_callbacks
 ):
@@ -266,7 +261,6 @@ def test_authenticated_user_cannot_delete_own_data_with_upcoming_signups(
 
 
 @pytest.mark.django_db
-@override_settings(GDPR_DISABLE_API_DELETION=False)
 @pytest.mark.parametrize(
     "payment_status",
     [
@@ -315,7 +309,6 @@ def test_authenticated_user_cannot_delete_own_data_with_ongoing_payments(
 
 
 @pytest.mark.django_db
-@override_settings(GDPR_DISABLE_API_DELETION=False)
 @pytest.mark.parametrize(
     "payment_status",
     [
