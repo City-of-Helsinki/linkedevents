@@ -28,27 +28,9 @@ def delete_user_and_gdpr_data(
     Function used by the Helsinki Profile GDPR API to delete all GDPR data collected of the user.
     The GDPR API package will run this within a transaction.
 
-    **Note!**: Disabled the deletion for now until the two service problem is solved.
-
     :param  user: the User instance to be deleted along with related GDPR data
     :param dry_run: a boolean telling if this is a dry run of the function or not
     """  # noqa: E501
-
-    if settings.GDPR_DISABLE_API_DELETION:
-        # Delete user is disabled. Returns 403 FORBIDDEN so that the GDPR view
-        # handles it correctly.
-        return ErrorResponse(
-            [
-                Error(
-                    "GDPR_DISABLE_API_DELETION=1",
-                    {
-                        "fi": "GDPR poistopyynnöt on estetty toistaiseksi Linked Events -palvelussa",  # noqa: E501
-                        "en": "GDPR removal requests are temporarily unavailable in Linked Events",  # noqa: E501
-                        "sv": "GDPR-borttagning begäran är tillfälligt inte tillgänglig i Linked Events",  # noqa: E501
-                    },
-                )
-            ]
-        )
 
     minimum_event_end = timezone.now() - timezone.timedelta(
         days=settings.GDPR_API_DELETE_EVENT_END_THRESHOLD_DAYS
