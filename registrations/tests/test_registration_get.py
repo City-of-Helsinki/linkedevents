@@ -1,10 +1,13 @@
 from collections import Counter
+from datetime import datetime
 from decimal import Decimal
 from unittest.mock import PropertyMock, patch
 
+import freezegun
 import pytest
 from django.conf import settings
 from django.test import TestCase
+from django.utils.timezone import make_aware
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -34,13 +37,13 @@ test_email = "test@email.com"
 # === util methods ===
 
 
-def get_list(api_client: APIClient, query_string: str = None):
+def get_list(api_client: APIClient, query_string: str = None, *args, **kwargs):
     url = reverse("registration-list")
 
     if query_string:
         url = "%s?%s" % (url, query_string)
 
-    return api_client.get(url)
+    return api_client.get(url, *args, **kwargs)
 
 
 def assert_registrations_in_response(
@@ -666,6 +669,42 @@ def test_registration_id_is_audit_logged_on_get_detail(user_api_client, registra
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         registration.pk
     ]
+
+
+@pytest.mark.django_db
+def test_list_should_order_by_id_by_default(user_api_client):
+    registration1 = RegistrationFactory()
+    registration2 = RegistrationFactory()
+    registration3 = RegistrationFactory()
+    expected_order = [registration1, registration2, registration3]
+
+    response = get_list(user_api_client)
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+    data = response.data["data"]
+    assert [item["id"] for item in data] == [item.pk for item in expected_order]
+
+
+@freezegun.freeze_time("2024-01-01")
+@pytest.mark.django_db
+def test_list_should_order_by_event_start_time(user_api_client):
+    registration_jun = RegistrationFactory(
+        event=EventFactory(start_time=make_aware(datetime(2024, 6, 1)))
+    )
+    registration_jan = RegistrationFactory(
+        event=EventFactory(start_time=make_aware(datetime(2024, 1, 1)))
+    )
+    registration_dec = RegistrationFactory(
+        event=EventFactory(start_time=make_aware(datetime(2024, 12, 1)))
+    )
+    expected_order = [registration_dec, registration_jun, registration_jan]
+
+    response = get_list(user_api_client, data={"sort": "-event__start_time"})
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+    data = response.data["data"]
+    assert [item["id"] for item in data] == [item.pk for item in expected_order]
 
 
 @pytest.mark.django_db
