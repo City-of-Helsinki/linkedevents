@@ -175,6 +175,17 @@ class RegistrationViewSet(
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
 
+    filter_backends = [
+        filters.OrderingFilter,
+    ]
+    ordering_fields = [
+        "id",
+        "event__start_time",
+    ]
+    ordering = [
+        "id",
+    ]
+
     permission_classes = [CanAccessRegistration]
 
     def get_serializer_context(self):
@@ -338,7 +349,7 @@ class RegistrationViewSet(
 
         # Copy query_params to get mutable version of it
         query_params = self.request.query_params.copy()
-        # By default _filter_event_queryset only returns events with GENERAL type.
+        # By default, _filter_event_queryset only returns events with GENERAL type.
         # This causes problem when getting a registration details, so filter registrations  # noqa: E501
         # by event_type only when explicitly set
         if not query_params.get("event_type"):
@@ -353,9 +364,9 @@ class RegistrationViewSet(
                 events = Event.objects.none()
             else:
                 events = self.request.user.get_editable_events_for_registration(events)
-        registrations = Registration.objects.filter(event__in=events)
 
-        return registrations
+        queryset = super().filter_queryset(queryset)
+        return queryset.filter(event__in=events)
 
     def get_serializer_class(self):
         if self.action == "send_message":
