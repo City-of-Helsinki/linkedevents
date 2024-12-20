@@ -585,7 +585,7 @@ class SignUpViewSet(
         filters.OrderingFilter,
     ]
     ordering_fields = ("id", "first_name", "last_name")
-    ordering = ("-id",)
+    ordering = ("id",)
     filterset_class = SignUpFilter
     permission_classes = [CanAccessSignup]
 
