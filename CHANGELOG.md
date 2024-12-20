@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.9.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.2...linkedevents-v3.9.3) (2024-12-20)
+
+
+### Bug Fixes
+
+* **registration:** Order signups by signup order in excel ([122d6cf](https://github.com/City-of-Helsinki/linkedevents/commit/122d6cf02d2308824c1e285c41fa686737fc3179))
+
 ## [3.9.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.1...linkedevents-v3.9.2) (2024-12-11)
 
 
