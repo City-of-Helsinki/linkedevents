@@ -79,21 +79,12 @@ def test_create_registration(user, api_client, event):
     assert_create_registration(api_client, registration_data)
 
 
-@pytest.mark.parametrize(
-    "info_url_fi,info_url_sv,info_url_en",
-    [
-        (None, None, None),
-        (None, None, ""),
-        (None, "", ""),
-        ("", None, None),
-        ("", "", None),
-        ("", "", ""),
-    ],
-)
 @pytest.mark.django_db
-def test_signup_url_is_linked_to_event_offer_without_info_url(
-    user_api_client, event, info_url_fi, info_url_sv, info_url_en
-):
+def test_signup_url_is_linked_to_event_offer(user_api_client, event):
+    info_url_fi = None
+    info_url_sv = ""
+    info_url_en = "https://test.com"
+
     offer = OfferFactory(
         event=event,
         info_url_fi=info_url_fi,
@@ -113,43 +104,6 @@ def test_signup_url_is_linked_to_event_offer_without_info_url(
     assert offer.info_url_fi == get_signup_create_url(registration, "fi")
     assert offer.info_url_sv == get_signup_create_url(registration, "sv")
     assert offer.info_url_en == get_signup_create_url(registration, "en")
-
-
-@pytest.mark.parametrize(
-    "info_url_field,info_url_value,blank_value",
-    [
-        ("info_url_fi", "https://test.com", None),
-        ("info_url_sv", "https://test.com", None),
-        ("info_url_en", "https://test.com", None),
-        ("info_url_fi", "https://test.com", ""),
-        ("info_url_sv", "https://test.com", ""),
-        ("info_url_en", "https://test.com", ""),
-    ],
-)
-@pytest.mark.django_db
-def test_signup_url_is_not_linked_to_event_offer_with_info_url(
-    user_api_client, event, info_url_field, info_url_value, blank_value
-):
-    fields = ("info_url_fi", "info_url_sv", "info_url_en")
-
-    offer_kwargs = {info_url_field: info_url_value}
-    for field in fields:
-        if field != info_url_field:
-            offer_kwargs[field] = blank_value
-
-    offer = OfferFactory(event=event, **offer_kwargs)
-    assert getattr(offer, info_url_field) == info_url_value
-
-    registration_data = get_minimal_required_registration_data(event.id)
-    assert_create_registration(user_api_client, registration_data)
-
-    offer.refresh_from_db()
-    assert getattr(offer, info_url_field) == info_url_value
-
-    blank_values = (blank_value,)
-    for field in fields:
-        if field != info_url_field:
-            assert getattr(offer, field) in blank_values
 
 
 @pytest.mark.django_db

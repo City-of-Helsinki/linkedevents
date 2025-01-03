@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.db.models import Q
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -8,11 +7,7 @@ from registrations.utils import get_signup_create_url, move_waitlisted_to_attend
 
 
 def _create_signup_link_for_event(registration: Registration) -> None:
-    registration.event.offers.filter(
-        (Q(info_url_fi=None) | Q(info_url_fi=""))
-        & (Q(info_url_sv=None) | Q(info_url_sv=""))
-        & (Q(info_url_en=None) | Q(info_url_en=""))
-    ).update(
+    registration.event.offers.update(
         info_url_fi=get_signup_create_url(registration, "fi"),
         info_url_sv=get_signup_create_url(registration, "sv"),
         info_url_en=get_signup_create_url(registration, "en"),
