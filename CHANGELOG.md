@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.10.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.2...linkedevents-v3.10.0) (2025-01-04)
+
+
+### Features
+
+* Remove GDPR_DISABLE_API_DELETION setting ([4432550](https://github.com/City-of-Helsinki/linkedevents/commit/44325501e2468d783e2a837077fea5e92bd8103e))
+
+
+### Bug Fixes
+
+* **registration:** Order signups by signup order in excel ([122d6cf](https://github.com/City-of-Helsinki/linkedevents/commit/122d6cf02d2308824c1e285c41fa686737fc3179))
+
 ## [3.9.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.1...linkedevents-v3.9.2) (2024-12-11)
 
 
