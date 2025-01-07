@@ -338,8 +338,12 @@ if DEBUG and DEBUG_TOOLBAR_AVAILABLE:
         "debug_toolbar.middleware.DebugToolbarMiddleware",
     )
     # Add the docker container gateway IP into internal IPs (for having debug toolbar)
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS += [ip[: ip.rfind(".")] + ".1" for ip in ips]
+    try:
+        _, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    except socket.gaierror:
+        pass
+    else:
+        INTERNAL_IPS += [ip[: ip.rfind(".")] + ".1" for ip in ips]
 
 
 ROOT_URLCONF = "linkedevents.urls"
