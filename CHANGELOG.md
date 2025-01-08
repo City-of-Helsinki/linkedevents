@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.10.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.2...linkedevents-v3.10.0) (2025-01-08)
+
+
+### Features
+
+* **registrations:** Add ordering for registrations view ([36d8a0b](https://github.com/City-of-Helsinki/linkedevents/commit/36d8a0bffe78b8c7cec47b1b8c89527152ba27a9))
+* Remove GDPR_DISABLE_API_DELETION setting ([4432550](https://github.com/City-of-Helsinki/linkedevents/commit/44325501e2468d783e2a837077fea5e92bd8103e))
+
+
+### Bug Fixes
+
+* Always update offer info_url when creating new registration ([6eef8ec](https://github.com/City-of-Helsinki/linkedevents/commit/6eef8ecc745918815f1f327cb45001d2b9656118))
+* **registration:** Order signups by signup order in excel ([122d6cf](https://github.com/City-of-Helsinki/linkedevents/commit/122d6cf02d2308824c1e285c41fa686737fc3179))
+
+
+### Reverts
+
+* "fix(registrations): order signups in descending order" ([2f7abe8](https://github.com/City-of-Helsinki/linkedevents/commit/2f7abe85fcc279f7c17edff747228217bba3949e))
+
 ## [3.9.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.1...linkedevents-v3.9.2) (2024-12-11)
 
 
