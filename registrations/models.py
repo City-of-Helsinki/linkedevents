@@ -654,7 +654,7 @@ class Registration(CreatedModifiedBaseModel):
                 Q(signup__registration_id=self.pk)
                 | Q(signup_group__registration_id=self.pk)
             )
-        ):
+        ).order_by("-pk"):
             contact_person.send_notification(
                 SignUpNotificationType.EVENT_CANCELLATION,
                 is_sub_event_cancellation=is_sub_event_cancellation,
