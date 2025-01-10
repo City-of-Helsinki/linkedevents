@@ -1,3 +1,4 @@
+import math
 from collections import Counter
 from typing import Optional, Union
 
@@ -25,13 +26,13 @@ def get_detail(api_client: APIClient, price_group_pk: Union[str, int]):
     return api_client.get(url)
 
 
-def get_list(api_client: APIClient, query: Optional[str] = None):
+def get_list(api_client: APIClient, query: Optional[str] = None, data=None):
     url = reverse("pricegroup-list")
 
     if query:
         url = "%s?%s" % (url, query)
 
-    return api_client.get(url)
+    return api_client.get(url, data=data)
 
 
 def assert_get_detail(api_client: APIClient, price_group_pk: Union[str, int]):
@@ -243,31 +244,42 @@ def test_price_group_list_ordering(api_client):
     api_client.force_authenticate(user)
 
     price_groups = [
-        PriceGroupFactory(description=""),
-        PriceGroupFactory(description="1"),
-        PriceGroupFactory(description="2"),
-        PriceGroupFactory(description="Abc"),
-        PriceGroupFactory(description="Bcd"),
-        PriceGroupFactory(description="Cde"),
-        PriceGroupFactory(description="Äää"),
-        PriceGroupFactory(description="Öää"),
-        PriceGroupFactory(description="Ööö"),
+        PriceGroupFactory(description_fi=""),
+        PriceGroupFactory(description_fi="1"),
+        PriceGroupFactory(description_fi="2"),
+        PriceGroupFactory(description_fi="Abc"),
+        PriceGroupFactory(description_fi="Bcd"),
+        PriceGroupFactory(description_fi="Cde"),
+        PriceGroupFactory(description_fi="Dce"),
+        PriceGroupFactory(description_fi="Äää"),
+        PriceGroupFactory(description_fi="Äöö"),
+        PriceGroupFactory(description_fi="Öää"),
+        PriceGroupFactory(description_fi="Ööö"),
     ]
 
+    # Sanity check for correct translations (use the first object with a non-empty
+    # description; an empty value is replaced with a fallback value)
+    with translation.override("fi"):
+        assert price_groups[1].description == "1"
+
     page_size = 3
-    page_start = 0
-    page_end = page_size
-    for page in range(1, 4):
-        response = get_list(api_client, query=f"page={page}&page_size={page_size}")
+    page_count = math.ceil(len(price_groups) / page_size)
+    for page in range(1, page_count + 1):
+        # Price groups are ordered by description, so need to activate the correct
+        # language.
+        with translation.override("fi"):
+            response = get_list(api_client, data={"page": page, "page_size": page_size})
+        assert (
+            response.status_code == status.HTTP_200_OK
+        ), f"expected status code 200 at page {page}, got {response.status_code} instead"
 
-        assert response.status_code == status.HTTP_200_OK
-        assert len(response.data["data"]) == page_size
-
-        for index, price_group in enumerate(price_groups[page_start:page_end]):
-            assert response.data["data"][index]["id"] == price_group.id
-
-        page_start += page_size
-        page_end += page_size
+        price_group_ids = [item["id"] for item in response.data["data"]]
+        start = page_size * (page - 1)
+        end = page_size * page
+        expected_ids = [price_group.id for price_group in price_groups[start:end]]
+        assert (
+            price_group_ids == expected_ids
+        ), f"expected ids {expected_ids} at page {page}, got {price_group_ids} instead"
 
 
 @pytest.mark.django_db
