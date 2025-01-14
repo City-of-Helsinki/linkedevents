@@ -2,11 +2,14 @@
 
 set -e
 
-
-if [[ "$WAIT_FOR_IT_ADDRESS" ]]; then
-    wait-for-it.sh $WAIT_FOR_IT_ADDRESS --timeout=30
+if [ -z "$SKIP_DATABASE_CHECK" ] || [ "$SKIP_DATABASE_CHECK" = "0" ]; then
+  until nc -z -v -w30 "$DATABASE_HOST" 5432
+  do
+    echo "Waiting for postgres database connection..."
+    sleep 1
+  done
+  echo "Database is up!"
 fi
-
 
 if [[ "$APPLY_MIGRATIONS" = "true" ]]; then
     echo "Applying database migrations..."
