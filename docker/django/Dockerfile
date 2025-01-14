@@ -1,11 +1,6 @@
-ARG PYTHON_VERSION=3.9
-ARG IMAGE_VARIANT=slim
-ARG BUILDER_REGISTRY=docker.io
-
 # ==============================
-FROM ${BUILDER_REGISTRY}/helsinkitest/python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS appbase
+FROM helsinki.azurecr.io/ubi9/python-39-gdal AS appbase
 # ==============================
-RUN mkdir /entrypoint
 
 ENV PYTHONDONTWRITEBYTECODE=true
 ENV PYTHONUNBUFFERED=true
@@ -13,46 +8,42 @@ ENV PYTHONUNBUFFERED=true
 # Works like this: "/example" -> http://hostname.domain.name/example
 ENV DJANGO_URL_PREFIX=/
 
+WORKDIR /app
+USER root
+
 ## Setting the permissions beforehand makes the mounted volume inherit the permission
 ## in docker compose. Useful for development with non-root user and named volume.
 ## https://github.com/docker/compose/issues/3270#issuecomment-363478501
-RUN mkdir -p /var/media && chown -R appuser:appuser /var/media && chmod g=u -R /var/media
+RUN mkdir -p /var/media && chmod g=u -R /var/media
 
-COPY --chown=appuser:appuser requirements.txt /app/
-COPY --chown=appuser:appuser requirements-prod.txt /app/
+COPY requirements.txt .
+COPY requirements-prod.txt .
 
-RUN apt-install.sh \
-    build-essential \
-    gdal-bin \
-    gettext \
-    libpq-dev \
-    postgresql-client \
-    libcurl4-openssl-dev \
+RUN dnf update -y  \
+    && dnf install -y nmap-ncat  \
     && pip install --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir -r /app/requirements.txt \
-    && pip install --no-cache-dir -r /app/requirements-prod.txt \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir -r requirements-prod.txt \
     && uwsgi --build-plugin https://github.com/City-of-Helsinki/uwsgi-sentry \
-    && apt-cleanup.sh build-essential
+    && dnf clean all
 
-COPY --chown=appuser:appuser ./docker/django/docker-entrypoint.sh /entrypoint/docker-entrypoint.sh
-ENTRYPOINT ["/entrypoint/docker-entrypoint.sh"]
+ENTRYPOINT ["/app/docker/django/docker-entrypoint.sh"]
 
 # ==============================
 FROM appbase AS development
 # ==============================
 
-COPY --chown=appuser:appuser requirements-dev.txt /app/
-RUN pip install --no-cache-dir -r /app/requirements-dev.txt
+COPY requirements-dev.txt .
+RUN pip install --no-cache-dir -r requirements-dev.txt
 
 ENV DEV_SERVER=true
 
-COPY --chown=appuser:appuser . /app/
+COPY . .
 
 # This is required by osoite importer (by underlying munigeo importers)
-RUN mkdir -p /app/data && chgrp -R 0 /app/data && chmod g+w -R /app/data
+RUN mkdir -p data && chgrp -R 0 data && chmod g+w -R data
 
-USER appuser
-
+USER default
 EXPOSE 8000/tcp
 
 # ==============================
@@ -60,12 +51,12 @@ FROM appbase AS staticbuilder
 # ==============================
 
 ENV VAR_ROOT=/app
-COPY --chown=appuser:appuser . /app
+COPY . .
 
-RUN mkdir -p /app/linkedevents/static \
-    && touch /app/linkedevents/static/openapi_schema.yaml \
+RUN mkdir -p linkedevents/static \
+    && touch linkedevents/static/openapi_schema.yaml \
     && SECRET_KEY="only-used-for-collectstatic" python manage.py spectacular \
-    --file /app/linkedevents/static/openapi_schema.yaml --lang en --validate --fail-on-warn \
+    --file linkedevents/static/openapi_schema.yaml --lang en --validate --fail-on-warn \
     --api-version v1 \
     && SECRET_KEY="only-used-for-collectstatic" python manage.py collectstatic --noinput
 
@@ -73,17 +64,16 @@ RUN mkdir -p /app/linkedevents/static \
 FROM appbase AS production
 # ==============================
 
-COPY --from=staticbuilder --chown=appuser:appuser /app/static /app/static
-COPY --chown=appuser:appuser . /app/
+COPY --from=staticbuilder /app/static /app/static
+COPY  . .
 
 RUN django-admin compilemessages
 
 # This is needed to install preferred templates here.
-RUN chgrp -R 0 /app/templates/rest_framework/ && chmod g+w -R /app/templates/rest_framework/
+RUN chgrp -R 0 templates/rest_framework/ && chmod g+w -R templates/rest_framework/
 
 # This is required by osoite importer (by underlying munigeo importers)
-RUN mkdir -p /app/data && chgrp -R 0 /app/data && chmod g+w -R /app/data
+RUN mkdir -p data && chgrp -R 0 data && chmod g+w -R data
 
-USER appuser
-
+USER default
 EXPOSE 8000/tcp
