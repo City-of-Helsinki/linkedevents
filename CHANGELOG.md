@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.10.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.0...linkedevents-v3.10.1) (2025-01-15)
+
+
+### Bug Fixes
+
+* **events:** Use espoo api days back conf as int ([35abc25](https://github.com/City-of-Helsinki/linkedevents/commit/35abc251b3982a1d569643a4babe1ee5e4326e56))
+* Gaierror when attempting to resolve unresolvable hostname in DEBUG ([189864c](https://github.com/City-of-Helsinki/linkedevents/commit/189864cfb90ec1a395f58feebe39b511eb9479f2))
+
+
+### Dependencies
+
+* Bump django to 4.2.18 ([3ca0b0a](https://github.com/City-of-Helsinki/linkedevents/commit/3ca0b0a3273dd7579cbb49a1295cfc35b2f3f46a))
+* Bump jinja2 from 3.1.4 to 3.1.5 ([408ba97](https://github.com/City-of-Helsinki/linkedevents/commit/408ba97a63266203cdb4a381a7e05d161aedd6ba))
+
 ## [3.10.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.9.2...linkedevents-v3.10.0) (2025-01-08)
 
 
