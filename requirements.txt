@@ -51,7 +51,7 @@ defusedxml==0.8.0rc2
     #   social-auth-core
 deprecation==2.1.0
     # via django-helusers
-django==4.2.17
+django==4.2.18
     # via
     #   -r requirements.in
     #   django-admin-autocomplete-filter
