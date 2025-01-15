@@ -84,7 +84,7 @@ env = environ.Env(
             "keyword": "yso:p2787",
         },
     ),
-    ESPOO_API_EVENT_START_DAYS_BACK=(str, 180),
+    ESPOO_API_EVENT_START_DAYS_BACK=(int, 180),
     ESPOO_API_PUBLISHERS=(
         list,
         [
