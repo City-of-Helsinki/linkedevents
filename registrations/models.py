@@ -600,29 +600,22 @@ class Registration(CreatedModifiedBaseModel):
             return
 
         try:
-            payment = (
-                first_on_list.create_web_store_payment()
-                if first_on_list.price_group.price > 0
-                else None
-            )
-        except (ValidationError, AttributeError) as exc:
+            payment = first_on_list.create_web_store_payment()
+        except ValidationError as exc:
             logger.error(
                 f"Failed to create payment when moving waitlisted signup #{first_on_list.pk} "  # noqa: E501
                 f"to attending: {exc}"
             )
             return
 
-        if not payment:
-            self.move_first_waitlisted_to_attending(first_on_list)
-        else:
-            first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
-            first_on_list.save(update_fields=["attendee_status"])
+        first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
+        first_on_list.save(update_fields=["attendee_status"])
 
-            contact_person = first_on_list.actual_contact_person
-            contact_person.send_notification(
-                SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
-                payment_link=payment.checkout_url,
-            )
+        contact_person = first_on_list.actual_contact_person
+        contact_person.send_notification(
+            SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
+            payment_link=payment.checkout_url,
+        )
 
     def move_first_waitlisted_to_attending(self, first_on_list=None):
         first_on_list = first_on_list or self.get_waitlisted(count=1)
