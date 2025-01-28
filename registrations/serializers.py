@@ -162,23 +162,6 @@ def _validate_contact_person_for_payment(contact_person: dict, errors: dict) -> 
         )
 
 
-def _validate_signups_for_payment(
-    signups: list[dict], errors: dict, field_name: str
-) -> None:
-    if any(
-        [
-            signup
-            for signup in signups
-            if signup.get("price_group")
-            and signup["price_group"]["registration_price_group"].price <= 0
-        ]
-    ):
-        errors[field_name] = _(
-            "Participants must have a price group with price greater than 0 "
-            "selected to make a payment."
-        )
-
-
 class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
     created_time = DateTimeField(
         default_timezone=ZoneInfo("UTC"),
@@ -642,8 +625,6 @@ class SignUpSerializer(
             self._validate_price_group(registration, data, validated_data, errors)
 
             if validated_data.get("create_payment"):
-                _validate_signups_for_payment([validated_data], errors, "price_group")
-
                 _validate_contact_person_for_payment(
                     validated_data.get("contact_person"), errors
                 )
@@ -1635,8 +1616,6 @@ class SignUpGroupCreateSerializer(
             )
 
         if validated_data.get("create_payment"):
-            _validate_signups_for_payment(validated_data["signups"], errors, "signups")
-
             _validate_contact_person_for_payment(
                 contact_person,
                 errors,
