@@ -56,7 +56,6 @@ from registrations.models import (
 )
 from registrations.permissions import CanAccessRegistrationSignups
 from registrations.utils import (
-    code_validity_duration,
     get_signup_create_url,
     has_allowed_substitute_user_email_domain,
 )
@@ -1457,10 +1456,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
                 }
             )
 
-        expiration = reservation.timestamp + timedelta(
-            minutes=code_validity_duration(reservation.seats)
-        )
-        if localtime() > expiration:
+        if localtime() > reservation.expiration:
             raise serializers.ValidationError(
                 {"reservation_code": "Reservation code has expired."}
             )
@@ -1832,7 +1828,9 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
         default_timezone=ZoneInfo("UTC"), required=False, read_only=True
     )
 
-    expiration = serializers.SerializerMethodField()
+    expiration = DateTimeField(
+        default_timezone=ZoneInfo("UTC"), required=False, read_only=True
+    )
 
     in_waitlist = serializers.SerializerMethodField()
 
@@ -1956,8 +1954,25 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
         return validated_data
 
     def update(self, instance, validated_data):
-        if localtime() > instance.expiration:
+        old_expiration = instance.expiration
+        now = localtime()
+
+        if now > old_expiration:
             raise ConflictException(_("Cannot update expired seats reservation."))
+
+        new_expiration = old_expiration + timedelta(
+            minutes=validated_data["seats"] - instance.seats
+        )
+        grace_period = localtime() + timedelta(
+            seconds=settings.RESERVATION_GRACE_PERIOD_SECONDS
+        )
+        # Increasing expiration is always OK but decrease only if the old expiration
+        # longer than grace period and even then only down to the start of the grace
+        # period.
+        if new_expiration > old_expiration:
+            validated_data["expiration"] = new_expiration
+        elif old_expiration > grace_period:
+            validated_data["expiration"] = max(new_expiration, grace_period)
 
         return super().update(instance, validated_data)
 

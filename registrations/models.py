@@ -1991,10 +1991,7 @@ class SeatReservationCode(models.Model):
     timestamp = models.DateTimeField(
         verbose_name=_("Timestamp"), auto_now_add=True, blank=True
     )
-
-    @property
-    def expiration(self):
-        return self.timestamp + timedelta(minutes=code_validity_duration(self.seats))
+    expiration = models.DateTimeField(_("Expiration time of the reservation"))
 
     class Meta:
         constraints = [
@@ -2002,6 +1999,13 @@ class SeatReservationCode(models.Model):
                 fields=["registration", "code"], name="unique_seat_reservation"
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.expiration:
+            self.expiration = localtime() + timedelta(
+                minutes=code_validity_duration(self.seats)
+            )
+        super().save(*args, **kwargs)
 
 
 class SignUpPriceGroup(RegistrationPriceGroupBaseModel, SoftDeletableBaseModel):

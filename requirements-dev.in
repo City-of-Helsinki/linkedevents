@@ -4,6 +4,7 @@ Werkzeug
 django-anymail
 django-debug-toolbar
 django-extensions
+django-test-migrations
 factory_boy
 freezegun
 pip-tools

@@ -1,7 +1,10 @@
 from datetime import timedelta
 
 import pytest
+from django.conf import settings
+from django.utils import timezone
 from django.utils.timezone import localtime
+from freezegun import freeze_time
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
@@ -146,8 +149,8 @@ def test_cannot_update_registration(user_api_client, registration, registration2
 @pytest.mark.django_db
 def test_cannot_update_expired_reservation(user_api_client, registration):
     reservation = SeatReservationCodeFactory(seats=1, registration=registration)
-    reservation.timestamp = localtime() - timedelta(days=1)
-    reservation.save(update_fields=["timestamp"])
+    reservation.expiration = localtime() - timedelta(seconds=1)
+    reservation.save(update_fields=["expiration"])
 
     reservation_data = {
         "seats": 1,
@@ -289,3 +292,51 @@ def test_seatreservation_id_is_audit_logged_on_put(registration, user_api_client
     assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
         reservation.pk
     ]
+
+
+@pytest.mark.parametrize(
+    "seats_start,seats_end,update_x_seconds_before,expiration_delta",
+    [
+        # One seat removed 10 seconds before expiry -> no change in expiration
+        (2, 1, 10, 0),
+        # One seat removed 61 seconds before start of grace time -> expiration -60s
+        (2, 1, settings.RESERVATION_GRACE_PERIOD_SECONDS + 61, -60),
+        # One seat added 10 seconds before expiry -> expiration +60s
+        (1, 2, 10, 60),
+    ],
+)
+@pytest.mark.django_db
+def test_grace_period(
+    user_api_client,
+    registration,
+    seats_start,
+    seats_end,
+    update_x_seconds_before,
+    expiration_delta,
+):
+    now = timezone.now()
+    with freeze_time(now):
+        reservation = SeatReservationCodeFactory(
+            seats=seats_start, registration=registration
+        )
+
+    original_expiration = reservation.expiration
+    expires_in = reservation.expiration - now
+    before_expiry = expires_in - timedelta(seconds=update_x_seconds_before)
+
+    reservation_data = {
+        "seats": seats_end,
+        "registration": registration.id,
+        "code": reservation.code,
+    }
+
+    with freeze_time(now + before_expiry):
+        response = update_seats_reservation(
+            user_api_client, reservation.id, reservation_data
+        )
+    assert response.status_code == status.HTTP_200_OK
+
+    reservation.refresh_from_db()
+    assert reservation.expiration == original_expiration + timedelta(
+        seconds=expiration_delta
+    )

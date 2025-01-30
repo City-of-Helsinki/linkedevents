@@ -1329,8 +1329,8 @@ def test_cannot_signup_group_if_reservation_code_is_expired(api_client, registra
     api_client.force_authenticate(user)
 
     reservation = SeatReservationCodeFactory(registration=registration, seats=1)
-    reservation.timestamp = reservation.timestamp - timedelta(days=1)
-    reservation.save(update_fields=["timestamp"])
+    reservation.expiration = reservation.expiration - timedelta(days=1)
+    reservation.save(update_fields=["expiration"])
 
     signup_group_data = {
         "registration": registration.id,
