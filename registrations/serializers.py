@@ -56,7 +56,6 @@ from registrations.models import (
 )
 from registrations.permissions import CanAccessRegistrationSignups
 from registrations.utils import (
-    code_validity_duration,
     get_signup_create_url,
     has_allowed_substitute_user_email_domain,
 )
@@ -1457,10 +1456,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
                 }
             )
 
-        expiration = reservation.timestamp + timedelta(
-            minutes=code_validity_duration(reservation.seats)
-        )
-        if localtime() > expiration:
+        if localtime() > reservation.expiration:
             raise serializers.ValidationError(
                 {"reservation_code": "Reservation code has expired."}
             )
@@ -1956,8 +1952,21 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
         return validated_data
 
     def update(self, instance, validated_data):
-        if localtime() > instance.expiration:
+        expiration = instance.expiration
+        now = localtime()
+        if now > expiration:
             raise ConflictException(_("Cannot update expired seats reservation."))
+
+        # Adjust expiration_extension so that there's always at least
+        # RESERVATION_GRACE_PERIOD_SECONDS of time left
+        if validated_data["seats"] < instance.seats:
+            new_expiry_in = instance.expiration_for_seats(validated_data["seats"]) - now
+            min_expiry_in = timedelta(seconds=settings.RESERVATION_GRACE_PERIOD_SECONDS)
+            if new_expiry_in <= min_expiry_in:
+                old_expiry_in = expiration - now
+                validated_data["expiration_extension"] = (
+                    instance.expiration_extension + old_expiry_in - new_expiry_in
+                )
 
         return super().update(instance, validated_data)
 

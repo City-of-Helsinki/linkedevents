@@ -1991,10 +1991,20 @@ class SeatReservationCode(models.Model):
     timestamp = models.DateTimeField(
         verbose_name=_("Timestamp"), auto_now_add=True, blank=True
     )
+    expiration_extension = models.DurationField(
+        _("Duration to extend the expiration time with"), default=timedelta()
+    )
 
     @property
     def expiration(self):
-        return self.timestamp + timedelta(minutes=code_validity_duration(self.seats))
+        return self.expiration_for_seats(self.seats)
+
+    def expiration_for_seats(self, seats):
+        return (
+            self.timestamp
+            + timedelta(minutes=code_validity_duration(seats))
+            + self.expiration_extension
+        )
 
     class Meta:
         constraints = [
