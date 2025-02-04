@@ -1,11 +1,12 @@
 # Changelog
 
-## [3.10.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.1...linkedevents-v3.10.1) (2025-02-04)
+## [3.10.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.1...linkedevents-v3.10.2) (2025-02-04)
 
 
 ### Bug Fixes
 
 * Add grace period to seat reservations expiration ([ea8ee57](https://github.com/City-of-Helsinki/linkedevents/commit/ea8ee57087ac0a8b58b39bb1373c0183e62a63ff))
+* **registration:** Reapply allow customer groups with zero price ([9725673](https://github.com/City-of-Helsinki/linkedevents/commit/97256732cb546b0fd3fe4db11f319ab82cdbf938))
 
 
 ### Miscellaneous Chores
