@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.10.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.1...linkedevents-v3.10.1) (2025-02-04)
+
+
+### Bug Fixes
+
+* Add grace period to seat reservations expiration ([ea8ee57](https://github.com/City-of-Helsinki/linkedevents/commit/ea8ee57087ac0a8b58b39bb1373c0183e62a63ff))
+
+
+### Miscellaneous Chores
+
+* Switch to City of Helsinki's ubi gdal image ([e2f504b](https://github.com/City-of-Helsinki/linkedevents/commit/e2f504b78d0f137abd59a714536e4c40ab558cab))
+
 ## [3.10.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.0...linkedevents-v3.10.1) (2025-01-15)
 
 
