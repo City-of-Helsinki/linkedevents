@@ -48,3 +48,5 @@ WEB_STORE_API_BASE_URL = "https://test_api/v1/"
 WEB_STORE_API_KEY = "abcd"
 WEB_STORE_API_NAMESPACE = "test"
 WEB_STORE_WEBHOOK_API_KEY = "1234"
+
+LIPPUPISTE_EVENT_API_URL = "http://lippupiste.localhost/"
