@@ -1,0 +1,53 @@
+{
+  "EventCalendar": "EventCalendar",
+  "Events": [
+    {
+      "EventPromoterId": "999",
+      "EventPromoterName": "Helsingin Kaupunginteatteri",
+      "EventSerieId": "1231231",
+      "EventId": "11116307",
+      "EventName": "PIENET JUHLAT",
+      "EventDate": "24.04.2020",
+      "EventDayOfWeek": "Pe",
+      "EventTime": "19:00",
+      "EventDeliverable": "1",
+      "EventStatus": "2",
+      "EventVenue": "Testi Teatteri, Suuri näyttämö",
+      "EventStreet": "Testitie 123",
+      "EventZip": "1337",
+      "EventPlace": "Tampere",
+      "EventLinkFi": "https://www.lippu.fi/tickets.html?affiliate=adv&fun=evdetail&doc=evdetailb&key=1231231$11116307&language=fi",
+      "EventLinkSv": "https://www.lippu.fi/tickets.html?affiliate=adv&fun=evdetail&doc=evdetailb&key=1231231$11116307&language=sv",
+      "EventLinkEn": "https://www.lippu.fi/tickets.html?affiliate=adv&fun=evdetail&doc=evdetailb&key=1231231$11116307&language=en",
+      "LinkEventUrlFi": "",
+      "EventCapacity": "313",
+      "EventAvailable": "100",
+      "EventSold": "200",
+      "EventReserved": "13",
+      "EventSeriePictureSmall_60x60": "https://www.lippu.fi/obj/media/FI-eventim/teaser/blank.gif",
+      "EventSeriePicture_142x180": "https://www.lippu.fi/obj/media/FI-eventim/teaser/blank.gif",
+      "EventSeriePictureBig_222x222": "https://www.lippu.fi/obj/media/FI-eventim/teaser/blank.gif",
+      "EventSerieInfo": "<b>Huom!</b>Muista ottaa liput mukaan",
+      "EventSerieText": ",<b>Pienet juhlat</b> on klassikkonäytelmä \"hurmuri\" Taunosta",
+      "EventSearchText": "Testi Teatteri Pienet juhlat Tampere",
+      "EventSerieLinkFi": "https://www.lippu.fi/tickets.html?affiliate=adv&doc=erdetaila&fun=erdetail&erid=1231231&language=fi",
+      "EventSerieLinkSv": "https://www.lippu.fi/tickets.html?affiliate=adv&doc=erdetaila&fun=erdetail&erid=1231231&language=sv",
+      "EventSerieLinkEn": "https://www.lippu.fi/tickets.html?affiliate=adv&doc=erdetaila&fun=erdetail&erid=1231231&language=en",
+      "TdlEventSerieId": "234234",
+      "TdlEventId": "123123",
+      "LiveXLinkFi": "",
+      "LiveXLinkSv": "",
+      "LiveXLinkEn": "",
+      "Categories": [
+        {
+          "CategoryId": "2B",
+          "Name": "Draama"
+        },
+        {
+          "CategoryId": "XY",
+          "Name": "Peruutukset ja muutokset"
+        }
+      ]
+    }
+  ]
+}

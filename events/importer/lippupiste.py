@@ -1,5 +1,3 @@
-import codecs
-import csv
 import logging
 import re
 from collections import defaultdict
@@ -80,12 +78,6 @@ HKT_TPREK_PLACE_MAP = {
     "Gloria, Pieni Roobertinkatu, Helsinki": "tprek:8099",  # String match fails
     "Helsingin Vanha kirkko": "tprek:43184",  # String match fails
 }
-
-# By default, only import events in the capital region
-POSTAL_CODE_RANGES = ((1, 990), (1200, 1770), (2100, 2380), (2600, 2860), (2920, 2980))
-
-# By default, only import agreed providers (lowercase required!)
-PROVIDERS_TO_IMPORT = ("helsingin kaupunginteatteri",)
 
 NAMES_TO_IGNORE_BY_PROVIDER = {
     "Helsingin kaupunginteatteri": (
@@ -262,18 +254,22 @@ class LippupisteImporter(Importer):
         self.sub_event_count_by_super_event_source_id = defaultdict(lambda: 0)
 
     def _fetch_event_source_data(self, url):
-        # stream=True allows lazy iteration
-        response = requests.get(url, stream=True, timeout=self.default_timeout)
-        response_iter = response.iter_lines()
-        # CSV reader wants str instead of byte, let's decode
-        decoded_response_iter = codecs.iterdecode(response_iter, "utf-8")
-        reader = csv.DictReader(
-            decoded_response_iter, delimiter=";", quotechar='"', doublequote=True
-        )
-        return reader
+        return requests.get(
+            url,
+            auth=(
+                settings.LIPPUPISTE_EVENT_API_USERNAME,
+                settings.LIPPUPISTE_EVENT_API_PASSWORD,
+            ),
+            params={"ClientID": settings.LIPPUPISTE_EVENT_API_CLIENT_ID},
+            timeout=self.default_timeout,
+            headers={
+                "Content-Type": "application/json",
+                "CALENDARKey": settings.LIPPUPISTE_EVENT_API_CALENDAR_KEY,
+            },
+        ).json()["Events"]
 
     def _get_keywords_from_source_category(self, source_category):
-        source_category_key = source_category.lower()
+        source_category_key = source_category["Name"].lower()
         keyword_set = set()
         for keyword_id in YSO_KEYWORD_MAPS.get(source_category_key, []):
             if keyword_id in self.keyword_by_id:
@@ -282,7 +278,6 @@ class LippupisteImporter(Importer):
         return keyword_set
 
     def _get_keywords_from_source_categories(self, source_categories):
-        source_categories = source_categories.split("|")
         keyword_set = set()
         for category in source_categories:
             keyword_set = keyword_set.union(
@@ -480,12 +475,19 @@ class LippupisteImporter(Importer):
                 [lang] + self.languages_to_detect,
                 "short_description",
             )
-        event["info_url"][lang] = clean_url(source_event["EventSerieLink"])
+        event["info_url"]["fi"] = clean_url(source_event["EventSerieLinkFi"])
+        event["info_url"]["sv"] = clean_url(source_event["EventSerieLinkSv"])
+        event["info_url"]["en"] = clean_url(source_event["EventSerieLinkEn"])
+
         event["offers"] = [
             {
                 "is_free": False,
                 "description": {lang: "Tarkista hinta lippupalvelusta"},
-                "info_url": {lang: clean_url(source_event["EventLink"])},
+                "info_url": {
+                    "fi": clean_url(source_event["EventLinkFi"]),
+                    "sv": clean_url(source_event["EventLinkSv"]),
+                    "en": clean_url(source_event["EventLinkEn"]),
+                },
                 "price": None,
             },
         ]
@@ -498,7 +500,7 @@ class LippupisteImporter(Importer):
 
         existing_keywords = event.get("keywords", set())
         keywords_from_source = self._get_keywords_from_source_categories(
-            source_event["EventSerieCategories"]
+            source_event["Categories"]
         )
         event["keywords"] = existing_keywords.union(keywords_from_source)
 
@@ -534,7 +536,9 @@ class LippupisteImporter(Importer):
         self._update_event_data(superevent, source_event)
         superevent["origin_id"] = superevent_source_id
         superevent["super_event_type"] = Event.SuperEventType.RECURRING
-        superevent["info_url"]["fi"] = source_event["EventSerieLink"]
+        superevent["info_url"]["fi"] = source_event["EventSerieLinkFi"]
+        superevent["info_url"]["sv"] = source_event["EventSerieLinkSv"]
+        superevent["info_url"]["en"] = source_event["EventSerieLinkEn"]
 
         self.sub_event_count_by_super_event_source_id[superevent_source_id] += 1
 
@@ -636,33 +640,19 @@ class LippupisteImporter(Importer):
         self.syncher.finish(force=self.options["force"])
 
     def import_events(self):
-        if not LIPPUPISTE_EVENT_API_URL:
+        if not settings.LIPPUPISTE_EVENT_API_URL:
             raise ImproperlyConfigured(
                 "LIPPUPISTE_EVENT_API_URL must be set in environment or config file"
             )
         logger.info("Importing Lippupiste events")
         events = recur_dict()
         event_source_data = list(
-            self._fetch_event_source_data(LIPPUPISTE_EVENT_API_URL)
+            self._fetch_event_source_data(settings.LIPPUPISTE_EVENT_API_URL)
         )
         if not event_source_data:
             raise ValidationError("Lippupiste API didn't return data, giving up")
 
         for source_event in event_source_data:
-            # check if the postal code matches
-            for range in POSTAL_CODE_RANGES:
-                if (
-                    source_event["EventZip"].isdigit()
-                    and range[0] <= int(source_event["EventZip"])
-                    and range[1] >= int(source_event["EventZip"])
-                ):
-                    break
-            else:
-                # no match, ignored
-                continue
-            # check if provider matches
-            if source_event["EventPromoterName"].lower() not in PROVIDERS_TO_IMPORT:
-                continue
             # check if we should ignore the event by name
             for provider in NAMES_TO_IGNORE_BY_PROVIDER:
                 if source_event["EventPromoterName"].lower() == provider.lower():
