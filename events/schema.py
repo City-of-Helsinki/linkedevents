@@ -613,7 +613,9 @@ class OfferSerializerExtension(OpenApiSerializerExtension):
         )
 
         result["properties"]["is_free"]["description"] = (
-            "Whether the event has an admission fee or not."
+            "Whether the event has an admission fee or not. This field is required "
+            "for at least one offer when the event is published, regardless of its "
+            "value."
         )
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
