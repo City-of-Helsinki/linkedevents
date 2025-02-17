@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.10.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.2...linkedevents-v3.10.3) (2025-02-17)
+
+
+### Bug Fixes
+
+* Lippupiste importer ([c78048f](https://github.com/City-of-Helsinki/linkedevents/commit/c78048f5a4270c56bf219e66d90b7da917296968))
+
+
+### Documentation
+
+* Improve Offer.is_free description ([75ea578](https://github.com/City-of-Helsinki/linkedevents/commit/75ea578a80546c976b0d4eed8d1e0adc7a36982f))
+
 ## [3.10.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.1...linkedevents-v3.10.2) (2025-02-04)
 
 
