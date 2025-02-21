@@ -4,6 +4,7 @@ import time
 import urllib
 from copy import deepcopy
 from datetime import timedelta
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -207,6 +208,7 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
     license = serializers.PrimaryKeyRelatedField(
         queryset=License.objects.all(), required=False
     )
+    license_url = serializers.SerializerMethodField()
     created_time = DateTimeField(
         default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
     )
@@ -219,6 +221,10 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
     class Meta:
         model = Image
         fields = "__all__"
+
+    @extend_schema_field(Optional[str])
+    def get_license_url(self, obj):
+        return obj.license.url if obj.license else None
 
     def to_representation(self, obj):
         # the url field is customized based on image and url
