@@ -15,7 +15,7 @@ from audit_log.models import AuditLogEntry
 
 from ..api import EventSerializer, OrganizationListSerializer, _terms_to_regex
 from ..auth import ApiKeyAuth
-from ..models import DataSource, Image
+from ..models import DataSource, Image, License
 from ..utils import get_user_data_source_and_organization_from_request
 from .utils import versioned_reverse as reverse
 
@@ -317,12 +317,17 @@ class TestImageAPI(APITestCase):
             origin_id="org-3",
             data_source=self.data_source,
         )
+        img_license = License.objects.create(
+            name="Test license",
+            url="http://urltothe.license",
+        )
         self.image_1 = Image.objects.create(
             name="image-1",
             data_source=self.data_source,
             publisher=self.org_1,
             url="http://fake.url/image-1/",
             alt_text="Lorem",
+            license=img_license,
         )
         self.image_2 = Image.objects.create(
             name="image-2",
@@ -364,6 +369,15 @@ class TestImageAPI(APITestCase):
 
         alt_text = response.data["alt_text"]
         self.assertEqual(alt_text, "Lorem")
+
+    def test_get_image_license_url(self):
+        url = reverse("image-detail", kwargs={"pk": self.image_1.id})
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        license_url = response.data["license_url"]
+        self.assertEqual(license_url, "http://urltothe.license")
 
     def test_text_search_by_image_alt_text(self):
         url = "{0}?text=lorem".format(reverse("image-list"))

@@ -16,7 +16,7 @@ from freezegun import freeze_time
 from rest_framework import status
 
 from audit_log.models import AuditLogEntry
-from events.models import Event, Language, PublicationStatus
+from events.models import Event, Language, License, PublicationStatus
 from events.tests.conftest import APIClient
 from events.tests.factories import EventFactory, OfferFactory
 from events.tests.utils import (
@@ -1946,6 +1946,21 @@ def test_get_event_with_offer_and_offer_price_groups(api_client, event):
     assert_offer_price_group_fields_exist(
         response.data["offers"][0]["offer_price_groups"][0]
     )
+
+
+@pytest.mark.django_db
+def test_event_list_shows_image_and_its_license(event, image):
+    event.images.add(image)
+    img_license = License.objects.create(
+        name="Test license",
+        url="http://urltothe.license",
+    )
+    image.license = img_license
+    image.save()
+
+    response = get_list(api_client)
+    license_url = response.data["data"][0]["images"][0]["license_url"]
+    assert license_url == "http://urltothe.license"
 
 
 class FilterEventsByRegistrationCapacitiesV1TestCase(TestCase, EventsListTestCaseMixin):
