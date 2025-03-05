@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.11.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.3...linkedevents-v3.11.0) (2025-03-05)
+
+
+### Features
+
+* **events:** Add image's license_url to api ([7128b94](https://github.com/City-of-Helsinki/linkedevents/commit/7128b94c64fc3a165e3d77938a7006a91e5f3507))
+
 ## [3.10.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.2...linkedevents-v3.10.3) (2025-02-17)
 
 
