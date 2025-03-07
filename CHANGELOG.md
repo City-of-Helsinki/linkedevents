@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.11.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.11.0...linkedevents-v3.11.1) (2025-03-07)
+
+
+### Dependencies
+
+* Bump cryptography from 43.0.1 to 44.0.1 ([7f840a5](https://github.com/City-of-Helsinki/linkedevents/commit/7f840a5ac4bd4e8b065020220ef7a680eaeea8b4))
+* Bump django from 4.2.18 to 4.2.20 ([080658f](https://github.com/City-of-Helsinki/linkedevents/commit/080658fe3ebc1a51579af3140f3e7b8a7fdb8306))
+* Bump jinja2 from 3.1.5 to 3.1.6 ([cfe16de](https://github.com/City-of-Helsinki/linkedevents/commit/cfe16de8e1a87e3372985651d527294d212afe70))
+
 ## [3.11.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.10.3...linkedevents-v3.11.0) (2025-03-05)
 
 
