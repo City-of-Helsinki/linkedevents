@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: linkedevents
+  annotations:
+    github.com/project-slug: City-of-Helsinki/linkedevents
+spec:
+  type: other
+  lifecycle: unknown
+  owner: platta
