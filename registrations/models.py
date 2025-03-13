@@ -615,6 +615,7 @@ class Registration(CreatedModifiedBaseModel):
         contact_person.send_notification(
             SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
             payment_link=payment.checkout_url,
+            payment_expiry_time=payment.expires_at,
         )
 
     def move_first_waitlisted_to_attending(self, first_on_list=None):
@@ -1861,6 +1862,7 @@ class SignUpContactPerson(
         payment_refunded=False,
         payment_partially_refunded=False,
         payment_cancelled=False,
+        payment_expiry_time=None,
     ):
         [_, linked_registrations_ui_locale] = get_ui_locales(self.service_language)
 
@@ -1893,6 +1895,7 @@ class SignUpContactPerson(
                 payment_refunded=payment_refunded,
                 payment_partially_refunded=payment_partially_refunded,
                 payment_cancelled=payment_cancelled,
+                payment_expiry_time=payment_expiry_time,
             )
             email_variables["payment_url"] = payment_link
 
@@ -1921,6 +1924,7 @@ class SignUpContactPerson(
         payment_refunded=False,
         payment_partially_refunded=False,
         payment_cancelled=False,
+        payment_expiry_time=None,
     ):
         message = self.get_notification_message(
             notification_type,
@@ -1930,6 +1934,7 @@ class SignUpContactPerson(
             payment_refunded=payment_refunded,
             payment_partially_refunded=payment_partially_refunded,
             payment_cancelled=payment_cancelled,
+            payment_expiry_time=payment_expiry_time,
         )
         rendered_body = message[1]
 

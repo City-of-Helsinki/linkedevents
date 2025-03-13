@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.utils import translation
+from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
 
 from events.models import Event
@@ -220,18 +221,18 @@ signup_email_texts = {
         "text": {
             Event.TypeId.GENERAL: _(
                 "Please use the payment link to confirm your registration for the event "  # noqa: E501
-                "<strong>%(event_name)s</strong>. The payment link expires in "
-                "%(expiration_hours)s hours."
+                "<strong>%(event_name)s</strong>. The payment link expires on "
+                "%(expiration_time)s."
             ),
             Event.TypeId.COURSE: _(
                 "Please use the payment link to confirm your registration for the course "  # noqa: E501
-                "<strong>%(event_name)s</strong>. The payment link expires in "
-                "%(expiration_hours)s hours."
+                "<strong>%(event_name)s</strong>. The payment link expires on "
+                "%(expiration_time)s."
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "Please use the payment link to confirm your registration for the volunteering "  # noqa: E501
-                "<strong>%(event_name)s</strong>. The payment link expires in "
-                "%(expiration_hours)s hours."
+                "<strong>%(event_name)s</strong>. The payment link expires on "
+                "%(expiration_time)s."
             ),
         },
         "group": {
@@ -326,20 +327,20 @@ signup_email_texts = {
             Event.TypeId.GENERAL: _(
                 "You have been selected to be moved from the waiting list of the event "
                 "<strong>%(event_name)s</strong> to a participant. Please use the "
-                "payment link to confirm your participation. The payment link expires in "  # noqa: E501
-                "%(expiration_hours)s hours."
+                "payment link to confirm your participation. The payment link expires on "  # noqa: E501
+                "%(expiration_time)s."
             ),
             Event.TypeId.COURSE: _(
                 "You have been selected to be moved from the waiting list of the course "  # noqa: E501
                 "<strong>%(event_name)s</strong> to a participant. Please use the "
-                "payment link to confirm your participation. The payment link expires in "  # noqa: E501
-                "%(expiration_hours)s hours."
+                "payment link to confirm your participation. The payment link expires on "  # noqa: E501
+                "%(expiration_time)s."
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "You have been selected to be moved from the waiting list of the volunteering "  # noqa: E501
                 "<strong>%(event_name)s</strong> to a participant. Please use the "
-                "payment link to confirm your participation. The payment link expires in "  # noqa: E501
-                "%(expiration_hours)s hours."
+                "payment link to confirm your participation. The payment link expires on "  # noqa: E501
+                "%(expiration_time)s."
             ),
         },
     },
@@ -576,18 +577,18 @@ recurring_event_signup_email_texts = {
         "text": {
             Event.TypeId.GENERAL: _(
                 "Please use the payment link to confirm your registration for the recurring event "  # noqa: E501
-                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "  # noqa: E501
-                "%(expiration_hours)s hours."
+                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires on "  # noqa: E501
+                "%(expiration_time)s."
             ),
             Event.TypeId.COURSE: _(
                 "Please use the payment link to confirm your registration for the recurring course "  # noqa: E501
-                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires in "  # noqa: E501
-                "%(expiration_hours)s hours."
+                "<strong>%(event_name)s %(event_period)s</strong>. The payment link expires on "  # noqa: E501
+                "%(expiration_time)s."
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "Please use the payment link to confirm your registration for the recurring "  # noqa: E501
                 "volunteering <strong>%(event_name)s %(event_period)s</strong>. The payment link "  # noqa: E501
-                "expires in %(expiration_hours)s hours."
+                "expires on %(expiration_time)s."
             ),
         },
         "group": {
@@ -673,19 +674,19 @@ recurring_event_signup_email_texts = {
                 "You have been selected to be moved from the waiting list of the recurring "  # noqa: E501
                 "event <strong>%(event_name)s %(event_period)s</strong> to a participant. "  # noqa: E501
                 "Please use the payment link to confirm your participation. The payment link "  # noqa: E501
-                "expires in %(expiration_hours)s hours."
+                "expires on %(expiration_time)s."
             ),
             Event.TypeId.COURSE: _(
                 "You have been selected to be moved from the waiting list of the recurring "  # noqa: E501
                 "course <strong>%(event_name)s %(event_period)s</strong> to a participant. "  # noqa: E501
                 "Please use the payment link to confirm your participation. The payment link "  # noqa: E501
-                "expires in %(expiration_hours)s hours."
+                "expires on %(expiration_time)s."
             ),
             Event.TypeId.VOLUNTEERING: _(
                 "You have been selected to be moved from the waiting list of the recurring "  # noqa: E501
                 "volunteering <strong>%(event_name)s %(event_period)s</strong> to a participant. "  # noqa: E501
                 "Please use the payment link to confirm your participation. The payment link "  # noqa: E501
-                "expires in %(expiration_hours)s hours."
+                "expires on %(expiration_time)s."
             ),
         },
     },
@@ -773,17 +774,25 @@ registration_user_access_invitation_texts = {
 }
 
 
-def _get_event_text_kwargs(event_name, event_period=None, notification_type=None):
+def _get_event_text_kwargs(
+    event_name, event_period=None, notification_type=None, payment_expiration_time=None
+):
     kwargs = {"event_name": event_name}
 
     if event_period is not None:
         kwargs["event_period"] = event_period
 
-    if notification_type is not None and notification_type in (
-        SignUpNotificationType.CONFIRMATION_WITH_PAYMENT,
-        SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
+    if (
+        notification_type is not None
+        and notification_type
+        in (
+            SignUpNotificationType.CONFIRMATION_WITH_PAYMENT,
+            SignUpNotificationType.TRANSFER_AS_PARTICIPANT_WITH_PAYMENT,
+        )
+        and payment_expiration_time
     ):
-        kwargs["expiration_hours"] = settings.WEB_STORE_ORDER_EXPIRATION_HOURS
+        expiration_time = localtime(payment_expiration_time).strftime("%d.%m.%Y %H:%M")
+        kwargs["expiration_time"] = expiration_time
 
     return kwargs
 
@@ -815,9 +824,13 @@ def _get_notification_texts(
     event_period,
     contact_person,
     notification_type,
+    payment_expiry_time=None,
 ):
     event_text_kwargs = _get_event_text_kwargs(
-        event_name, event_period=event_period, notification_type=notification_type
+        event_name,
+        event_period=event_period,
+        notification_type=notification_type,
+        payment_expiration_time=payment_expiry_time,
     )
 
     if contact_person.first_name:
@@ -932,6 +945,7 @@ def get_signup_notification_texts(
     payment_refunded=False,
     payment_partially_refunded=False,
     payment_cancelled=False,
+    payment_expiry_time=None,
 ):
     registration = contact_person.registration
     service_lang = contact_person.get_service_language_pk()
@@ -975,6 +989,7 @@ def get_signup_notification_texts(
             event_period,
             contact_person,
             notification_type,
+            payment_expiry_time=payment_expiry_time,
         )
 
     if notification_type == SignUpNotificationType.CANCELLATION:

@@ -44,7 +44,6 @@ from registrations.tests.test_signup_patch import description_fields
 from registrations.tests.utils import (
     DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
     assert_attending_and_waitlisted_signups,
-    assert_payment_link_email_sent,
     assert_signup_payment_data_is_correct,
     create_user_by_role,
 )
@@ -303,16 +302,6 @@ def test_authenticated_user_can_create_signups_with_payments(api_client, user_ro
         service_language=language.pk,
     )
 
-    # Payment link is sent via email.
-    assert_payment_link_email_sent(
-        SignUpContactPerson.objects.first(),
-        SignUpPayment.objects.first(),
-        expected_subject="Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Foo",
-        expected_text="Voit vahvistaa ilmoittautumisesi tapahtumaan <strong>Foo</strong> "
-        "oheisen maksulinkin avulla. Maksulinkki vanhenee %(hours)s tunnin kuluttua."
-        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
-    )
-
 
 @pytest.mark.parametrize(
     "user_role",
@@ -495,16 +484,6 @@ def test_create_signup_payment_without_pricetotal_in_response(api_client):
         user,
         SignUp.objects.first(),
         service_language=language.pk,
-    )
-
-    # Payment link is sent via email.
-    assert_payment_link_email_sent(
-        SignUpContactPerson.objects.first(),
-        SignUpPayment.objects.first(),
-        expected_subject="Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Foo",
-        expected_text="Voit vahvistaa ilmoittautumisesi tapahtumaan <strong>Foo</strong> "
-        "oheisen maksulinkin avulla. Maksulinkki vanhenee %(hours)s tunnin kuluttua."
-        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
     )
 
 

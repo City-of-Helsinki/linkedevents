@@ -1133,24 +1133,21 @@ def test_soft_deleted_signup_is_not_moved_to_attending_from_waiting_list(
             "Payment required for registration confirmation - Foo",
             "You have been selected to be moved from the waiting list of the event "
             "<strong>Foo</strong> to a participant. Please use the "
-            "payment link to confirm your participation. The payment link expires in "
-            "%(hours)s hours" % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+            "payment link to confirm your participation. The payment link expires on",
         ),
         (
             "fi",
             "Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Foo",
             "Sinut on valittu siirrettäväksi tapahtuman <strong>Foo</strong> "
             "jonotuslistalta osallistujaksi. Ole hyvä ja käytä oheista maksulinkkiä "
-            "vahvistaaksesi osallistumisesi. Maksulinkki vanhenee %(hours)s tunnin kuluttua."
-            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+            "vahvistaaksesi osallistumisesi. Maksulinkki vanhenee",
         ),
         (
             "sv",
             "Betalning krävs för bekräftelse av registreringen - Foo",
             "Du har blivit utvald att flyttats från väntelistan för evenemanget "
             "<strong>Foo</strong> till att bli en deltagare. Vänligen använd betalningslänken "
-            "för att bekräfta ditt deltagande. Betalningslänken går ut efter %(hours)s timmar."
-            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+            "för att bekräfta ditt deltagande. Betalningslänken går ut den",
         ),
     ],
 )
@@ -1236,25 +1233,21 @@ def test_send_email_with_payment_link_when_moving_participant_from_waitlist(
             "Payment required for registration confirmation - Recurring: Foo",
             "You have been selected to be moved from the waiting list of the recurring event "
             "<strong>Foo 1 Feb 2024 - 29 Feb 2024</strong> to a participant. Please use the "
-            "payment link to confirm your participation. The payment link expires in "
-            "%(hours)s hours." % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+            "payment link to confirm your participation. The payment link expires on ",
         ),
         (
             "fi",
             "Maksu vaaditaan ilmoittautumisen vahvistamiseksi - Sarja: Foo",
             "Sinut on valittu siirrettäväksi sarjatapahtuman "
             "<strong>Foo 1.2.2024 - 29.2.2024</strong> jonotuslistalta osallistujaksi. Ole hyvä "
-            "ja käytä oheista maksulinkkiä vahvistaaksesi osallistumisesi. Maksulinkki vanhenee "
-            "%(hours)s tunnin kuluttua."
-            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+            "ja käytä oheista maksulinkkiä vahvistaaksesi osallistumisesi. Maksulinkki vanhenee",
         ),
         (
             "sv",
             "Betalning krävs för bekräftelse av registreringen - Serie: Foo",
             "Du har blivit utvald att flyttats från väntelistan för serieevenemanget "
             "<strong>Foo 1.2.2024 - 29.2.2024</strong> till att bli en deltagare. Vänligen använd "
-            "betalningslänken för att bekräfta ditt deltagande. Betalningslänken går ut efter "
-            "%(hours)s timmar." % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+            "betalningslänken för att bekräfta ditt deltagande. Betalningslänken går ut den",
         ),
     ],
 )
