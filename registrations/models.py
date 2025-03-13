@@ -2148,6 +2148,10 @@ class SignUpPayment(
 
     logged_in_checkout_url = models.URLField(null=True, blank=True, default=None)
 
+    expiry_notification_sent_at = models.DateTimeField(
+        null=True, blank=True, default=None
+    )
+
     @transaction.atomic
     def soft_delete(self):
         super().soft_delete()
