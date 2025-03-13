@@ -436,6 +436,7 @@ def test_mark_payments_expired_signup_moved_to_waitlisted_with_payment_link():
     new_payment = SignUpPayment.objects.first()
     assert new_payment.signup_id == waitlisted_signup.pk
 
+    expiry_dt = localtime(new_payment.expires_at).strftime("%d.%m.%Y %H:%M")
     assert_payment_link_email_sent(
         contact_person2,
         new_payment,
@@ -443,8 +444,8 @@ def test_mark_payments_expired_signup_moved_to_waitlisted_with_payment_link():
         expected_subject=f"Payment required for registration confirmation - {_EVENT_NAME}",
         expected_text="You have been selected to be moved from the waiting list of the event "
         "<strong>Foo</strong> to a participant. Please use the "
-        "payment link to confirm your participation. The payment link expires in "
-        "%(hours)s hours" % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+        "payment link to confirm your participation. The payment link expires on "
+        "%(expiry)s." % {"expiry": expiry_dt},
     )
     assert mail.outbox[1].to[0] == contact_person.email
     assert mail.outbox[1].subject == f"Registration payment expired - {_EVENT_NAME}"
@@ -602,7 +603,7 @@ def test_mark_payments_expired_payment_cancelled_signup_moved_to_waitlisted_with
 
     new_payment = SignUpPayment.objects.first()
     assert new_payment.signup_id == waitlisted_signup.pk
-
+    expiry_dt = localtime(new_payment.expires_at).strftime("%d.%m.%Y %H:%M")
     assert_payment_link_email_sent(
         contact_person2,
         new_payment,
@@ -610,8 +611,8 @@ def test_mark_payments_expired_payment_cancelled_signup_moved_to_waitlisted_with
         expected_subject=f"Payment required for registration confirmation - {_EVENT_NAME}",
         expected_text="You have been selected to be moved from the waiting list of the event "
         "<strong>Foo</strong> to a participant. Please use the "
-        "payment link to confirm your participation. The payment link expires in "
-        "%(hours)s hours" % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
+        "payment link to confirm your participation. The payment link expires on "
+        "%(expiry)s." % {"expiry": expiry_dt},
     )
     assert mail.outbox[1].to[0] == contact_person.email
     assert mail.outbox[1].subject == f"Registration cancelled - {_EVENT_NAME}"

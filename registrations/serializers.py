@@ -93,31 +93,24 @@ def _get_protected_data(validated_data: dict, keys: list[str]) -> dict:
     return {key: validated_data.pop(key) for key in keys if key in validated_data}
 
 
-def _notify_contact_person(
-    contact_person, attendee_status, current_user=None, payment_link=None
-):
+def _notify_contact_person(contact_person, attendee_status, current_user=None):
     if not contact_person:
         return
 
     confirmation_type_mapping = {
-        SignUp.AttendeeStatus.ATTENDING: (
-            SignUpNotificationType.CONFIRMATION_WITH_PAYMENT
-            if payment_link
-            else SignUpNotificationType.CONFIRMATION
-        ),
+        SignUp.AttendeeStatus.ATTENDING: SignUpNotificationType.CONFIRMATION,
         SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,  # noqa: E501
     }
 
     access_code = (
         contact_person.create_access_code()
-        if contact_person.can_create_access_code(current_user) and not payment_link
+        if contact_person.can_create_access_code(current_user)
         else None
     )
 
     contact_person.send_notification(
         confirmation_type_mapping[attendee_status],
         access_code=access_code,
-        payment_link=payment_link,
     )
 
 
@@ -470,13 +463,14 @@ class SignUpSerializer(
             # serializer.
             payment = self._create_payment(signup)
 
+        payment_link = getattr(payment, "checkout_url", None)
         if signup:
-            _notify_contact_person(
-                contact_person,
-                signup.attendee_status,
-                current_user=self.context["request"].user,
-                payment_link=getattr(payment, "checkout_url", None),
-            )
+            if not payment_link:
+                _notify_contact_person(
+                    contact_person,
+                    signup.attendee_status,
+                    current_user=self.context["request"].user,
+                )
 
             return signup
 
@@ -1670,7 +1664,6 @@ class SignUpGroupCreateSerializer(
             contact_person,
             attendee_status,
             current_user=self.context["request"].user,
-            payment_link=getattr(payment, "checkout_url", None),
         )
 
         reservation.delete()

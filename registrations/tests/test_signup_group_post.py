@@ -44,7 +44,6 @@ from registrations.tests.test_registration_post import hel_email
 from registrations.tests.utils import (
     DEFAULT_CREATE_ORDER_ERROR_RESPONSE,
     assert_attending_and_waitlisted_signups,
-    assert_payment_link_email_sent,
     assert_signup_payment_data_is_correct,
     create_user_by_role,
 )
@@ -369,16 +368,6 @@ def test_allowed_user_roles_can_create_signup_group_with_payment(api_client, use
         service_language="en",
     )
 
-    # Payment link is sent via email.
-    assert_payment_link_email_sent(
-        SignUpContactPerson.objects.first(),
-        SignUpPayment.objects.first(),
-        expected_subject="Payment required for registration confirmation - Foo",
-        expected_text="Please use the payment link to confirm your registration for the event "
-        "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
-        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
-    )
-
 
 @pytest.mark.parametrize(
     "user_role",
@@ -568,16 +557,6 @@ def test_create_signup_group_payment_without_pricetotal_in_response(api_client):
         user,
         signup_group=SignUpGroup.objects.first(),
         service_language="en",
-    )
-
-    # Payment link is sent via email.
-    assert_payment_link_email_sent(
-        SignUpContactPerson.objects.first(),
-        SignUpPayment.objects.first(),
-        expected_subject="Payment required for registration confirmation - Foo",
-        expected_text="Please use the payment link to confirm your registration for the event "
-        "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
-        % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
     )
 
 
@@ -831,17 +810,7 @@ def test_create_signup_group_payment_signup_is_waitlisted(
 
     assert SignUpPayment.objects.count() == maximum_attendee_capacity
 
-    if maximum_attendee_capacity:
-        # Payment link is sent via email for the attending signup.
-        assert_payment_link_email_sent(
-            SignUpContactPerson.objects.first(),
-            SignUpPayment.objects.first(),
-            expected_subject="Payment required for registration confirmation - Foo",
-            expected_text="Please use the payment link to confirm your registration for the event "
-            "<strong>Foo</strong>. The payment link expires in %(hours)s hours."
-            % {"hours": settings.WEB_STORE_ORDER_EXPIRATION_HOURS},
-        )
-    else:
+    if not maximum_attendee_capacity:
         assert len(mail.outbox) == 1
         assert mail.outbox[0].subject == "Waiting list seat reserved - Foo"
 
