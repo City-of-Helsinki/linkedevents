@@ -151,7 +151,7 @@ class SignUpOrGroupDependingMixin:
         super().save(*args, **kwargs)
 
 
-class ObjectsWithoutSoftDeletedManager(SerializableMixin.SerializableManager):
+class SoftDeletableManager(SerializableMixin.SerializableManager):
     def get_queryset(self):
         return super().get_queryset().filter(deleted=False)
 
@@ -159,7 +159,7 @@ class ObjectsWithoutSoftDeletedManager(SerializableMixin.SerializableManager):
 class SoftDeletableBaseModel(models.Model):
     deleted = models.BooleanField(default=False)
 
-    objects = ObjectsWithoutSoftDeletedManager()
+    objects = SoftDeletableManager()
     all_objects = models.Manager()
 
     def soft_delete(self):
