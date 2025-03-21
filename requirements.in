@@ -35,6 +35,7 @@ ipython
 isodate
 jinja2
 langdetect
+libvoikko
 lxml
 markdown
 pillow
