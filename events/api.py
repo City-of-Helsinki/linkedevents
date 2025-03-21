@@ -2326,6 +2326,7 @@ class EventViewSet(
             "images__publisher",
             "images__created_by",
             "images__last_modified_by",
+            "images__license",
             "in_language",
             "offers",
             "registration",
