@@ -2,13 +2,16 @@ from datetime import timedelta
 from unittest.mock import Mock
 
 import pytest
+from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import ValidationError
 
 from events.api import EventFilter
 from events.models import Event
 from events.tests.factories import EventFactory, KeywordFactory, PlaceFactory
+from events.tests.test_event_get import get_list
 from events.tests.utils import create_super_event
 
 
@@ -177,3 +180,86 @@ def test_get_event_list_max_duration():
 
     assert qs.count() == 1
     assert event_short in qs
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("iso_weekday, expected_name", settings.ISO_WEEKDAYS)
+def test_get_event_list_filter_weekdays(iso_weekday, expected_name, api_client):
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[0][1],
+        start_time=timezone.datetime(2025, 3, 10, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[1][1],
+        start_time=timezone.datetime(2025, 3, 11, 12, 0, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[2][1],
+        start_time=timezone.datetime(2025, 3, 12, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[3][1],
+        start_time=timezone.datetime(2025, 3, 13, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[4][1],
+        start_time=timezone.datetime(2025, 3, 14, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[5][1],
+        start_time=timezone.datetime(2025, 3, 15, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[6][1],
+        start_time=timezone.datetime(2025, 3, 16, 12, tzinfo=timezone.utc),
+    )
+
+    resp = get_list(api_client, query_string=f"start_weekday={iso_weekday}")
+    data = resp.data["data"]
+
+    assert len(data) == 1
+    assert data[0]["name"]["fi"] == expected_name
+    assert parse_datetime(data[0]["start_time"]).isoweekday() == iso_weekday
+
+
+@pytest.mark.django_db
+def test_get_event_list_filter_multiple_weekdays(api_client):
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[0][1],
+        start_time=timezone.datetime(2025, 3, 10, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[1][1],
+        start_time=timezone.datetime(2025, 3, 11, 12, 0, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[2][1],
+        start_time=timezone.datetime(2025, 3, 12, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[3][1],
+        start_time=timezone.datetime(2025, 3, 13, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[4][1],
+        start_time=timezone.datetime(2025, 3, 14, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[5][1],
+        start_time=timezone.datetime(2025, 3, 15, 12, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[6][1],
+        start_time=timezone.datetime(2025, 3, 16, 12, tzinfo=timezone.utc),
+    )
+
+    resp = get_list(api_client, query_string="start_weekday=1,2,3")
+    data = sorted(resp.data["data"], key=lambda x: x["id"])
+
+    assert len(data) == 3
+    assert data[0]["name"]["fi"] == "Monday"
+    assert parse_datetime(data[0]["start_time"]).isoweekday() == 1
+    assert data[1]["name"]["fi"] == "Tuesday"
+    assert parse_datetime(data[1]["start_time"]).isoweekday() == 2
+    assert data[2]["name"]["fi"] == "Wednesday"
+    assert parse_datetime(data[2]["start_time"]).isoweekday() == 3

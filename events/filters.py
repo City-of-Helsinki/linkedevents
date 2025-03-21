@@ -310,6 +310,12 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             "Search for events that are at most as long as the given duration."
         ),
     )
+    start_weekday = django_filters.MultipleChoiceFilter(
+        field_name="start_time__iso_week_day",
+        choices=settings.ISO_WEEKDAYS,
+        widget=django_filters.widgets.CSVWidget(),
+        help_text=_("Filter events by their start time weekday using iso format."),
+    )
 
     class Meta:
         model = Event
