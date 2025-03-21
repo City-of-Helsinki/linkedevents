@@ -106,7 +106,7 @@ def test_get_event_list_full_text(language):
     event_en.keywords.set([kw_en])
     event_sv.keywords.set([kw_sv])
 
-    call_command("refresh_full_text", "--create-no-transaction")
+    call_command("update_full_text_search_vectors")
 
     request = Mock()
     request.query_params = {"x_full_text_language": language}

@@ -25,8 +25,8 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.gis.db import models
-from django.contrib.postgres.fields import HStoreField
-from django.contrib.postgres.indexes import Index
+from django.contrib.postgres.fields import ArrayField, HStoreField
+from django.contrib.postgres.indexes import GinIndex, Index
 from django.contrib.postgres.search import SearchVectorField
 from django.core.mail import send_mail
 from django.db import transaction
@@ -1389,13 +1389,28 @@ class Event(
 
         return ""
 
+    @classmethod
+    def get_words_fi_columns(cls):
+        """
+        Defines the columns that will be used when populating
+        finnish words to words_fi column. The content
+        will be tokenized to lexems(to_tsvector) and added to
+        the search_column.
+        """
+        return [
+            "name_fi",
+            "location__name_fi",
+            "short_description_fi",
+            "description_fi",
+        ]
+
 
 reversion.register(Event)
 
 
-class EventFullText(models.Model):
+class EventSearchIndex(models.Model):
     """
-    A representation of the materialized view used in full-text search.
+    Event full-text search index.
     """
 
     event = models.OneToOneField(
@@ -1405,18 +1420,27 @@ class EventFullText(models.Model):
         primary_key=True,
     )
     place = models.ForeignKey(
-        Event, related_name="full_text_place", on_delete=models.DO_NOTHING
+        Place, related_name="full_text_place", on_delete=models.DO_NOTHING, null=True
     )
 
     event_last_modified_time = models.DateTimeField()
     place_last_modified_time = models.DateTimeField()
+
+    words_fi = ArrayField(models.CharField(max_length=64), default=list)
+    words_en = ArrayField(models.CharField(max_length=64), default=list)
+    words_sv = ArrayField(models.CharField(max_length=64), default=list)
 
     search_vector_fi = SearchVectorField()
     search_vector_en = SearchVectorField()
     search_vector_sv = SearchVectorField()
 
     class Meta:
-        managed = False
+        ordering = ["-pk"]
+        indexes = (
+            GinIndex(fields=["search_vector_fi"]),
+            GinIndex(fields=["search_vector_en"]),
+            GinIndex(fields=["search_vector_sv"]),
+        )
 
 
 @receiver(m2m_changed, sender=Event.keywords.through)
