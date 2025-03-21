@@ -1,10 +1,12 @@
 import collections
+import logging
 import re
 import warnings
 from datetime import datetime, timedelta
 from typing import Iterable, Optional
 
 import bleach
+import libvoikko
 import pytz
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
@@ -19,6 +21,10 @@ from events.models import DataSource, Keyword, Place
 from events.sql import count_events_for_keywords, count_events_for_places
 from helevents.models import User
 
+logger = logging.getLogger(__name__)
+voikko = libvoikko.Voikko("fi")
+voikko.setNoUglyHyphenation(True)
+
 
 def convert_to_camelcase(s):
     return "".join(word.title() if i else word for i, word in enumerate(s.split("_")))
@@ -28,6 +34,44 @@ def convert_from_camelcase(s):
     return re.sub(
         r"(^|[a-z])([A-Z])", lambda m: "_".join([i.lower() for i in m.groups() if i]), s
     )
+
+
+def get_field_attr(obj, field):
+    """Get attr recursively by following foreign key relations
+    For example:
+    get_foreign_key_attr(
+        <Address: Kurrapolku 1-2A, Turku>, "street__name_fi"
+    )
+    """
+    fields = field.split("__")
+    if len(fields) == 1:
+        return getattr(obj, fields[0], None)
+    else:
+        first_field = fields[0]
+        remaining_fields = "__".join(fields[1:])
+        return get_field_attr(getattr(obj, first_field), remaining_fields)
+
+
+def is_compound_word(word):
+    result = voikko.analyze(word)
+    if len(result) == 0:
+        return False
+    return True if result[0]["WORDBASES"].count("+") > 1 else False
+
+
+def get_word_bases(word):
+    """
+    Returns a list of word bases of the word, if it is a compound word.
+    """
+    word = word.strip()
+    if is_compound_word(word):
+        # By Setting the setMinHyphenatedWordLength to word_length,
+        # voikko returns the words that are in the compound word
+        voikko.setMinHyphenatedWordLength(len(word))
+        word_bases = voikko.hyphenate(word)
+        return word_bases.split("-")
+    else:
+        return [word]
 
 
 def get_value_from_tuple_list(list_of_tuples, search_key, value_index):
