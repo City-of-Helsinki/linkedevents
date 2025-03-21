@@ -1,9 +1,8 @@
 import logging
 import re
 import urllib.parse
-from datetime import datetime, timedelta
+from datetime import datetime
 from datetime import time as datetime_time
-from datetime import timezone as datetime_timezone
 from functools import partial, reduce
 from operator import or_
 from typing import Literal, Union
@@ -1956,54 +1955,6 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         # time of writing, so go figure.
         dt = utils.parse_end_time(val)[0]
         queryset = queryset.filter(Q(last_modified_time__gte=dt))
-
-    start = params.get("start")
-    end = params.get("end")
-    days = params.get("days")
-
-    if days:
-        try:
-            days = int(days)
-        except ValueError:
-            raise ParseError(_("Error while parsing days."))
-        if days < 1:
-            raise serializers.ValidationError(_("Days must be 1 or more."))
-
-        if start or end:
-            raise serializers.ValidationError(
-                _("Start or end cannot be used with days.")
-            )
-
-        today = datetime.now(datetime_timezone.utc).date()
-
-        start = today.isoformat()
-        end = (today + timedelta(days=days)).isoformat()
-
-    if not end:
-        # postponed events are considered to be "far" in the future and should be
-        # included if end is *not* given
-        postponed_q = Q(event_status=Event.Status.POSTPONED)
-    else:
-        postponed_q = Q()
-
-    if start:
-        # Inconsistent behaviour, see test_inconsistent_tz_default
-        dt = utils.parse_time(start, default_tz=pytz.timezone(settings.TIME_ZONE))[0]
-
-        # only return events with specified end times, or unspecified start times, during the whole of the event  # noqa: E501
-        # this gets of rid pesky one-day events with no known end time (but known
-        # start) after they started
-        queryset = queryset.filter(
-            Q(end_time__gt=dt, has_end_time=True)
-            | Q(end_time__gt=dt, has_start_time=False)
-            | Q(start_time__gte=dt)
-            | postponed_q
-        )
-
-    if end:
-        # Inconsistent behaviour, see test_inconsistent_tz_default
-        dt = utils.parse_end_time(end, default_tz=pytz.timezone(settings.TIME_ZONE))[0]
-        queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     val = params.get("bbox", None)
     if val:
