@@ -97,6 +97,35 @@ def _in_or_null_filter(field_name, queryset, name, value):
     return queryset.filter(q)
 
 
+def q_source(sub_events, **kwargs) -> Q:
+    """
+    Builds a Q object to filter events based on their own fields or the fields of their
+    sub-events.
+
+    If `sub_events` is False, it applies filters directly to the event.
+    If `sub_events` is True, it checks if the event or any of its lowest-level
+    sub-events match the conditions
+    """
+    if sub_events:
+        outer_qs = Event.objects.filter(pk=OuterRef("pk"))
+        return Q(
+            Exists(
+                outer_qs.filter(sub_events__isnull=True, **kwargs)
+                | outer_qs.filter(
+                    sub_events__isnull=False,
+                    sub_events__sub_events__isnull=True,
+                    **{f"sub_events__{k}": v for k, v in kwargs.items()},
+                )
+                | outer_qs.filter(
+                    sub_events__isnull=False,
+                    sub_events__sub_events__isnull=False,
+                    **{f"sub_events__sub_events__{k}": v for k, v in kwargs.items()},
+                )
+            )
+        )
+    return Q(**kwargs)
+
+
 def filter_division(queryset, name: str, value: Iterable[str]):
     """
     Allows division filtering by both division name and more specific ocd id (identified by colon
