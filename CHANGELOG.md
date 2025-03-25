@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.12.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.11.1...linkedevents-v3.12.0) (2025-03-25)
+
+
+### Features
+
+* **registration:** Add command for sending payment required with link ([f74b8be](https://github.com/City-of-Helsinki/linkedevents/commit/f74b8beca0e4fa35e037505ea5e7749523a91376))
+* **registration:** Add expiry_notification_sent_at to SignUpPayment ([8da67d6](https://github.com/City-of-Helsinki/linkedevents/commit/8da67d614ad93b6af692a532fc02540740140361))
+* **registration:** Do not send singup payment notification on creation ([562906d](https://github.com/City-of-Helsinki/linkedevents/commit/562906de9951155feb7a98394e034f933150bf00))
+
+
+### Bug Fixes
+
+* **events:** Prefetch images__data_source ([dbba01f](https://github.com/City-of-Helsinki/linkedevents/commit/dbba01ffe05c5e8a3049b4a8f9dd58073dac8e94))
+* **events:** Prefetch images__license ([086d153](https://github.com/City-of-Helsinki/linkedevents/commit/086d1536ec76a8c966a6ecb192ad566828c8970e))
+
 ## [3.11.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.11.0...linkedevents-v3.11.1) (2025-03-07)
 
 
