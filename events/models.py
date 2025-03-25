@@ -1390,18 +1390,18 @@ class Event(
         return ""
 
     @classmethod
-    def get_words_fi_columns(cls):
+    def get_words_columns(cls, lang):
         """
         Defines the columns that will be used when populating
-        finnish words to words_fi column. The content
+        words to language specific words column. The content
         will be tokenized to lexems(to_tsvector) and added to
         the search_column.
         """
         return [
-            "name_fi",
-            "location__name_fi",
-            "short_description_fi",
-            "description_fi",
+            "name_%s" % lang,
+            "location__name_%s" % lang,
+            "short_description_%s" % lang,
+            "description_%s" % lang,
         ]
 
 
