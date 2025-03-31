@@ -22,7 +22,9 @@ from events.sql import count_events_for_keywords, count_events_for_places
 from helevents.models import User
 
 logger = logging.getLogger(__name__)
-voikko = libvoikko.Voikko("fi")
+
+# setup libvoikko
+voikko = libvoikko.Voikko("fi", "/etc/voikko")
 voikko.setNoUglyHyphenation(True)
 
 
