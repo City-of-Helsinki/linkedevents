@@ -73,6 +73,10 @@ Install required Python packages into the virtualenv
 cd $INSTALL_BASE/linkedevents
 pip install -r requirements.txt
 ```
+
+Install Voikko by following [these](https://voikko.puimula.org/python.html) instructions.
+Recommendation is to use "morpho" Finnish language dictionary.
+
 Create the database, like so: (we have only tested on PostgreSQL)
 ```bash
 cd $INSTALL_BASE/linkedevents
