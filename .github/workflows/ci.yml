@@ -16,4 +16,5 @@ jobs:
       postgres-major-version: 14
       use-postgis: true
       extra-commands: |
+        sudo apt-get install voikko-fi libvoikko-dev
         python manage.py spectacular --lang en --validate --fail-on-warn --api-version v1
