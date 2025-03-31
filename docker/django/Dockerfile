@@ -16,6 +16,13 @@ USER root
 ## https://github.com/docker/compose/issues/3270#issuecomment-363478501
 RUN mkdir -p /var/media && chmod g=u -R /var/media
 
+# Setup Voikko finnish morpho dictionary
+RUN mkdir -p /etc/voikko \
+    && chmod g=u -R /etc/voikko \
+    && cd /etc/voikko \
+    && wget https://www.puimula.org/htp/testing/voikko-snapshot-v5/dict-morpho.zip \
+    && unzip dict-morpho.zip
+
 COPY requirements.txt .
 COPY requirements-prod.txt .
 
