@@ -22,6 +22,9 @@ from sentry_sdk.serializer import add_global_repr_processor
 
 from linkedevents import __version__
 
+GDAL_LIBRARY_PATH = os.environ.get("GDAL_LIBRARY_PATH")
+GEOS_LIBRARY_PATH = os.environ.get("GEOS_LIBRARY_PATH")
+
 CONFIG_FILE_NAME = "config_dev.env"
 
 DEBUG_TOOLBAR_AVAILABLE = importlib.util.find_spec("debug_toolbar") is not None

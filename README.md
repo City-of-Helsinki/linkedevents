@@ -168,11 +168,11 @@ After this, everything but search endpoint (/search) is working. See [search](#s
     ```
   * See: https://github.com/django/django/pull/15214
 * Fix:
-  * Edit `linkedevents/settings.py`, add to end:
+  * Edit `.zshrc` / `.bashrc` / `.bash_profile` and add the following lines:
     ```text
     # macOS:
-    GDAL_LIBRARY_PATH="/opt/homebrew/opt/gdal/lib/libgdal.dylib"
-    GEOS_LIBRARY_PATH="/opt/homebrew/opt/geos/lib/libgeos_c.dylib"
+    export GDAL_LIBRARY_PATH=/opt/homebrew/lib/libgdal.dylib
+    export GEOS_LIBRARY_PATH=/opt/homebrew/lib/libgeos_c.dylib
     ```
 
 ### Troubleshooting
