@@ -17,7 +17,7 @@ def assert_event_data_is_equal(d1, d2, version="v1"):
         "data_source",
         "publisher",
         "location",
-        "name",
+        "name_en",
         "event_status",
         "sub_events",
         "custom_data",

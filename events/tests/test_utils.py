@@ -13,6 +13,7 @@ from events.utils import (
     clean_text_fields,
     parse_end_time,
     parse_time,
+    split_word_bases,
     start_of_day,
     start_of_next_day,
     start_of_previous_day,
@@ -170,6 +171,22 @@ def test_inconsistent_tz_default(api_client, minimal_event_dict, user, settings)
     assert (
         list_with_offset_create_dt.json()["meta"]["count"] == 1
     ), list_with_offset_create_dt.json()
+
+
+@pytest.mark.parametrize(
+    "word, expected_result",
+    [
+        ("lentokone", {"lento", "kone"}),
+        ("päiväkoti", {"päivä", "koti"}),
+        ("lentokoneen", {"lento", "koneen"}),
+        ("lentokoneita", {"lento", "koneita"}),
+        ("saippuakivimittakaava", {"saippua", "kivi", "mitta", "kaava"}),
+        ("lentokone123", set()),
+    ],
+)
+def test_split_word_bases(word, expected_result):
+    result = split_word_bases(word, set())
+    assert result == expected_result
 
 
 @pytest.mark.parametrize(
