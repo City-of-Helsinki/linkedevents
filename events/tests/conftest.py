@@ -234,6 +234,8 @@ def place(data_source, organization, administrative_division):
         publisher=organization,
         position=Point(50, 50),
         name_fi="Paikka 1",
+        name_sv="Plats 1",
+        name_en="Place 1",
     )
 
 
@@ -276,6 +278,9 @@ def event(data_source, organization, place, user):
         short_description="short desc",
         description="desc",
         name="tapahtuma",
+        name_fi="tapahtuma",
+        name_sv="evenemang",
+        name_en="event",
     )
 
 

@@ -322,7 +322,7 @@ def test_get_registration_with_event_included(user_api_client, event, registrati
     )
     response_event = response.data["event"]
     assert response_event["id"] == event.id
-    assert list(response_event["name"].values())[0] == event.name
+    assert list(response_event["name"].values())[0] == event.name_fi
     assert list(response_event["description"].values())[0] == event.description
     assert response_event["publisher"] == event.publisher.id
 
@@ -339,7 +339,7 @@ def test_get_registration_with_event_and_location_included(
     )
     response_location = response.data["event"]["location"]
     assert response_location["id"] == place.id
-    assert list(response_location["name"].values())[0] == place.name
+    assert list(response_location["name"].values())[0] == place.name_fi
 
 
 @pytest.mark.django_db

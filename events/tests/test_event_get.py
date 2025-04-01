@@ -637,7 +637,7 @@ def test_language_filter(api_client, event, event2, event3):
     get_list_and_assert_events("in_language=sv", [event2])
 
     # English should have one event (matches in_language)
-    get_list_and_assert_events("language=en", [event2])
+    get_list_and_assert_events("language=en", [event, event2])
     get_list_and_assert_events("in_language=en", [event2])
 
     # Russian should have one event (matches name_ru)
