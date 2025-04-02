@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 import bleach
 import environ
 import sentry_sdk
+from corsheaders.defaults import default_headers
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
@@ -164,7 +165,10 @@ env = environ.Env(
     SECRET_KEY=(str, ""),
     SECURE_PROXY_SSL_HEADER=(tuple, None),
     SENTRY_DSN=(str, ""),
-    SENTRY_ENVIRONMENT=(str, "development"),
+    SENTRY_ENVIRONMENT=(str, "local"),
+    SENTRY_PROFILE_SESSION_SAMPLE_RATE=(float, None),
+    SENTRY_RELEASE=(str, None),
+    SENTRY_TRACES_SAMPLE_RATE=(float, None),
     SOCIAL_AUTH_TUNNISTAMO_KEY=(str, "linkedevents-api-dev"),
     SOCIAL_AUTH_TUNNISTAMO_SECRET=(str, ""),
     SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT=(str, ""),
@@ -332,9 +336,12 @@ if env("SENTRY_DSN"):
     sentry_sdk.init(
         dsn=env("SENTRY_DSN"),
         environment=env("SENTRY_ENVIRONMENT"),
-        release=COMMIT_HASH,
+        release=env("SENTRY_RELEASE"),
         integrations=[DjangoIntegration()],
         event_scrubber=EventScrubber(denylist=SENTRY_DENYLIST),
+        traces_sample_rate=env("SENTRY_TRACES_SAMPLE_RATE"),
+        profile_session_sample_rate=env("SENTRY_PROFILE_SESSION_SAMPLE_RATE"),
+        profile_lifecycle="trace",
     )
 
 MIDDLEWARE = [
@@ -476,6 +483,11 @@ REST_FRAMEWORK = {
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_HEADERS = (
+    *default_headers,
+    "baggage",
+    "sentry-trace",
+)
 CSRF_COOKIE_NAME = "%s-csrftoken" % env("COOKIE_PREFIX")
 SESSION_COOKIE_NAME = "%s-sessionid" % env("COOKIE_PREFIX")
 
