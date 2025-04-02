@@ -9,6 +9,7 @@ static/CACHE
 media/
 .vagrant/
 .env
+config_dev.env
 .idea
 .django_secret
 *.iml
