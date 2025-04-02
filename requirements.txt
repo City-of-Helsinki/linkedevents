@@ -10,8 +10,6 @@ asgiref==3.8.1
     #   django-cors-headers
 asttokens==3.0.0
     # via stack-data
-async-timeout==5.0.1
-    # via redis
 attrs==25.3.0
     # via
     #   -r requirements.in
@@ -79,6 +77,7 @@ django==4.2.20
     #   drf-spectacular
     #   easy-thumbnails
     #   helsinki-profile-gdpr-api
+    #   sentry-sdk
     #   social-auth-app-django
 django-admin-autocomplete-filter==0.7.1
     # via -r requirements.in
@@ -162,10 +161,6 @@ ecdsa==0.19.1
     # via python-jose
 elasticsearch==7.17.12
     # via -r requirements.in
-exceptiongroup==1.2.2
-    # via
-    #   cattrs
-    #   ipython
 executing==2.2.0
     # via stack-data
 helsinki-profile-gdpr-api==0.2.0
@@ -176,8 +171,6 @@ icalendar==6.1.2
     # via -r requirements.in
 idna==3.10
     # via requests
-importlib-metadata==8.6.1
-    # via markdown
 inflection==0.5.1
     # via drf-spectacular
 ipython==8.18.1
@@ -302,7 +295,7 @@ rpds-py==0.23.1
     #   referencing
 rsa==4.9
     # via python-jose
-sentry-sdk==2.24.0
+sentry-sdk[django]==2.25.1
     # via -r requirements.in
 six==1.17.0
     # via
@@ -332,12 +325,7 @@ traitlets==5.14.3
     #   matplotlib-inline
 typing-extensions==4.12.2
     # via
-    #   asgiref
     #   beautifulsoup4
-    #   cattrs
-    #   django-modeltranslation
-    #   drf-spectacular
-    #   ipython
     #   python-docx
     #   referencing
 tzdata==2025.1
@@ -362,8 +350,6 @@ whitenoise==6.9.0
     # via -r requirements.in
 xlsxwriter==3.2.2
     # via -r requirements.in
-zipp==3.21.0
-    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
