@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 import bleach
 import environ
 import sentry_sdk
+from corsheaders.defaults import default_headers
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
@@ -322,6 +323,13 @@ if env("SENTRY_DSN"):
         release=COMMIT_HASH,
         integrations=[DjangoIntegration()],
         event_scrubber=EventScrubber(denylist=SENTRY_DENYLIST),
+        traces_sample_rate=1.0,
+        # Set profile_session_sample_rate to 1.0 to profile 100%
+        # of profile sessions.
+        profile_session_sample_rate=1.0,
+        # Set profile_lifecycle to "trace" to automatically
+        # run the profiler on when there is an active transaction
+        profile_lifecycle="trace",
     )
 
 MIDDLEWARE = [
@@ -466,6 +474,11 @@ CORS_ORIGIN_ALLOW_ALL = True
 CSRF_COOKIE_NAME = "%s-csrftoken" % env("COOKIE_PREFIX")
 SESSION_COOKIE_NAME = "%s-sessionid" % env("COOKIE_PREFIX")
 
+CORS_ALLOW_HEADERS = (
+    *default_headers,
+    "baggage",
+    "sentry-trace",
+)
 
 TEMPLATES = [
     {
