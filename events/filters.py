@@ -28,7 +28,7 @@ from munigeo.api import srid_to_srs
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 
-from events.models import Event, Place
+from events.models import Event, EventAggregate, Place
 from events.widgets import DistanceWithinWidget
 from linkedevents.filters import LinkedEventsOrderingFilter
 
@@ -284,6 +284,10 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             "Hide all child events for super events which are of type <code>recurring</code>."  # noqa: E501
         ),
     )
+    hide_super_event = django_filters.BooleanFilter(
+        method="filter_hide_super_event",
+        help_text=_("Hide all events which are super events."),
+    )
 
     x_full_text = django_filters.CharFilter(method="filter_x_full_text")
 
@@ -387,6 +391,15 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             super_event__super_event_type=Event.SuperEventType.RECURRING
         ).exclude(
             eventaggregatemember__event_aggregate__super_event__super_event_type=Event.SuperEventType.RECURRING
+        )
+
+    def filter_hide_super_event(self, queryset, name, value: Optional[bool]):
+        if not value:
+            return queryset
+
+        return queryset.exclude(
+            Q(super_event__isnull=True) & Q(super_event_type__isnull=False)
+            | Exists(EventAggregate.objects.filter(super_event=OuterRef("pk")))
         )
 
     def filter_x_full_text(self, qs, name, value: Optional[str]):
