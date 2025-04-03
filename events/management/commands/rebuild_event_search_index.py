@@ -11,11 +11,14 @@ from events.utils import get_field_attr, split_word_bases
 logger = logging.getLogger(__name__)
 
 
-def update_full_text_search_objects(lang: str = "fi") -> int:
+def rebuild_search_index(lang: str = "fi") -> int:
     """
-    Updates the full text search objects for the events.
+    Rebuild the full text search index for the events.
+
     This function iterates through all events, extracts words from the specified
-    columns, and updates the EventSearchIndex model with the search vectors.
+    columns, and updates the EventSearchIndex model with data for
+    the specified language.
+
     :param lang: The language code for the search objects (default is "fi").
     :return: The number of populated search objects.
     """
@@ -31,9 +34,8 @@ def update_full_text_search_objects(lang: str = "fi") -> int:
         for keyword in event.keywords.values_list("name_%s" % lang, flat=True):
             split_word_bases(keyword, words, lang)
 
-        logger.debug(f"Updating search vectors for {event.id}, words: {words}")
+        logger.debug(f"Updating search index for {event.id}, words: {words}")
 
-        # create or update EventSearchIndex object
         EventSearchIndex.objects.update_or_create(
             event=event,
             defaults={
@@ -51,9 +53,9 @@ def update_full_text_search_objects(lang: str = "fi") -> int:
     return num_populated
 
 
-def update_full_text_search_vectors():
+def update_index_search_vectors():
     """
-    Updates the search vectors for the full text search objects.
+    Update search vectors for the search index.
     """
     eqs = Event.objects.filter(full_text=OuterRef("pk"))
     EventSearchIndex.objects.all().annotate(
@@ -95,9 +97,22 @@ def update_full_text_search_vectors():
 
 
 class Command(BaseCommand):
+    help = "Rebuilds the search vectors for the full text search objects."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--clean",
+            action="store_true",
+            help="Clean the search index before rebuilding.",
+        )
+
     def handle(self, *args, **options):
+        if options["clean"]:
+            logger.info("Cleaning the search index.")
+            EventSearchIndex.objects.all().delete()
+            logger.info("Cleaned the search index.")
         for lang in ["fi", "sv", "en"]:
-            logger.info(f"Generating search vectors for language: {lang}.")
-            num_populated = update_full_text_search_objects(lang)
-            logger.info(f"Search vectors updated for {num_populated} Events")
-        update_full_text_search_vectors()
+            logger.info(f"Rebuilding search index for language: {lang}.")
+            num_populated = rebuild_search_index(lang)
+            logger.info(f"Search index updated for {num_populated} Events")
+        update_index_search_vectors()
