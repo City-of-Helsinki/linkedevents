@@ -3022,6 +3022,11 @@ class EventViewSet(
                 description="Include deleted events in the query.",
             ),
             OpenApiParameter(
+                name="hide_super_event",
+                type=OpenApiTypes.BOOL,
+                description="Hide all events which are super events.",
+            ),
+            OpenApiParameter(
                 name="ids",
                 type=OpenApiTypes.STR,
                 description=(
