@@ -1416,11 +1416,11 @@ class EventSearchIndex(models.Model):
     event = models.OneToOneField(
         Event,
         related_name="full_text",
-        on_delete=models.DO_NOTHING,
+        on_delete=models.CASCADE,
         primary_key=True,
     )
     place = models.ForeignKey(
-        Place, related_name="full_text_place", on_delete=models.DO_NOTHING, null=True
+        Place, related_name="full_text_place", on_delete=models.CASCADE, null=True
     )
 
     event_last_modified_time = models.DateTimeField()
