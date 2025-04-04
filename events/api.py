@@ -1910,7 +1910,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
 
         # TODO REMOVE ME
         if val.startswith("tunnistamo"):
-            raise Exception(f'Please stop entering this: "{val}".')
+            raise Exception(f'Please stop entering this: "{val}"!')
 
         qset = Q()
 
