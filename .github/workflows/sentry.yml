@@ -1,0 +1,25 @@
+name: Create Sentry release
+
+on:
+  push:
+    branches: [sentry-tracing]
+  pull_request:
+    branches: [sentry-tracing]
+  workflow_dispatch:
+
+jobs:
+  sentry-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.TEST_SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.TEST_SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.TEST_SENTRY_PROJECT }}
+        with:
+          environment: development
