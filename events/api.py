@@ -1912,6 +1912,10 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         if val.startswith("tunnistamo"):
             raise Exception(f'Please stop entering this: "{val}"!')
 
+        # TODO AND ME
+        if val.startswith("ummistamo"):
+            raise Exception(f'Please stop entering this: "{val}"!')
+
         qset = Q()
 
         # Free string search from all translated event fields
