@@ -19,6 +19,7 @@ attribute to change @context when need to define schemas for custom fields.
 
 import datetime
 import logging
+from typing import Optional
 
 import pytz
 from django.conf import settings
@@ -27,10 +28,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import ArrayField, HStoreField
 from django.contrib.postgres.indexes import GinIndex, Index
-from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.mail import send_mail
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import OuterRef, Q, Subquery
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
@@ -1232,6 +1233,8 @@ class Event(
                 registration_to_cancel
             )
 
+        self.update_search_index()
+
     def cancel_registration_signups_or_notify_contact_person(self, registration=None):
         if registration:
             registration.cancel_signups(is_event_cancellation=True)
@@ -1355,6 +1358,45 @@ class Event(
                 recipient_list.append(admin.email)
         self._send_notification(NotificationType.DRAFT_POSTED, recipient_list, request)
 
+    def update_search_index(self):
+        """
+        Update the search index for this event. This is called
+        automatically when the event is saved.
+        The search index is updated for each language separately.
+        The search index is updated with the words from the event
+        and the keywords.
+        Also updates the search vectors for the event.
+        """
+        from events.utils import get_field_attr, split_word_bases
+
+        for lang in ["fi", "sv", "en"]:
+            words = set()
+            for column in self.get_words_columns(lang):
+                row_content = get_field_attr(self, column)
+                if row_content:
+                    split_word_bases(row_content, words, lang)
+
+            for keyword in self.keywords.values_list("name_%s" % lang, flat=True):
+                split_word_bases(keyword, words, lang)
+
+            logger.info(f"Updating search index for {self.id}, words: {words}")
+
+            EventSearchIndex.objects.update_or_create(
+                event=self,
+                defaults={
+                    "place": self.location if self else None,
+                    "event_last_modified_time": self.last_modified_time
+                    if self
+                    else timezone.now(),
+                    "place_last_modified_time": self.location.last_modified_time
+                    if self and self.location
+                    else timezone.now(),
+                    "words_%s" % lang: list(words),
+                },
+            )
+        # Update search vectors for the event
+        EventSearchIndexService.update_index_search_vectors(self)
+
     @property
     def is_created_with_apikey(self) -> bool:
         from events.auth import ApiKeyUser
@@ -1406,6 +1448,63 @@ class Event(
 
 
 reversion.register(Event)
+
+
+class EventSearchIndexService:
+    """
+    Service class for managing the event search index.
+    """
+
+    @staticmethod
+    def update_index_search_vectors(event: Optional[Event] = None) -> None:
+        """
+        Update search vectors for the search index.
+
+        If event is given, only update that event's search vector.
+        Otherwise, update all events' search vectors.
+        """
+        if event:
+            qs = EventSearchIndex.objects.filter(event=event)
+        else:
+            qs = EventSearchIndex.objects.all()
+
+        eqs = Event.objects.filter(full_text=OuterRef("pk"))
+        qs.annotate(
+            event_name_fi=Subquery(eqs.values("name_fi")[:1]),
+            event_description_fi=Subquery(eqs.values("description_fi")[:1]),
+            event_short_description_fi=Subquery(eqs.values("short_description_fi")[:1]),
+            place_name_fi=Subquery(eqs.values("location__name_fi")[:1]),
+            event_name_sv=Subquery(eqs.values("name_sv")[:1]),
+            event_description_sv=Subquery(eqs.values("description_sv")[:1]),
+            event_short_description_sv=Subquery(eqs.values("short_description_sv")[:1]),
+            place_name_sv=Subquery(eqs.values("location__name_sv")[:1]),
+            event_name_en=Subquery(eqs.values("name_en")[:1]),
+            event_description_en=Subquery(eqs.values("description_en")[:1]),
+            event_short_description_en=Subquery(eqs.values("short_description_en")[:1]),
+            place_name_en=Subquery(eqs.values("location__name_en")[:1]),
+            keywords_fi=Subquery(eqs.values("keywords__name_fi")[:1]),
+            keywords_sv=Subquery(eqs.values("keywords__name_sv")[:1]),
+            keywords_en=Subquery(eqs.values("keywords__name_en")[:1]),
+        ).update(
+            search_vector_fi=SearchVector("event_name_fi", config="finnish", weight="A")
+            + SearchVector("place_name_fi", config="finnish", weight="A")
+            + SearchVector("words_fi", config="finnish", weight="A")
+            + SearchVector("keywords_fi", config="finnish", weight="B")
+            + SearchVector("event_short_description_fi", config="finnish", weight="C")
+            + SearchVector("event_description_fi", config="finnish", weight="D"),
+            search_vector_sv=SearchVector("event_name_sv", config="swedish", weight="A")
+            + SearchVector("place_name_sv", config="swedish", weight="A")
+            + SearchVector("words_sv", config="swedish", weight="A")
+            + SearchVector("keywords_sv", config="swedish", weight="B")
+            + SearchVector("event_short_description_sv", config="swedish", weight="C")
+            + SearchVector("event_description_sv", config="swedish", weight="D"),
+            search_vector_en=SearchVector("event_name_en", config="english", weight="A")
+            + SearchVector("place_name_en", config="english", weight="A")
+            + SearchVector("words_en", config="english", weight="A")
+            + SearchVector("keywords_en", config="english", weight="B")
+            + SearchVector("event_short_description_en", config="english", weight="C")
+            + SearchVector("event_description_en", config="english", weight="D"),
+        )
 
 
 class EventSearchIndex(models.Model):
