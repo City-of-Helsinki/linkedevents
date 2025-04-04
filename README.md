@@ -370,3 +370,5 @@ To create or update a static YAML file for testing purposes, etc., you may run t
 ./manage.py spectacular --file <file_name> --lang en --validate --fail-on-warn --api-version v1
 ```
 To make your local Linked Events instance use the static file, the environment variable `SWAGGER_USE_STATIC_SCHEMA` should be set to `true`.
+
+easter egg
