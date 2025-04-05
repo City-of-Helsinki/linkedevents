@@ -1,5 +1,34 @@
 # Changelog
 
+## [3.13.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.12.0...linkedevents-v3.13.0) (2025-04-05)
+
+
+### Features
+
+* **events:** Add filter param to hide super events ([595da7a](https://github.com/City-of-Helsinki/linkedevents/commit/595da7aa6ab6e5b4f6548c534aa482c41253e43b))
+* **full-text-search:** Add support for clean ([14e826d](https://github.com/City-of-Helsinki/linkedevents/commit/14e826de08aaf8688a7c6ced6718ce6a2b2016bc))
+* **full-text-search:** Replace ".,:;" with space ([4d817ef](https://github.com/City-of-Helsinki/linkedevents/commit/4d817ef6784e5cfbc3cfd9c7e644a970274111fe))
+* **full-text-search:** Replace search model ([45623ce](https://github.com/City-of-Helsinki/linkedevents/commit/45623cec2b43a4287ffbb0ba58a3be8d303300f4))
+* **full-text-search:** Update on delete-rules ([d0c7c55](https://github.com/City-of-Helsinki/linkedevents/commit/d0c7c55bc17efa3cdc7da47acc1851ddb99b69f4))
+* **full-text-search:** Update search vector data ([8840646](https://github.com/City-of-Helsinki/linkedevents/commit/8840646638dfcb7e2cfb84ad748c96695a9941a0))
+* **full-text-search:** Use explicit config path ([222b7a6](https://github.com/City-of-Helsinki/linkedevents/commit/222b7a65856df148fd63e47f5625a3bae471d253))
+* **full-text-search:** Use morpho-dict in Voikko ([29df570](https://github.com/City-of-Helsinki/linkedevents/commit/29df570cb669988e3df653913963b7fdd27a3f65))
+
+
+### Bug Fixes
+
+* Utilize GDAL/GEOS env variables in settings ([cf14b45](https://github.com/City-of-Helsinki/linkedevents/commit/cf14b457df57bcb2a054518407b5a3a1d6cb399c))
+
+
+### Dependencies
+
+* Add libvoikko and update requirements ([e356795](https://github.com/City-of-Helsinki/linkedevents/commit/e356795a1c90fd79f77a5ae258341cdbcc077b85))
+
+
+### Documentation
+
+* **full-text-search:** Add Voikko instructions ([fe7c6c3](https://github.com/City-of-Helsinki/linkedevents/commit/fe7c6c39b42a96ef9f79d738788f7d7fbe808cce))
+
 ## [3.12.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.11.1...linkedevents-v3.12.0) (2025-03-25)
 
 
