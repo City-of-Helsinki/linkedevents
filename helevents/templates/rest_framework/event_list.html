@@ -78,6 +78,21 @@
         <pre><code>event/?starts_after=16:30&amp;ends_before=21</code></pre>
         <p><a href="?starts_after=16:30&amp;ends_before=21" title="json">See the result</a></p>
 
+        <h3 id="event-weekday">Event weekday</h3>
+        <p>Use <code>weekday</code> to filter for the events that occurs within
+            certain weekdays. Weekdays are to be input as Iso 8601 weekday numbers, where 1 is Monday
+            and 7 is Sunday.</p>
+
+        <p>The parameter can include:</p>
+        <ul>
+            <li>One weekday</li>
+            <li>Multiple weekdays separated by a comma</li>
+        </ul>
+        <p>Example (Saturdays and Sundays):</p>
+        <pre><code>event/?weekday=6,7</code></pre>
+        <p><a href="?weekday=6,7" title="json">See the result</a></p>
+
+
         <h3 id="event-duration">Event duration</h3>
         <p>Use <code>max_duration</code> to filter for the events that last up to a specified time, or
             <code>min_duration</code> to filter for the events that last at least a specified amount of time.</p>

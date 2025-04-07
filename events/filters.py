@@ -11,6 +11,7 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, SearchRank
 from django.db.models import (
+    BooleanField,
     Case,
     DurationField,
     Exists,
@@ -314,6 +315,13 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             "Search for events that are at most as long as the given duration."
         ),
     )
+    weekday = django_filters.MultipleChoiceFilter(
+        choices=settings.ISO_WEEKDAYS,
+        method="filter_weekday",
+        distinct=False,
+        widget=django_filters.widgets.CSVWidget(),
+        help_text=_("Filter events by their occurring weekday using iso format."),
+    )
 
     class Meta:
         model = Event
@@ -321,6 +329,52 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             "registration__remaining_attendee_capacity": ["gte", "isnull"],
             "registration__remaining_waiting_list_capacity": ["gte", "isnull"],
         }
+
+    def filter_weekday(self, queryset, name, values):
+        if not values:
+            return queryset
+
+        weekdays = [int(i) for i in values]
+
+        # Add some utility fields to the queryset for filtering.
+        queryset = queryset.annotate(
+            duration=ExpressionWrapper(
+                F("end_time") - F("start_time"), output_field=DurationField()
+            ),
+            start_day=F("start_time__iso_week_day"),
+            end_day=F("end_time__iso_week_day"),
+            spans_over_weekend=Case(
+                When(start_day__gt=F("end_day"), then=True),
+                default=False,
+                output_field=BooleanField(),
+            ),
+            over_week_long_event=Case(
+                When(duration__gte=timedelta(days=7), then=True),
+                default=False,
+            ),
+        )
+
+        # Basic check for start and end time days.
+        weekday_filter = Q(start_day__in=weekdays) | Q(end_day__in=weekdays)
+
+        # Over week long events are always included.
+        weekday_filter |= Q(over_week_long_event=True)
+        for weekday in weekdays:
+            weekday_filter |= Q(
+                Q(spans_over_weekend=True, over_week_long_event=False)
+                & Q(Q(start_day__lte=weekday) | Q(end_day__gte=weekday))
+            )
+
+            weekday_filter |= Q(
+                Q(
+                    spans_over_weekend=False,
+                    over_week_long_event=False,
+                    start_day__lte=weekday,
+                    end_day__gte=weekday,
+                )
+            )
+
+        return queryset.filter(weekday_filter)
 
     def filter_max_duration(self, queryset, name, value):
         if not value:
