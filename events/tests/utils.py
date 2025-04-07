@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytz
 from django.conf import settings
@@ -178,3 +178,41 @@ def create_super_event(events: list[Event], data_source) -> Event:
         event.super_event = aggregate.super_event
     Event.objects.bulk_update(events, ("super_event",))
     return super_event
+
+
+def create_events_for_weekdays() -> None:
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[0][1].lower(),
+        start_time=datetime(2025, 3, 10, 12, tzinfo=timezone.utc),
+        end_time=datetime(2025, 3, 10, 14, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[1][1].lower(),
+        start_time=datetime(2025, 3, 11, 12, tzinfo=timezone.utc),
+        end_time=datetime(2025, 3, 11, 14, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[2][1].lower(),
+        start_time=datetime(2025, 3, 12, 12, tzinfo=timezone.utc),
+        end_time=datetime(2025, 3, 12, 14, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[3][1].lower(),
+        start_time=datetime(2025, 3, 13, 12, tzinfo=timezone.utc),
+        end_time=datetime(2025, 3, 13, 14, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[4][1].lower(),
+        start_time=datetime(2025, 3, 14, 12, tzinfo=timezone.utc),
+        end_time=datetime(2025, 3, 14, 14, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[5][1].lower(),
+        start_time=datetime(2025, 3, 15, 12, tzinfo=timezone.utc),
+        end_time=datetime(2025, 3, 15, 14, tzinfo=timezone.utc),
+    )
+    EventFactory(
+        name=settings.ISO_WEEKDAYS[6][1].lower(),
+        start_time=datetime(2025, 3, 16, 12, tzinfo=timezone.utc),
+        end_time=datetime(2025, 3, 16, 14, tzinfo=timezone.utc),
+    )
