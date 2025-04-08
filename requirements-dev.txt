@@ -6,14 +6,17 @@
 #
 asgiref==3.8.1
     # via
+    #   -c requirements.txt
     #   django
 build==1.2.2.post1
     # via pip-tools
 certifi==2025.1.31
     # via
+    #   -c requirements.txt
     #   requests
 charset-normalizer==3.4.1
     # via
+    #   -c requirements.txt
     #   requests
 click==8.1.8
     # via pip-tools
@@ -21,6 +24,7 @@ coverage[toml]==7.7.0
     # via pytest-cov
 django==4.2.20
     # via
+    #   -c requirements.txt
     #   django-anymail
     #   django-debug-toolbar
     #   django-extensions
@@ -34,9 +38,11 @@ django-test-migrations==1.4.0
     # via -r requirements-dev.in
 ecdsa==0.19.1
     # via
+    #   -c requirements.txt
     #   python-jose
 exceptiongroup==1.2.2
     # via
+    #   -c requirements.txt
     #   pytest
 factory-boy==3.3.3
     # via
@@ -50,20 +56,25 @@ freezegun==1.5.1
     #   pytest-freezer
 idna==3.10
     # via
+    #   -c requirements.txt
     #   requests
 importlib-metadata==8.6.1
     # via
+    #   -c requirements.txt
     #   build
 inflection==0.5.1
     # via
+    #   -c requirements.txt
     #   pytest-factoryboy
 iniconfig==2.1.0
     # via pytest
 markupsafe==3.0.2
     # via
+    #   -c requirements.txt
     #   werkzeug
 packaging==24.2
     # via
+    #   -c requirements.txt
     #   build
     #   pytest
     #   pytest-factoryboy
@@ -73,6 +84,7 @@ pluggy==1.5.0
     # via pytest
 pyasn1==0.4.8
     # via
+    #   -c requirements.txt
     #   python-jose
     #   rsa
 pyproject-hooks==1.2.0
@@ -96,29 +108,35 @@ pytest-freezer==0.4.9
     # via -r requirements-dev.in
 python-dateutil==2.9.0.post0
     # via
+    #   -c requirements.txt
     #   freezegun
 python-jose==3.4.0
     # via
+    #   -c requirements.txt
     #   -r requirements-dev.in
 requests==2.32.3
     # via
+    #   -c requirements.txt
     #   django-anymail
     #   requests-mock
 requests-mock==1.12.1
     # via -r requirements-dev.in
 rsa==4.9
     # via
+    #   -c requirements.txt
     #   python-jose
-ruff==0.7.1
+ruff==0.11.4
     # via -r requirements-dev.in
 six==1.17.0
     # via
+    #   -c requirements.txt
     #   ecdsa
     #   python-dateutil
 snakemd==2.3.0
     # via -r requirements-dev.in
 sqlparse==0.5.3
     # via
+    #   -c requirements.txt
     #   django
     #   django-debug-toolbar
 tomli==2.2.1
@@ -129,14 +147,17 @@ tomli==2.2.1
     #   pytest
 typing-extensions==4.12.2
     # via
+    #   -c requirements.txt
     #   asgiref
     #   django-test-migrations
     #   pytest-factoryboy
 tzdata==2025.1
     # via
+    #   -c requirements.txt
     #   faker
 urllib3==1.26.20
     # via
+    #   -c requirements.txt
     #   django-anymail
     #   requests
 werkzeug==3.1.3
@@ -145,6 +166,7 @@ wheel==0.45.1
     # via pip-tools
 zipp==3.21.0
     # via
+    #   -c requirements.txt
     #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
