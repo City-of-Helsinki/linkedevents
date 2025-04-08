@@ -16,5 +16,5 @@ pytest-freezer
 python-jose
 requests-mock
 # Keep this in sync with .pre-commit-config.yaml
-ruff==0.7.1
+ruff==0.11.4
 snakemd
