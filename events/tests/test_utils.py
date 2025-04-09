@@ -176,12 +176,14 @@ def test_inconsistent_tz_default(api_client, minimal_event_dict, user, settings)
 @pytest.mark.parametrize(
     "word, expected_result",
     [
-        ("lentokone", {"lento", "kone"}),
+        ("lentokone", {"lentää", "kone"}),
+        ("lentokoneen", {"lentää", "kone"}),
+        ("lentokoneita", {"lentää", "kone"}),
         ("päiväkoti", {"päivä", "koti"}),
-        ("lentokoneen", {"lento", "koneen"}),
-        ("lentokoneita", {"lento", "koneita"}),
+        ("kissoja", {"kissa"}),
         ("saippuakivimittakaava", {"saippua", "kivi", "mitta", "kaava"}),
-        ("lentokone123", set()),
+        ("kokonaisvaltainen", {"koko", "nainen", "kokonainen", "valta"}),
+        ("lentokone123", {"lentokone123"}),
     ],
 )
 def test_split_word_bases(word, expected_result):

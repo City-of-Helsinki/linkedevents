@@ -38,13 +38,12 @@ def convert_from_camelcase(s):
     )
 
 
-def get_field_attr(obj: object, field: str) -> object:
+def get_field_attr(obj: object, field: str) -> str:
     """
     Get attr recursively by following foreign key relations.
     :param obj: object to get the attribute from
     :param field: field name or foreign key relation
     :return: attribute value
-    :rtype: object
     """
     fields = field.split("__")
     if len(fields) == 1:
@@ -55,36 +54,30 @@ def get_field_attr(obj: object, field: str) -> object:
         return get_field_attr(getattr(obj, first_field), remaining_fields)
 
 
-def is_compound_word(word: str) -> bool:
+def get_word_bases(word: str) -> set:
     """
-    Check if the word is a compound word.
-    :param word: the word to check
-    :return: True if the word is a compound word, False otherwise
-    """
-    result = voikko.analyze(word)
-    if len(result) == 0:
-        return False
-    return True if result[0]["WORDBASES"].count("+") > 1 else False
-
-
-def get_word_bases(word: str) -> list:
-    """
-    Returns a list of word bases of the word, if it is a compound word.
+    Returns a list of word bases of the word.
     :param word: the word to split
     :return: a list of word bases
     """
+    words = set()
     word = word.strip()
-    if is_compound_word(word):
-        # By Setting the setMinHyphenatedWordLength to word_length,
-        # voikko returns the words that are in the compound word
-        voikko.setMinHyphenatedWordLength(len(word))
-        word_bases = voikko.hyphenate(word)
-        return word_bases.split("-")
-    else:
-        return [word]
+    analysis = voikko.analyze(word)
+    if len(analysis) == 0:
+        # if the word can't be analyzed, return the word itself
+        words.add(word)
+        return words
+    for item in analysis:
+        # extract the bases from the string
+        if "WORDBASES" in item:
+            word_bases = re.findall(r"\(([^+].*?)\)", item["WORDBASES"])
+            words.update(word_bases)
+        else:
+            words.add(word)
+    return words
 
 
-def split_word_bases(word, words, lang: str = "fi") -> set:
+def split_word_bases(word: str, words: set, lang: str = "fi") -> set:
     """
     Splits the word into its bases and adds them to the set of words.
     :param word: the word to split
@@ -98,9 +91,10 @@ def split_word_bases(word, words, lang: str = "fi") -> set:
             w_array = word.split()
         for word in w_array:
             word_bases = get_word_bases(word)
-            if len(word_bases) > 1:
-                for base in word_bases:
-                    words.add(base)
+            words.update(word_bases)
+    else:
+        # for other languages, just add the word itself
+        words.add(word)
     return words
 
 
