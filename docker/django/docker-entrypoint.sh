@@ -35,15 +35,15 @@ if [[ "$COMPILE_TRANSLATIONS" = "true" ]]; then
 fi
 
 # Allow running arbitrary commands instead of the servers
-if [[ -n "$@" ]]; then
+if [[ -n "$*" ]]; then
     "$@"
 elif [[ "$DEV_SERVER" = "true" ]]; then
     exec python -Wd ./manage.py runserver_plus 0.0.0.0:8000
 else
     exec uwsgi \
          --ini .prod/uwsgi_configuration.ini \
-         --processes ${UWSGI_PROCESSES-2} \
-         --threads ${UWSGI_THREADS-2} \
+         --processes "${UWSGI_PROCESSES-2}" \
+         --threads "${UWSGI_THREADS-2}" \
          --stats /tmp/statsock \
          -m
 fi
