@@ -40,10 +40,6 @@ if [[ -n "$*" ]]; then
 elif [[ "$DEV_SERVER" = "true" ]]; then
     exec python -Wd ./manage.py runserver_plus 0.0.0.0:8000
 else
-    exec uwsgi \
-         --ini .prod/uwsgi_configuration.ini \
-         --processes "${UWSGI_PROCESSES-2}" \
-         --threads "${UWSGI_THREADS-2}" \
-         --stats /tmp/statsock \
-         -m
+    export UWSGI_PROCESSES=${UWSGI_PROCESSES:-4}
+    uwsgi --ini .prod/uwsgi_configuration.ini
 fi
