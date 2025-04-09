@@ -2531,13 +2531,13 @@ class TestEnkoraImporter:
             if field_name not in expected_fields:
                 continue
             if field_name in ("keywords", "audience"):
-                assert sorted(field_value) == sorted(
-                    expected_fields[field_name]
-                ), f"Field '{field_name}' mismatch!"
+                assert sorted(field_value) == sorted(expected_fields[field_name]), (
+                    f"Field '{field_name}' mismatch!"
+                )
             else:
-                assert (
-                    field_value == expected_fields[field_name]
-                ), f"Field {field_name} mismatch!"
+                assert field_value == expected_fields[field_name], (
+                    f"Field {field_name} mismatch!"
+                )
 
     @pytest.mark.parametrize(
         "test_input_tags,expected_event_language",

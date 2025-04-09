@@ -1988,7 +1988,7 @@ class EnkoraImporter(Importer):
                     )
 
                 desc_html += (
-                    f'<p><b>{translated_description_text[lang]["add_on_text"]}</b></p>\n<p>'
+                    f"<p><b>{translated_description_text[lang]['add_on_text']}</b></p>\n<p>"
                     f'<a href="{EnkoraImporter.COURSE_CONTACT_LINK}">Liikuntaluuri</a>: '  # noqa: E501
                     f'<a href="tel:{EnkoraImporter.COURSE_CONTACT_PHONE}">{EnkoraImporter.COURSE_CONTACT_PHONE}</a></p>'  # noqa: E501
                 )
@@ -2463,7 +2463,7 @@ class Kurssidata(Enkora):
         # Sanity:
         if len(reservation_event_groups) != 1:
             raise RuntimeError(
-                "Getting reservation event group {} " "resulted in {} items!".format(
+                "Getting reservation event group {} resulted in {} items!".format(
                     course_id, len(reservation_event_groups)
                 )
             )

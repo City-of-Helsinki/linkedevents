@@ -160,17 +160,17 @@ def test_inconsistent_tz_default(api_client, minimal_event_dict, user, settings)
         api_client,
         query_string=f"start={future_naive_dt_str}&end={future_naive_dt_str}",
     )
-    assert (
-        list_with_original_create_dt.json()["meta"]["count"] == 0
-    ), list_with_original_create_dt.json()
+    assert list_with_original_create_dt.json()["meta"]["count"] == 0, (
+        list_with_original_create_dt.json()
+    )
 
     list_with_offset_create_dt = get_list(
         api_client,
         query_string=f"start={offset_naive_dt_str}&end={offset_naive_dt_str}",
     )
-    assert (
-        list_with_offset_create_dt.json()["meta"]["count"] == 1
-    ), list_with_offset_create_dt.json()
+    assert list_with_offset_create_dt.json()["meta"]["count"] == 1, (
+        list_with_offset_create_dt.json()
+    )
 
 
 @pytest.mark.parametrize(
