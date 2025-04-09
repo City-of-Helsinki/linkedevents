@@ -37,7 +37,7 @@ class Command(BaseCommand):
 
         header = ""
         for i in range(max_depth + 1):
-            header += f"Level {i+1}{delimiter}"
+            header += f"Level {i + 1}{delimiter}"
 
         fixed_rows = [header.rstrip(delimiter) + "\n"]
 

@@ -52,9 +52,9 @@ def assert_registrations_in_response(
     response_registration_ids = {event["id"] for event in response.data["data"]}
     expected_registration_ids = {registration.id for registration in registrations}
     if query:
-        assert (
-            response_registration_ids == expected_registration_ids
-        ), f"\nquery: {query}"
+        assert response_registration_ids == expected_registration_ids, (
+            f"\nquery: {query}"
+        )
     else:
         assert response_registration_ids == expected_registration_ids
 

@@ -167,7 +167,7 @@ def group_by_date(events):
 
 class DOCXRenderer(renderers.BaseRenderer):
     media_type = (
-        "application/vnd.openxmlformats-officedocument" ".wordprocessingml.document"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
     format = "docx"
     charset = None

@@ -269,17 +269,17 @@ def test_price_group_list_ordering(api_client):
         # language.
         with translation.override("fi"):
             response = get_list(api_client, data={"page": page, "page_size": page_size})
-        assert (
-            response.status_code == status.HTTP_200_OK
-        ), f"expected status code 200 at page {page}, got {response.status_code} instead"
+        assert response.status_code == status.HTTP_200_OK, (
+            f"expected status code 200 at page {page}, got {response.status_code} instead"
+        )
 
         price_group_ids = [item["id"] for item in response.data["data"]]
         start = page_size * (page - 1)
         end = page_size * page
         expected_ids = [price_group.id for price_group in price_groups[start:end]]
-        assert (
-            price_group_ids == expected_ids
-        ), f"expected ids {expected_ids} at page {page}, got {price_group_ids} instead"
+        assert price_group_ids == expected_ids, (
+            f"expected ids {expected_ids} at page {page}, got {price_group_ids} instead"
+        )
 
 
 @pytest.mark.django_db
