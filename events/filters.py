@@ -470,12 +470,6 @@ class EventFilter(django_filters.rest_framework.FilterSet):
                     )
                 }
             )
-
-        config_map = {
-            "fi": "finnish",
-            "en": "english",
-            "sv": "swedish",
-        }
         # replace all most common delimiters with space
         search_value = re.sub(r"[.,:;]", " ", value)
         words = set()
@@ -483,7 +477,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         search_value = " ".join(words)
         search_vector_name = f"full_text__search_vector_{language}"
         search_query = SearchQuery(
-            search_value, search_type="websearch", config=config_map[language]
+            search_value, search_type="websearch", config="simple"
         )
         search_rank = SearchRank(F(search_vector_name), search_query)
 
