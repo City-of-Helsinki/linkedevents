@@ -110,7 +110,7 @@ class EventSearchIndexService:
         """
         Update search vectors for the search index.
 
-        If event is given, only update that event's search vector.
+        If event is given, only update that event's search vectors.
         Otherwise, update all events' search vectors.
         """
         if event:
@@ -136,22 +136,22 @@ class EventSearchIndexService:
             keywords_sv=Subquery(eqs.values("keywords__name_sv")[:1]),
             keywords_en=Subquery(eqs.values("keywords__name_en")[:1]),
         ).update(
-            search_vector_fi=SearchVector("event_name_fi", config="finnish", weight="A")
-            + SearchVector("place_name_fi", config="finnish", weight="A")
-            + SearchVector("words_fi", config="finnish", weight="A")
-            + SearchVector("keywords_fi", config="finnish", weight="B")
-            + SearchVector("event_short_description_fi", config="finnish", weight="C")
-            + SearchVector("event_description_fi", config="finnish", weight="D"),
-            search_vector_sv=SearchVector("event_name_sv", config="swedish", weight="A")
-            + SearchVector("place_name_sv", config="swedish", weight="A")
-            + SearchVector("words_sv", config="swedish", weight="A")
-            + SearchVector("keywords_sv", config="swedish", weight="B")
-            + SearchVector("event_short_description_sv", config="swedish", weight="C")
-            + SearchVector("event_description_sv", config="swedish", weight="D"),
-            search_vector_en=SearchVector("event_name_en", config="english", weight="A")
-            + SearchVector("place_name_en", config="english", weight="A")
-            + SearchVector("words_en", config="english", weight="A")
-            + SearchVector("keywords_en", config="english", weight="B")
-            + SearchVector("event_short_description_en", config="english", weight="C")
-            + SearchVector("event_description_en", config="english", weight="D"),
+            search_vector_fi=SearchVector("event_name_fi", config="simple", weight="A")
+            + SearchVector("place_name_fi", config="simple", weight="A")
+            + SearchVector("words_fi", config="simple", weight="A")
+            + SearchVector("keywords_fi", config="simple", weight="B")
+            + SearchVector("event_short_description_fi", config="simple", weight="C")
+            + SearchVector("event_description_fi", config="simple", weight="D"),
+            search_vector_sv=SearchVector("event_name_sv", config="simple", weight="A")
+            + SearchVector("place_name_sv", config="simple", weight="A")
+            + SearchVector("words_sv", config="simple", weight="A")
+            + SearchVector("keywords_sv", config="simple", weight="B")
+            + SearchVector("event_short_description_sv", config="simple", weight="C")
+            + SearchVector("event_description_sv", config="simple", weight="D"),
+            search_vector_en=SearchVector("event_name_en", config="simple", weight="A")
+            + SearchVector("place_name_en", config="simple", weight="A")
+            + SearchVector("words_en", config="simple", weight="A")
+            + SearchVector("keywords_en", config="simple", weight="B")
+            + SearchVector("event_short_description_en", config="simple", weight="C")
+            + SearchVector("event_description_en", config="simple", weight="D"),
         )
