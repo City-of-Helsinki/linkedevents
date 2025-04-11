@@ -3,6 +3,7 @@ import logging
 import re
 import warnings
 from datetime import datetime, timedelta
+from functools import cache
 from typing import Iterable, Optional
 
 import bleach
@@ -54,6 +55,11 @@ def get_field_attr(obj: object, field: str) -> str:
         return get_field_attr(getattr(obj, first_field), remaining_fields)
 
 
+@cache
+def analyze_word(word: str) -> list:
+    return voikko.analyze(word)
+
+
 def get_word_bases(word: str) -> set:
     """
     Returns a list of word bases of the word.
@@ -62,7 +68,7 @@ def get_word_bases(word: str) -> set:
     """
     words = set()
     word = word.strip()
-    analysis = voikko.analyze(word)
+    analysis = analyze_word(word)
     if len(analysis) == 0:
         # if the word can't be analyzed, return the word itself
         words.add(word)
