@@ -1,4 +1,5 @@
 import pytest
+from django.conf import settings
 from django.core.management import call_command
 
 from events.models import EventSearchIndex
@@ -33,6 +34,10 @@ def test_rebuild_search_index(event, place, keyword):
     assert keyword.name_en[:4].lower() in str(event_full_text.search_vector_en)
 
 
+@pytest.mark.skipif(
+    not settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED,
+    reason="Event search signals disabled",
+)
 @pytest.mark.django_db
 def test_auto_update_event_search_index_on_event_create(
     event, place, keyword, data_source
@@ -59,6 +64,10 @@ def test_auto_update_event_search_index_on_event_create(
     assert event_2_full_text.search_vector_en is not None
 
 
+@pytest.mark.skipif(
+    not settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED,
+    reason="Event search signals disabled",
+)
 @pytest.mark.django_db
 def test_auto_update_event_search_index_on_event_update(
     event, place, keyword, data_source
@@ -87,6 +96,10 @@ def test_auto_update_event_search_index_on_event_update(
     assert event.name_fi[:4].lower() in str(updated_event_full_text.search_vector_fi)
 
 
+@pytest.mark.skipif(
+    not settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED,
+    reason="Event search signals disabled",
+)
 @pytest.mark.django_db
 def test_auto_update_event_search_index_on_event_delete(event, place, data_source):
     assert EventSearchIndex.objects.all().count() == 1
@@ -96,6 +109,10 @@ def test_auto_update_event_search_index_on_event_delete(event, place, data_sourc
     assert EventSearchIndex.objects.all().count() == 1
 
 
+@pytest.mark.skipif(
+    not settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED,
+    reason="Event search signals disabled",
+)
 @pytest.mark.django_db
 def test_auto_update_event_search_index_on_place_update(event, place, data_source):
     assert EventSearchIndex.objects.all().count() == 1
@@ -120,6 +137,10 @@ def test_auto_update_event_search_index_on_place_update(event, place, data_sourc
     assert place.name_fi[:4].lower() in str(updated_event_full_text.search_vector_fi)
 
 
+@pytest.mark.skipif(
+    not settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED,
+    reason="Event search signals disabled",
+)
 @pytest.mark.django_db
 def test_auto_update_event_search_index_on_place_delete(event, place, data_source):
     assert EventSearchIndex.objects.all().count() == 1
@@ -145,6 +166,10 @@ def test_auto_update_event_search_index_on_place_delete(event, place, data_sourc
     assert place_2_name_fi[:4].lower() not in str(event_full_text.search_vector_fi)
 
 
+@pytest.mark.skipif(
+    not settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED,
+    reason="Event search signals disabled",
+)
 @pytest.mark.django_db
 def test_auto_update_event_search_index_on_keyword_update(
     event, place, keyword, data_source
@@ -172,6 +197,10 @@ def test_auto_update_event_search_index_on_keyword_update(
     assert keyword.name_fi[:4].lower() in str(updated_event_full_text.search_vector_fi)
 
 
+@pytest.mark.skipif(
+    not settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED,
+    reason="Event search signals disabled",
+)
 @pytest.mark.django_db
 def test_auto_update_event_search_index_on_keyword_delete(
     event, place, keyword, data_source
@@ -200,6 +229,10 @@ def test_auto_update_event_search_index_on_keyword_delete(
     )
 
 
+@pytest.mark.skipif(
+    not settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED,
+    reason="Event search signals disabled",
+)
 @pytest.mark.django_db
 def test_auto_update_event_search_index_on_keywords_clear(
     event, place, keyword, data_source
