@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 
@@ -14,7 +15,8 @@ logger = logging.getLogger(__name__)
     dispatch_uid="event_post_save",
 )
 def event_post_save(sender: type[Event], instance: Event, **kwargs: dict) -> None:
-    instance.update_search_index()
+    if settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED:
+        instance.update_search_index()
 
 
 @receiver(
@@ -23,8 +25,9 @@ def event_post_save(sender: type[Event], instance: Event, **kwargs: dict) -> Non
     dispatch_uid="place_post_save",
 )
 def place_post_save(sender: type[Place], instance: Place, **kwargs: dict) -> None:
-    for event in instance.events.all():
-        event.update_search_index()
+    if settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED:
+        for event in instance.events.all():
+            event.update_search_index()
 
 
 @receiver(
@@ -33,8 +36,9 @@ def place_post_save(sender: type[Place], instance: Place, **kwargs: dict) -> Non
     dispatch_uid="keyword_post_save",
 )
 def keyword_post_save(sender: type[Keyword], instance: Keyword, **kwargs: dict) -> None:
-    for event in instance.events.all():
-        event.update_search_index()
+    if settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED:
+        for event in instance.events.all():
+            event.update_search_index()
 
 
 @receiver(
@@ -43,9 +47,10 @@ def keyword_post_save(sender: type[Keyword], instance: Keyword, **kwargs: dict) 
     dispatch_uid="event_keywords_m2m_changed",
 )
 def event_keywords_m2m_changed(sender, instance, action, **kwargs):
-    if action in ["post_add", "post_remove", "post_clear"]:
-        if isinstance(instance, Event):
-            instance.update_search_index()
-        if isinstance(instance, Keyword):
-            for event in instance.events.all():
-                event.update_search_index()
+    if settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED:
+        if action in ["post_add", "post_remove", "post_clear"]:
+            if isinstance(instance, Event):
+                instance.update_search_index()
+            if isinstance(instance, Keyword):
+                for event in instance.events.all():
+                    event.update_search_index()
