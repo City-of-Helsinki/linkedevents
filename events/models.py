@@ -53,6 +53,11 @@ from notifications.models import (
 from notifications.utils import format_date, format_datetime
 from registrations.utils import get_email_noreply_address
 
+NAME_FORMAT = "name_%s"
+PLACE_NAME_FORMAT = "location__name_%s"
+SHORT_DESCRIPTION_FORMAT = "short_description_%s"
+DESCRIPTION_FORMAT = "description_%s"
+
 logger = logging.getLogger(__name__)
 
 User = settings.AUTH_USER_MODEL
@@ -1249,7 +1254,7 @@ class Event(
         languages = [lang[0] for lang in settings.LANGUAGES]
         for lang in languages:
             lang = lang.replace("-", "_")  # to handle complex codes like e.g. zh-hans
-            s = getattr(self, "name_%s" % lang, None)
+            s = getattr(self, NAME_FORMAT % lang, None)
             if s:
                 name = s
                 break
@@ -1355,6 +1360,12 @@ class Event(
                 recipient_list.append(admin.email)
         self._send_notification(NotificationType.DRAFT_POSTED, recipient_list, request)
 
+    def update_search_index(self):
+        from events.search_index.postgres import EventSearchIndexService
+
+        EventSearchIndexService.update_search_index(self)
+        EventSearchIndexService.update_index_search_vectors(self)
+
     @property
     def is_created_with_apikey(self) -> bool:
         from events.auth import ApiKeyUser
@@ -1398,10 +1409,10 @@ class Event(
         the search_column.
         """
         return [
-            "name_%s" % lang,
-            "location__name_%s" % lang,
-            "short_description_%s" % lang,
-            "description_%s" % lang,
+            NAME_FORMAT % lang,
+            PLACE_NAME_FORMAT % lang,
+            SHORT_DESCRIPTION_FORMAT % lang,
+            DESCRIPTION_FORMAT % lang,
         ]
 
 

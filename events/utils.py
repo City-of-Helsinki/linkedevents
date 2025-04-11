@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from typing import Iterable, Optional
 
 import bleach
-import libvoikko
 import pytz
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
@@ -23,10 +22,6 @@ from helevents.models import User
 
 logger = logging.getLogger(__name__)
 
-# setup libvoikko
-voikko = libvoikko.Voikko("fi", "/etc/voikko")
-voikko.setNoUglyHyphenation(True)
-
 
 def convert_to_camelcase(s):
     return "".join(word.title() if i else word for i, word in enumerate(s.split("_")))
@@ -36,72 +31,6 @@ def convert_from_camelcase(s):
     return re.sub(
         r"(^|[a-z])([A-Z])", lambda m: "_".join([i.lower() for i in m.groups() if i]), s
     )
-
-
-def get_field_attr(obj: object, field: str) -> object:
-    """
-    Get attr recursively by following foreign key relations.
-    :param obj: object to get the attribute from
-    :param field: field name or foreign key relation
-    :return: attribute value
-    :rtype: object
-    """
-    fields = field.split("__")
-    if len(fields) == 1:
-        return getattr(obj, fields[0], None)
-    else:
-        first_field = fields[0]
-        remaining_fields = "__".join(fields[1:])
-        return get_field_attr(getattr(obj, first_field), remaining_fields)
-
-
-def is_compound_word(word: str) -> bool:
-    """
-    Check if the word is a compound word.
-    :param word: the word to check
-    :return: True if the word is a compound word, False otherwise
-    """
-    result = voikko.analyze(word)
-    if len(result) == 0:
-        return False
-    return True if result[0]["WORDBASES"].count("+") > 1 else False
-
-
-def get_word_bases(word: str) -> list:
-    """
-    Returns a list of word bases of the word, if it is a compound word.
-    :param word: the word to split
-    :return: a list of word bases
-    """
-    word = word.strip()
-    if is_compound_word(word):
-        # By Setting the setMinHyphenatedWordLength to word_length,
-        # voikko returns the words that are in the compound word
-        voikko.setMinHyphenatedWordLength(len(word))
-        word_bases = voikko.hyphenate(word)
-        return word_bases.split("-")
-    else:
-        return [word]
-
-
-def split_word_bases(word, words, lang: str = "fi") -> set:
-    """
-    Splits the word into its bases and adds them to the set of words.
-    :param word: the word to split
-    :param words: the set of words to add the bases to
-    :param lang: the language of the word (default: "fi")
-    :return: the set of words
-    """
-    if lang == "fi":
-        w_array = word or []
-        if isinstance(word, str):
-            w_array = word.split()
-        for word in w_array:
-            word_bases = get_word_bases(word)
-            if len(word_bases) > 1:
-                for base in word_bases:
-                    words.add(base)
-    return words
 
 
 def get_value_from_tuple_list(list_of_tuples, search_key, value_index):

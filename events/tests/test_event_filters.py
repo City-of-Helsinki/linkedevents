@@ -55,7 +55,7 @@ def test_filter_full_text_wrong_language():
         filter_set.filter_x_full_text(None, "x_full_text", "something")
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "language",
     [
@@ -132,6 +132,66 @@ def test_get_event_list_full_text(language):
     result = do_filter("Test Keyword")
     assert result.count() == 1
     assert result[0].id == f"test:{language}"
+
+
+@pytest.mark.django_db
+def test_get_event_search_full_text():
+    place_fi = PlaceFactory(
+        name_fi="Kissakuja", name_en="Something else", name_sv="Something else"
+    )
+    kw_fi = KeywordFactory(
+        name_fi="Avainsanatehdas", name_en="Something else", name_sv="Something else"
+    )
+    event_fi = EventFactory(
+        id="test:fi",
+        name_fi="Oodi keväälle - Matkallelähtökonsertti",
+        name_en="Something else",
+        name_sv="Something else",
+        short_description_fi="Kauppakorkeakoulun Ylioppilaskunnan Laulajat suuntaa vapun jälkeen "
+        "Irlantiin Corkin kansainväliselle kuorofestivaalille",
+        description_fi="Konsertin huippukohtia ovat muun muassa Säde Bartlingilta "
+        "tilaamamme kansansävelmäsovituksen Metsän puita tuuli "
+        "tuudittaa kantaesitys",
+        location=place_fi,
+    )
+
+    event_fi.keywords.set([kw_fi])
+
+    call_command("rebuild_event_search_index")
+
+    request = Mock()
+    request.query_params = {"x_full_text_language": "fi"}
+
+    filter_set = EventFilter(request=request)
+
+    def do_filter(query):
+        return filter_set.filter_x_full_text(
+            Event.objects.all(), "x_full_text", f"{query}"
+        )
+
+    result = do_filter("kissoja")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
+
+    result = do_filter("keväälle")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
+
+    result = do_filter("tehtaassa")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
+
+    result = do_filter("vappu")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
+
+    result = do_filter("kansainvälisellä kuorofestivaalilla")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
+
+    result = do_filter("konserttina...")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
 
 
 @pytest.mark.django_db

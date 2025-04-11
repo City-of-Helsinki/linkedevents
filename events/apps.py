@@ -6,3 +6,4 @@ class EventsConfig(AppConfig):
 
     def ready(self):
         import events.signals  # noqa
+        import events.search_index.signals  # noqa

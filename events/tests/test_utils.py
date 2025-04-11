@@ -7,13 +7,13 @@ from django.utils import timezone
 from freezegun import freeze_time
 from rest_framework.exceptions import ParseError
 
+from events.search_index.utils import split_word_bases
 from events.tests.test_event_get import get_list
 from events.tests.test_event_post import create_with_post
 from events.utils import (
     clean_text_fields,
     parse_end_time,
     parse_time,
-    split_word_bases,
     start_of_day,
     start_of_next_day,
     start_of_previous_day,
@@ -176,12 +176,14 @@ def test_inconsistent_tz_default(api_client, minimal_event_dict, user, settings)
 @pytest.mark.parametrize(
     "word, expected_result",
     [
-        ("lentokone", {"lento", "kone"}),
+        ("lentokone", {"lentää", "kone"}),
+        ("lentokoneen", {"lentää", "kone"}),
+        ("lentokoneita", {"lentää", "kone"}),
         ("päiväkoti", {"päivä", "koti"}),
-        ("lentokoneen", {"lento", "koneen"}),
-        ("lentokoneita", {"lento", "koneita"}),
+        ("kissoja", {"kissa"}),
         ("saippuakivimittakaava", {"saippua", "kivi", "mitta", "kaava"}),
-        ("lentokone123", set()),
+        ("kokonaisvaltainen", {"koko", "nainen", "kokonainen", "valta"}),
+        ("lentokone123", {"lentokone123"}),
     ],
 )
 def test_split_word_bases(word, expected_result):
