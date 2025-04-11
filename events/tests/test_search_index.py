@@ -3,7 +3,26 @@ from django.conf import settings
 from django.core.management import call_command
 
 from events.models import EventSearchIndex
+from events.search_index.utils import split_word_bases
 from events.tests.factories import EventFactory, PlaceFactory
+
+
+@pytest.mark.parametrize(
+    "word, expected_result",
+    [
+        ("lentokone", {"lentää", "kone"}),
+        ("lentokoneen", {"lentää", "kone"}),
+        ("lentokoneita", {"lentää", "kone"}),
+        ("päiväkoti", {"päivä", "koti"}),
+        ("kissoja", {"kissa"}),
+        ("saippuakivimittakaava", {"saippua", "kivi", "mitta", "kaava"}),
+        ("kokonaisvaltainen", {"koko", "nainen", "kokonainen", "valta"}),
+        ("lentokone123", {"lentokone123"}),
+    ],
+)
+def test_split_word_bases(word, expected_result):
+    result = split_word_bases(word, set())
+    assert result == expected_result
 
 
 @pytest.mark.django_db

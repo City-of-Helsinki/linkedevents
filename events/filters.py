@@ -30,7 +30,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 
 from events.models import Event, EventAggregate, Place
-from events.utils import split_word_bases
+from events.search_index.utils import split_word_bases
 from events.widgets import DistanceWithinWidget
 from linkedevents.filters import LinkedEventsOrderingFilter
 
