@@ -7,13 +7,13 @@ from django.utils import timezone
 from freezegun import freeze_time
 from rest_framework.exceptions import ParseError
 
+from events.search_index.utils import split_word_bases
 from events.tests.test_event_get import get_list
 from events.tests.test_event_post import create_with_post
 from events.utils import (
     clean_text_fields,
     parse_end_time,
     parse_time,
-    split_word_bases,
     start_of_day,
     start_of_next_day,
     start_of_previous_day,

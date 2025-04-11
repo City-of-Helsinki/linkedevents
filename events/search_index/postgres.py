@@ -6,7 +6,7 @@ from django.db.models import OuterRef, Subquery
 from django.utils import timezone
 
 from events.models import Event, EventSearchIndex
-from events.utils import get_field_attr, split_word_bases
+from events.search_index.utils import get_field_attr, split_word_bases
 
 logger = logging.getLogger(__name__)
 
