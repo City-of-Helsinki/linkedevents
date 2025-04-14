@@ -1,5 +1,43 @@
 # Changelog
 
+## [3.13.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.12.0...linkedevents-v3.13.0) (2025-04-14)
+
+
+### Features
+
+* Add feature-flag for event search signals ([d3940dd](https://github.com/City-of-Helsinki/linkedevents/commit/d3940dd3d97b3e6f5f083b8635be7e08ff55e9b1))
+* Auto-sync event search index on event save ([a09f96d](https://github.com/City-of-Helsinki/linkedevents/commit/a09f96d055c17d5b13c5af012e5bef059f23b86e))
+* Cache Voikko analysis ([fcb8c3f](https://github.com/City-of-Helsinki/linkedevents/commit/fcb8c3f15fd7802abaa9c1a9ab49642b2ee606e4))
+* Do a harakiri faster if every process has at least one waiting job ([9671a48](https://github.com/City-of-Helsinki/linkedevents/commit/9671a48c569fe7d4baa46bf0a6084da9c1aa3b51))
+* **events:** Add filter param to hide super events ([595da7a](https://github.com/City-of-Helsinki/linkedevents/commit/595da7aa6ab6e5b4f6548c534aa482c41253e43b))
+* **events:** Add weekday filter for events ([0259370](https://github.com/City-of-Helsinki/linkedevents/commit/02593706452f48a807deba1c747008a21a2e6835))
+* **full-text-search:** Add support for clean ([14e826d](https://github.com/City-of-Helsinki/linkedevents/commit/14e826de08aaf8688a7c6ced6718ce6a2b2016bc))
+* **full-text-search:** Replace ".,:;" with space ([4d817ef](https://github.com/City-of-Helsinki/linkedevents/commit/4d817ef6784e5cfbc3cfd9c7e644a970274111fe))
+* **full-text-search:** Replace search model ([45623ce](https://github.com/City-of-Helsinki/linkedevents/commit/45623cec2b43a4287ffbb0ba58a3be8d303300f4))
+* **full-text-search:** Update on delete-rules ([d0c7c55](https://github.com/City-of-Helsinki/linkedevents/commit/d0c7c55bc17efa3cdc7da47acc1851ddb99b69f4))
+* **full-text-search:** Update search vector data ([8840646](https://github.com/City-of-Helsinki/linkedevents/commit/8840646638dfcb7e2cfb84ad748c96695a9941a0))
+* **full-text-search:** Use explicit config path ([222b7a6](https://github.com/City-of-Helsinki/linkedevents/commit/222b7a65856df148fd63e47f5625a3bae471d253))
+* **full-text-search:** Use morpho-dict in Voikko ([29df570](https://github.com/City-of-Helsinki/linkedevents/commit/29df570cb669988e3df653913963b7fdd27a3f65))
+* Improve uwsgi options ([61d7e26](https://github.com/City-of-Helsinki/linkedevents/commit/61d7e26347bff22c12a79274b0a3204c42af9c01))
+* Use simple search config ([fb6626a](https://github.com/City-of-Helsinki/linkedevents/commit/fb6626a675aa7e785eba54b378a54dc50d4bf58f))
+* Use word bases instead of syllables ([6ca75d0](https://github.com/City-of-Helsinki/linkedevents/commit/6ca75d0db2535fa933181e4e9ef0f96b8b27284c))
+
+
+### Bug Fixes
+
+* Utilize GDAL/GEOS env variables in settings ([cf14b45](https://github.com/City-of-Helsinki/linkedevents/commit/cf14b457df57bcb2a054518407b5a3a1d6cb399c))
+
+
+### Dependencies
+
+* Add libvoikko and update requirements ([e356795](https://github.com/City-of-Helsinki/linkedevents/commit/e356795a1c90fd79f77a5ae258341cdbcc077b85))
+* Bump uwsgi ([f2372c0](https://github.com/City-of-Helsinki/linkedevents/commit/f2372c0c8251314d057790c8b4f795ce731a90ef))
+
+
+### Documentation
+
+* **full-text-search:** Add Voikko instructions ([fe7c6c3](https://github.com/City-of-Helsinki/linkedevents/commit/fe7c6c39b42a96ef9f79d738788f7d7fbe808cce))
+
 ## [3.12.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.11.1...linkedevents-v3.12.0) (2025-03-25)
 
 
