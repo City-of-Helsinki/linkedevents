@@ -1,8 +1,10 @@
 import logging
 import re
 from functools import cache
+from typing import Generator
 
 import libvoikko
+from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -74,3 +76,17 @@ def split_word_bases(word: str, words: set, lang: str = "fi") -> set:
         # for other languages, just add the word itself
         words.add(word)
     return words
+
+
+def batch_qs(qs: QuerySet, batch_size: int = 1000) -> Generator:
+    """
+    Returns a (start, end, total, queryset) tuple for each batch in the given
+    queryset. Make sure to order the queryset before calling this function.
+    :param qs: the queryset to batch
+    :param batch_size: the size of each batch (default: 1000)
+    :return: a generator that yields (start, end, total, queryset) tuples
+    """
+    total = qs.count()
+    for start in range(0, total, batch_size):
+        end = min(start + batch_size, total)
+        yield start, end, total, qs[start:end]
