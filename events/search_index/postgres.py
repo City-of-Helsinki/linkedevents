@@ -1,12 +1,13 @@
 import logging
 from typing import Optional
 
+from django.conf import settings
 from django.contrib.postgres.search import SearchVector
 from django.db.models import OuterRef, Subquery
 from django.utils import timezone
 
 from events.models import Event, EventSearchIndex
-from events.search_index.utils import get_field_attr, split_word_bases
+from events.search_index.utils import batch_qs, get_field_attr, split_word_bases
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,6 @@ class EventSearchIndexService:
         for keyword in event.keywords.values_list("name_%s" % lang, flat=True):
             split_word_bases(keyword, words, lang)
 
-        logger.debug(
-            f"Getting words for event: {event.id}, lang: {lang}, words: {words}"
-        )
         return words
 
     @classmethod
@@ -63,46 +61,50 @@ class EventSearchIndexService:
         and saves it to the database.
         Use bulk_create to improve performance.
         """
-
         num_updated = 0
-        event_index_objects = []
-
-        qs = (
+        logger.info("Updating search indexes...")
+        event_qs = (
             Event.objects.all()
             .select_related("location")
             .prefetch_related("keywords")
             .order_by("pk")
         )
 
-        for event in qs.iterator(chunk_size=10000):
-            event_index = EventSearchIndex(
-                event=event,
-                place=event.location if event else None,
-                event_last_modified_time=event.last_modified_time
-                if event
-                else timezone.now(),
-                place_last_modified_time=event.location.last_modified_time
-                if event and event.location
-                else timezone.now(),
-                words_fi=list(cls.get_words(event, "fi")),
-                words_sv=list(cls.get_words(event, "sv")),
-                words_en=list(cls.get_words(event, "en")),
+        for start, end, total, qs in batch_qs(
+            event_qs, batch_size=settings.EVENT_SEARCH_INDEX_REBUILD_BATCH_SIZE
+        ):
+            logger.info(f"Now processing {start + 1} - {end} of {total}")
+            event_index_objects = []
+            for event in qs:
+                event_index = EventSearchIndex(
+                    event=event,
+                    place=event.location if event else None,
+                    event_last_modified_time=event.last_modified_time
+                    if event
+                    else timezone.now(),
+                    place_last_modified_time=event.location.last_modified_time
+                    if event and event.location
+                    else timezone.now(),
+                    words_fi=list(cls.get_words(event, "fi")),
+                    words_sv=list(cls.get_words(event, "sv")),
+                    words_en=list(cls.get_words(event, "en")),
+                )
+                event_index_objects.append(event_index)
+                num_updated += 1
+            EventSearchIndex.objects.bulk_create(
+                event_index_objects,
+                update_conflicts=True,
+                unique_fields=["event"],
+                update_fields=[
+                    "place",
+                    "event_last_modified_time",
+                    "place_last_modified_time",
+                    "words_fi",
+                    "words_sv",
+                    "words_en",
+                ],
             )
-            event_index_objects.append(event_index)
-            num_updated += 1
-        EventSearchIndex.objects.bulk_create(
-            event_index_objects,
-            update_conflicts=True,
-            unique_fields=["event"],
-            update_fields=[
-                "place",
-                "event_last_modified_time",
-                "place_last_modified_time",
-                "words_fi",
-                "words_sv",
-                "words_en",
-            ],
-        )
+        logger.info(f"Search index updated for {num_updated} Events")
         return num_updated
 
     @classmethod
@@ -113,6 +115,7 @@ class EventSearchIndexService:
         If event is given, only update that event's search vectors.
         Otherwise, update all events' search vectors.
         """
+        logger.info("Updating search vectors...")
         if event:
             qs = EventSearchIndex.objects.filter(event=event)
         else:
@@ -155,3 +158,4 @@ class EventSearchIndexService:
             + SearchVector("event_short_description_en", config="simple", weight="C")
             + SearchVector("event_description_en", config="simple", weight="D"),
         )
+        logger.info("Search vectors updated.")
