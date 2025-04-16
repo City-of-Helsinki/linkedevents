@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.13.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.13.0...linkedevents-v3.13.1) (2025-04-16)
+
+
+### Performance Improvements
+
+* Rebuild event search index in batches ([302da48](https://github.com/City-of-Helsinki/linkedevents/commit/302da48627861c96e87823e46ef8606a4685f943))
+
 ## [3.13.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.12.0...linkedevents-v3.13.0) (2025-04-14)
 
 
