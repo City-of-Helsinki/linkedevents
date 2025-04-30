@@ -470,8 +470,8 @@ class EventFilter(django_filters.rest_framework.FilterSet):
                     )
                 }
             )
-        # replace all most common delimiters with space
-        search_value = re.sub(r"[.,:;]", " ", value)
+        # replace non-word characters with space
+        search_value = re.sub(r"\W", " ", value)
         words = set()
         split_word_bases(search_value, words, language)
         search_value = " ".join(words)
