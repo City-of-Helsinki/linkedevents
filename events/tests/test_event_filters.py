@@ -220,6 +220,59 @@ def test_get_event_search_full_text_special_characters():
     result = do_filter("kevääksi .,:;()[]{}*'\"^¨+=-_<>")
     assert result.count() == 1
     assert result[0].id == "test:fi"
+
+
+@pytest.mark.django_db
+def test_get_event_search_full_text_with_embedded_html():
+    place = PlaceFactory(
+        name_fi="Mannerheimintie 7",
+        name_sv="Mannerheimvägen 7",
+        name_en="Mannerheimintie 7",
+    )
+    kw_1 = KeywordFactory(
+        name_fi="Opastukset ja kurssit",
+        name_sv="Undervisning och kurser",
+        name_en="Training and courses",
+    )
+    kw_2 = KeywordFactory(name_fi="Tapahtumat", name_en="Events", name_sv="Evenemang")
+    event = EventFactory(
+        id="test:fi",
+        name_fi="Tietotekniikkaopastusta senioreille",
+        short_description_fi="Tietotekniikkaopastus senioreille Entressen kirjastossa",
+        description_fi="<h2>Haluaisitko apua ja neuvoja tietokoneen, internetin tai sähköpostin peruskäyttöön?</h2>"
+        "<h3></h3><p>Maksutonta tietotekniikkaopastuksia on tarjolla Entressen kirjastossa "
+        "ajanvarauksella <strong>torstaisin </strong><b>11.1. - 16.5. </b>"
+        "<strong>2024 </strong><b>kello 11 - 13 . </b></p>"
+        "<p>Opastus tapahtuu asiakkaan omalla kannettavalla tietokoneella, mobiililaitteella "
+        "tai kirjaston asiakaskoneella. Opastuksissa käydään läpi tietokoneen käytön ja "
+        "internetin palveluiden perusteita. Opastus kestää yhden tunnin. "
+        "Opastusaika varataan etukäteen joko puhelimitse numerossa 09 1234 5678 "
+        "tai paikan päällä kirjastossa. Asiakkaalla voi olla opastukseen vain yksi varaus "
+        "kerrallaan.</p><p>Ry on tieto- ja viestintätekniikasta sekä vapaaehtoistoiminnasta "
+        "kiinnostuneiden eläkeläisten yhdistys. "
+        'Yhdistyksen kotisivu: <a href="https://www.random.fi/">Ry</a>.</p>',
+        location=place,
+    )
+
+    event.keywords.set([kw_1, kw_2])
+
+    call_command("rebuild_event_search_index")
+
+    request = Mock()
+    request.query_params = {"x_full_text_language": "fi"}
+
+    filter_set = EventFilter(request=request)
+
+    def do_filter(query):
+        return filter_set.filter_x_full_text(
+            Event.objects.all(), "x_full_text", f"{query}"
+        )
+
+    result = do_filter("tapahtuma,eläkeläisille")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize("ongoing", [True, False])
 def test_get_event_list_ongoing(ongoing):
