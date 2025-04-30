@@ -136,26 +136,20 @@ def test_get_event_list_full_text(language):
 
 @pytest.mark.django_db
 def test_get_event_search_full_text():
-    place_fi = PlaceFactory(
-        name_fi="Kissakuja", name_en="Something else", name_sv="Something else"
-    )
-    kw_fi = KeywordFactory(
-        name_fi="Avainsanatehdas", name_en="Something else", name_sv="Something else"
-    )
-    event_fi = EventFactory(
+    place = PlaceFactory(name_fi="Kissakuja")
+    kw = KeywordFactory(name_fi="Avainsanatehdas")
+    event = EventFactory(
         id="test:fi",
         name_fi="Oodi keväälle - Matkallelähtökonsertti",
-        name_en="Something else",
-        name_sv="Something else",
         short_description_fi="Kauppakorkeakoulun Ylioppilaskunnan Laulajat suuntaa vapun jälkeen "
         "Irlantiin Corkin kansainväliselle kuorofestivaalille",
         description_fi="Konsertin huippukohtia ovat muun muassa Säde Bartlingilta "
         "tilaamamme kansansävelmäsovituksen Metsän puita tuuli "
         "tuudittaa kantaesitys",
-        location=place_fi,
+        location=place,
     )
 
-    event_fi.keywords.set([kw_fi])
+    event.keywords.set([kw])
 
     call_command("rebuild_event_search_index")
 
@@ -194,6 +188,38 @@ def test_get_event_search_full_text():
     assert result[0].id == "test:fi"
 
 
+@pytest.mark.django_db
+def test_get_event_search_full_text_special_characters():
+    place = PlaceFactory(name_fi="Kissakuja")
+    kw = KeywordFactory(name_fi="Avainsanatehdas")
+    event = EventFactory(
+        id="test:fi",
+        name_fi="Oodi keväälle - Matkallelähtökonsertti",
+        short_description_fi="Kauppakorkeakoulun Ylioppilaskunnan Laulajat suuntaa vapun jälkeen "
+        "Irlantiin Corkin kansainväliselle kuorofestivaalille",
+        description_fi="Konsertin huippukohtia ovat muun muassa Säde Bartlingilta "
+        "tilaamamme kansansävelmäsovituksen Metsän puita tuuli "
+        "tuudittaa kantaesitys",
+        location=place,
+    )
+
+    event.keywords.set([kw])
+
+    call_command("rebuild_event_search_index")
+
+    request = Mock()
+    request.query_params = {"x_full_text_language": "fi"}
+
+    filter_set = EventFilter(request=request)
+
+    def do_filter(query):
+        return filter_set.filter_x_full_text(
+            Event.objects.all(), "x_full_text", f"{query}"
+        )
+
+    result = do_filter("kevääksi .,:;()[]{}*'\"^¨+=-_<>")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
 @pytest.mark.django_db
 @pytest.mark.parametrize("ongoing", [True, False])
 def test_get_event_list_ongoing(ongoing):
