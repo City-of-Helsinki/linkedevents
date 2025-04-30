@@ -65,6 +65,8 @@ def split_word_bases(word: str, words: set, lang: str = "fi") -> set:
     :param lang: the language of the word (default: "fi")
     :return: the set of words
     """
+    # replace common separators with spaces
+    word = re.sub(r"[;:,.?!-]", " ", word or "")
     if lang == "fi":
         w_array = word or []
         if isinstance(word, str):
