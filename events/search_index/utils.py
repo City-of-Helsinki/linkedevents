@@ -6,6 +6,8 @@ from typing import Generator
 import libvoikko
 from django.db.models import QuerySet
 
+from events.importer.utils import clean_text
+
 logger = logging.getLogger(__name__)
 
 # setup libvoikko
@@ -67,6 +69,8 @@ def split_word_bases(word: str, words: set, lang: str = "fi") -> set:
     """
     # replace common separators with spaces
     word = re.sub(r"[;:,.?!-]", " ", word or "")
+    # remove html tags and newlines
+    word = clean_text(word, strip_newlines=True, parse_html=True)
     if lang == "fi":
         w_array = word or []
         if isinstance(word, str):
