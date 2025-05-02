@@ -38,6 +38,7 @@ langdetect
 libvoikko
 lxml
 markdown
+num2words
 pillow
 psycopg2
 pyYAML
