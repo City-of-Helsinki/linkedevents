@@ -138,6 +138,7 @@ def test_get_event_list_full_text(language):
 def test_get_event_search_full_text():
     place = PlaceFactory(name_fi="Kissakuja")
     kw = KeywordFactory(name_fi="Avainsanatehdas")
+    audience = KeywordFactory(name_fi="Kirjastokortti")
     event = EventFactory(
         id="test:fi",
         name_fi="Oodi keväälle - Matkallelähtökonsertti 2025",
@@ -150,6 +151,7 @@ def test_get_event_search_full_text():
     )
 
     event.keywords.set([kw])
+    event.audience.set([audience])
 
     call_command("rebuild_event_search_index")
 
@@ -204,6 +206,10 @@ def test_get_event_search_full_text():
     assert result[0].id == "test:fi"
 
     result = do_filter("konserttina...")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
+
+    result = do_filter("kirjastokortti")
     assert result.count() == 1
     assert result[0].id == "test:fi"
 
