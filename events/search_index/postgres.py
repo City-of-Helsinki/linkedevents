@@ -28,6 +28,9 @@ class EventSearchIndexService:
         for keyword in event.keywords.values_list("name_%s" % lang, flat=True):
             extract_word_bases(keyword, words, lang)
 
+        for keyword in event.audience.values_list("name_%s" % lang, flat=True):
+            extract_word_bases(keyword, words, lang)
+
         return words
 
     @classmethod
@@ -66,7 +69,7 @@ class EventSearchIndexService:
         event_qs = (
             Event.objects.all()
             .select_related("location")
-            .prefetch_related("keywords")
+            .prefetch_related("keywords", "audience")
             .order_by("pk")
         )
 
@@ -138,23 +141,29 @@ class EventSearchIndexService:
             keywords_fi=Subquery(eqs.values("keywords__name_fi")[:1]),
             keywords_sv=Subquery(eqs.values("keywords__name_sv")[:1]),
             keywords_en=Subquery(eqs.values("keywords__name_en")[:1]),
+            audience_fi=Subquery(eqs.values("audience__name_fi")[:1]),
+            audience_sv=Subquery(eqs.values("audience__name_sv")[:1]),
+            audience_en=Subquery(eqs.values("audience__name_en")[:1]),
         ).update(
             search_vector_fi=SearchVector("event_name_fi", config="simple", weight="A")
             + SearchVector("place_name_fi", config="simple", weight="A")
             + SearchVector("words_fi", config="simple", weight="A")
             + SearchVector("keywords_fi", config="simple", weight="B")
+            + SearchVector("audience_fi", config="simple", weight="B")
             + SearchVector("event_short_description_fi", config="simple", weight="C")
             + SearchVector("event_description_fi", config="simple", weight="D"),
             search_vector_sv=SearchVector("event_name_sv", config="simple", weight="A")
             + SearchVector("place_name_sv", config="simple", weight="A")
             + SearchVector("words_sv", config="simple", weight="A")
             + SearchVector("keywords_sv", config="simple", weight="B")
+            + SearchVector("audience_sv", config="simple", weight="B")
             + SearchVector("event_short_description_sv", config="simple", weight="C")
             + SearchVector("event_description_sv", config="simple", weight="D"),
             search_vector_en=SearchVector("event_name_en", config="simple", weight="A")
             + SearchVector("place_name_en", config="simple", weight="A")
             + SearchVector("words_en", config="simple", weight="A")
             + SearchVector("keywords_en", config="simple", weight="B")
+            + SearchVector("audience_en", config="simple", weight="B")
             + SearchVector("event_short_description_en", config="simple", weight="C")
             + SearchVector("event_description_en", config="simple", weight="D"),
         )
