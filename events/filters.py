@@ -30,7 +30,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 
 from events.models import Event, EventAggregate, Place
-from events.search_index.utils import split_word_bases
+from events.search_index.utils import extract_word_bases
 from events.widgets import DistanceWithinWidget
 from linkedevents.filters import LinkedEventsOrderingFilter
 
@@ -473,7 +473,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         # replace non-word characters with space
         search_value = re.sub(r"\W", " ", value)
         words = set()
-        split_word_bases(search_value, words, language)
+        extract_word_bases(search_value, words, language)
         search_value = " ".join(words)
         search_vector_name = f"full_text__search_vector_{language}"
         search_query = SearchQuery(

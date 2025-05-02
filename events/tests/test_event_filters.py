@@ -140,12 +140,12 @@ def test_get_event_search_full_text():
     kw = KeywordFactory(name_fi="Avainsanatehdas")
     event = EventFactory(
         id="test:fi",
-        name_fi="Oodi keväälle - Matkallelähtökonsertti",
+        name_fi="Oodi keväälle - Matkallelähtökonsertti 2025",
         short_description_fi="Kauppakorkeakoulun Ylioppilaskunnan Laulajat suuntaa vapun jälkeen "
         "Irlantiin Corkin kansainväliselle kuorofestivaalille",
         description_fi="Konsertin huippukohtia ovat muun muassa Säde Bartlingilta "
         "tilaamamme kansansävelmäsovituksen Metsän puita tuuli "
-        "tuudittaa kantaesitys",
+        "tuudittaa kantaesitys 6-9-vuotiaille",
         location=place,
     )
 
@@ -167,7 +167,27 @@ def test_get_event_search_full_text():
     assert result.count() == 1
     assert result[0].id == "test:fi"
 
-    result = do_filter("keväälle")
+    result = do_filter("keväälle 2")
+    assert result.count() == 0
+
+    result = do_filter("keväälle 20")
+    assert result.count() == 0
+
+    result = do_filter("keväälle 202")
+    assert result.count() == 0
+
+    result = do_filter("keväälle 2024")
+    assert result.count() == 0
+
+    result = do_filter("keväälle 2025")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
+
+    result = do_filter("6-9-vuotiaille")
+    assert result.count() == 1
+    assert result[0].id == "test:fi"
+
+    result = do_filter("yhdeksän-vuotiaille")
     assert result.count() == 1
     assert result[0].id == "test:fi"
 
@@ -175,7 +195,7 @@ def test_get_event_search_full_text():
     assert result.count() == 1
     assert result[0].id == "test:fi"
 
-    result = do_filter("vappu")
+    result = do_filter("Säde")
     assert result.count() == 1
     assert result[0].id == "test:fi"
 

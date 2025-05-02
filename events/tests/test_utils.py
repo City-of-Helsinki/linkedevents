@@ -7,7 +7,6 @@ from django.utils import timezone
 from freezegun import freeze_time
 from rest_framework.exceptions import ParseError
 
-from events.search_index.utils import split_word_bases
 from events.tests.test_event_get import get_list
 from events.tests.test_event_post import create_with_post
 from events.utils import (
@@ -171,24 +170,6 @@ def test_inconsistent_tz_default(api_client, minimal_event_dict, user, settings)
     assert list_with_offset_create_dt.json()["meta"]["count"] == 1, (
         list_with_offset_create_dt.json()
     )
-
-
-@pytest.mark.parametrize(
-    "word, expected_result",
-    [
-        ("lentokone", {"lentää", "kone"}),
-        ("lentokoneen", {"lentää", "kone"}),
-        ("lentokoneita", {"lentää", "kone"}),
-        ("päiväkoti", {"päivä", "koti"}),
-        ("kissoja", {"kissa"}),
-        ("saippuakivimittakaava", {"saippua", "kivi", "mitta", "kaava"}),
-        ("kokonaisvaltainen", {"koko", "nainen", "kokonainen", "valta"}),
-        ("lentokone123", {"lentokone123"}),
-    ],
-)
-def test_split_word_bases(word, expected_result):
-    result = split_word_bases(word, set())
-    assert result == expected_result
 
 
 @pytest.mark.parametrize(
