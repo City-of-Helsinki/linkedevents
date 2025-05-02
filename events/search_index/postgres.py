@@ -7,7 +7,7 @@ from django.db.models import OuterRef, Subquery
 from django.utils import timezone
 
 from events.models import Event, EventSearchIndex
-from events.search_index.utils import batch_qs, get_field_attr, split_word_bases
+from events.search_index.utils import batch_qs, extract_word_bases, get_field_attr
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +23,10 @@ class EventSearchIndexService:
         for column in Event.get_words_columns(lang):
             row_content = get_field_attr(event, column)
             if row_content:
-                split_word_bases(row_content, words, lang)
+                extract_word_bases(row_content, words, lang)
 
         for keyword in event.keywords.values_list("name_%s" % lang, flat=True):
-            split_word_bases(keyword, words, lang)
+            extract_word_bases(keyword, words, lang)
 
         return words
 

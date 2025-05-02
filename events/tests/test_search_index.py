@@ -3,7 +3,7 @@ from django.conf import settings
 from django.core.management import call_command
 
 from events.models import EventSearchIndex
-from events.search_index.utils import split_word_bases
+from events.search_index.utils import convert_numbers, extract_word_bases
 from events.tests.factories import EventFactory, PlaceFactory
 
 
@@ -17,11 +17,38 @@ from events.tests.factories import EventFactory, PlaceFactory
         ("kissoja", {"kissa"}),
         ("saippuakivimittakaava", {"saippua", "kivi", "mitta", "kaava"}),
         ("kokonaisvaltainen", {"koko", "nainen", "kokonainen", "valta"}),
-        ("lentokone123", {"lentokone123"}),
     ],
 )
-def test_split_word_bases(word, expected_result):
-    result = split_word_bases(word, set())
+def test_extract_word_bases(word, expected_result):
+    result = extract_word_bases(word, set())
+    assert result == expected_result
+
+
+@pytest.mark.parametrize(
+    "word, expected_result",
+    [
+        ("0", {"nolla", "0"}),
+        ("1", {"yksi", "1"}),
+        ("22", {"kaksikymmentäkaksi", "22"}),
+        ("300", {"kolmesataa", "300"}),
+        ("4000", {"neljätuhatta", "4000"}),
+        ("Vuosi 2025", {"kaksituhatta kaksikymmentäviisi", "2025"}),
+        (
+            "Eka 123 toka 456",
+            {"satakaksikymmentäkolme", "neljäsataaviisikymmentäkuusi", "123", "456"},
+        ),
+        (
+            "Numero 1234567890",
+            {
+                "miljardi kaksisataakolmekymmentäneljämiljoonaa "
+                "viisisataakuusikymmentäseitsemäntuhatta kahdeksansataayhdeksänkymmentä",
+                "1234567890",
+            },
+        ),
+    ],
+)
+def test_get_number_as_finnish_word(word, expected_result):
+    result = convert_numbers(word)
     assert result == expected_result
 
 

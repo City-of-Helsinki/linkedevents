@@ -5,6 +5,7 @@ from typing import Generator
 
 import libvoikko
 from django.db.models import QuerySet
+from num2words import num2words
 
 from events.importer.utils import clean_text
 
@@ -59,7 +60,7 @@ def get_word_bases(word: str) -> set:
     return words
 
 
-def split_word_bases(word: str, words: set, lang: str = "fi") -> set:
+def extract_word_bases(word: str, words: set, lang: str = "fi") -> set:
     """
     Splits the word into its bases and adds them to the set of words.
     :param word: the word to split
@@ -76,11 +77,30 @@ def split_word_bases(word: str, words: set, lang: str = "fi") -> set:
         if isinstance(word, str):
             w_array = word.split()
         for word in w_array:
+            # convert numbers to words
+            words.update(convert_numbers(word, lang=lang))
             word_bases = get_word_bases(word)
             words.update(word_bases)
     else:
         # for other languages, just add the word itself
         words.add(word)
+    return words
+
+
+def convert_numbers(word: str, lang: str = "fi") -> set:
+    """
+    Converts numbers in the word to textual words.
+    :param word: the word to process
+    :param lang: the language to convert to (default: "fi")
+    :return: a set of words
+    """
+    words = set()
+    numbers = re.sub(r"\D+", " ", word).split()
+    for number in numbers:
+        # convert the number to a Finnish word
+        words.add(num2words(number, lang=lang))
+    # add numbers itself also
+    words.update(numbers)
     return words
 
 
