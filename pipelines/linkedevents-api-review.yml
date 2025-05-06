@@ -38,6 +38,7 @@ resources:
     # Azure DevOps repository
     - repository: linkedevents-pipelines
       type: git
+      ref: refs/heads/sentry_release_PLATTA-6534
       # Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
 
