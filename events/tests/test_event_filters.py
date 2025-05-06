@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
@@ -534,3 +534,69 @@ def test_get_event_list_over_week_event(iso_weekday, name, api_client):
 
     assert len(data) == 1
     assert data[0]["name"]["fi"] == "long event"
+
+
+@pytest.mark.django_db
+def test_get_event_list_hide_recurring_children_weekday_matches_sub_events(api_client):
+    monday_event = EventFactory(start_time=datetime(2025, 1, 6))
+    tuesday_event = EventFactory(
+        data_source=monday_event.data_source, start_time=datetime(2025, 1, 7)
+    )
+    create_super_event([monday_event, tuesday_event], monday_event.data_source)
+
+    thursday = timezone.datetime(2025, 3, 6, 12, tzinfo=timezone.utc)
+    event_3 = EventFactory(start_time=thursday, end_time=thursday + timedelta(hours=1))
+    super_of_thursday = create_super_event([event_3], event_3.data_source)
+
+    resp = get_list(
+        api_client,
+        query_string="weekday=4&hide_recurring_children=true&hide_recurring_children_sub_events=true",
+    )
+    data = resp.data["data"]
+
+    assert len(data) == 1
+    assert data[0]["id"] == super_of_thursday.id
+
+
+@pytest.mark.django_db
+def test_get_event_list_hide_recurring_children_start_matches_sub_events(api_client):
+    event_1 = EventFactory(start_time=datetime(2025, 1, 6))
+    event_2 = EventFactory(start_time=datetime(2025, 1, 7))
+    create_super_event([event_1, event_2], event_1.data_source)
+
+    thursday = timezone.datetime(2025, 3, 6, 12, tzinfo=timezone.utc)
+    event_3 = EventFactory(start_time=thursday, end_time=thursday + timedelta(hours=1))
+    super_2 = create_super_event([event_3], event_3.data_source)
+
+    resp = get_list(
+        api_client,
+        query_string="start=2025-03-06&hide_recurring_children=true&hide_recurring_children_sub_events=true",
+    )
+    data = resp.data["data"]
+
+    assert len(data) == 1
+    assert data[0]["id"] == super_2.id
+
+
+@pytest.mark.django_db
+def test_get_event_list_hide_recurring_children_publisher_match_sub_events_and_non_sub(
+    api_client,
+):
+    event_1 = EventFactory()
+    event_2 = EventFactory()
+    super_1 = create_super_event([event_1, event_2], event_1.data_source)
+
+    event_3 = EventFactory()
+    create_super_event([event_3], event_3.data_source)
+    event_4 = EventFactory(publisher=event_1.publisher)
+
+    resp = get_list(
+        api_client,
+        query_string=f"publisher={event_1.publisher_id}&hide_recurring_children=true&hide_recurring_children_sub_events=true",
+    )
+    data = resp.data["data"]
+
+    assert len(data) == 2
+    event_ids = [event["id"] for event in data]
+    assert super_1.id in event_ids
+    assert event_4.id in event_ids
