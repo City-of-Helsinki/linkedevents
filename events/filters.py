@@ -282,12 +282,6 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             "applied parameter."
         ),
     )
-    hide_recurring_children = django_filters.BooleanFilter(
-        method="filter_hide_recurring_children",
-        help_text=_(
-            "Hide all child events for super events which are of type <code>recurring</code>."  # noqa: E501
-        ),
-    )
     hide_super_event = django_filters.BooleanFilter(
         method="filter_hide_super_event",
         help_text=_("Hide all events which are super events."),
@@ -352,12 +346,32 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         ),
     )
 
+    sub_events = django_filters.BooleanFilter(
+        required=False,
+        help_text=_("If set to true, filtering will also consider events' sub-events."),
+        method="filter_sub_events",
+    )
+
+    # Must be applied last so that can include sub-events
+    hide_recurring_children = django_filters.BooleanFilter(
+        method="filter_hide_recurring_children",
+        help_text=_(
+            "Hide all child events for super events which are of type <code>recurring</code>."  # noqa: E501
+        ),
+    )
+
     class Meta:
         model = Event
         fields = {
             "registration__remaining_attendee_capacity": ["gte", "isnull"],
             "registration__remaining_waiting_list_capacity": ["gte", "isnull"],
         }
+
+    def filter_sub_events(self, queryset, name, value: Optional[bool]):
+        """sub_events is a boolean filter that determines whether to include sub-events
+        in each filter.
+        """
+        return queryset
 
     def filter_weekday(self, queryset, name, values):
         if not values:
@@ -463,18 +477,6 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         )
 
         return queryset.filter(location__in=places)
-
-    def filter_hide_recurring_children(self, queryset, name, value: Optional[bool]):
-        if not value:
-            return queryset
-
-        # There are two different structures that can define a super event
-        # for recurring events.
-        return queryset.exclude(
-            super_event__super_event_type=Event.SuperEventType.RECURRING
-        ).exclude(
-            eventaggregatemember__event_aggregate__super_event__super_event_type=Event.SuperEventType.RECURRING
-        )
 
     def filter_hide_super_event(self, queryset, name, value: Optional[bool]):
         if not value:
@@ -583,6 +585,38 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             0
         ]
         return queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
+
+    def filter_hide_recurring_children(self, queryset, name, value: Optional[bool]):
+        if not value:
+            return queryset
+
+        cleaned_data = getattr(self.form, "cleaned_data", None)
+        if cleaned_data and cleaned_data.get("sub_events", False):
+            # If sub_events is set to true, we need to include the super events.
+            super_events = Event.objects.filter(
+                Exists(
+                    queryset.filter(
+                        Q(super_event=OuterRef("pk"))
+                        | Q(
+                            eventaggregatemember__event_aggregate__super_event=OuterRef(
+                                "pk"
+                            )
+                        )
+                    )
+                )
+            )
+
+            return super_events.filter(
+                Exists(queryset.filter(super_event=OuterRef("pk")))
+            )
+
+        # There are two different structures that can define a super event
+        # for recurring events.
+        return queryset.exclude(
+            super_event__super_event_type=Event.SuperEventType.RECURRING
+        ).exclude(
+            eventaggregatemember__event_aggregate__super_event__super_event_type=Event.SuperEventType.RECURRING
+        )
 
 
 class OrganizationFilter(django_filters.rest_framework.FilterSet):
