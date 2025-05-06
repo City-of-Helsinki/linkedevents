@@ -62,6 +62,9 @@ def test_filter_full_text_wrong_language():
         "fi",
         "en",
         "sv",
+        "ru",
+        "ar",
+        "zh_hans",
     ],
 )
 def test_get_event_list_full_text(language):
@@ -74,6 +77,15 @@ def test_get_event_list_full_text(language):
     place_sv = PlaceFactory(
         name_sv="Test Place", name_en="Something else", name_fi="Something else"
     )
+    place_zh_hans = PlaceFactory(
+        name_zh_hans="Test Place", name_en="Something else", name_fi="Something else"
+    )
+    place_ru = PlaceFactory(
+        name_ru="Test Place", name_en="Something else", name_fi="Something else"
+    )
+    place_ar = PlaceFactory(
+        name_ar="Test Place", name_en="Something else", name_fi="Something else"
+    )
     kw_fi = KeywordFactory(
         name_fi="Test Keyword", name_en="Something else", name_sv="Something else"
     )
@@ -82,6 +94,15 @@ def test_get_event_list_full_text(language):
     )
     kw_sv = KeywordFactory(
         name_sv="Test Keyword", name_en="Something else", name_fi="Something else"
+    )
+    kw_zh_hans = KeywordFactory(
+        name_zh_hans="Test Keyword", name_en="Something else", name_fi="Something else"
+    )
+    kw_ru = KeywordFactory(
+        name_ru="Test Keyword", name_en="Something else", name_fi="Something else"
+    )
+    kw_ar = KeywordFactory(
+        name_ar="Test Keyword", name_en="Something else", name_fi="Something else"
     )
     event_fi = EventFactory(
         id="test:fi",
@@ -104,10 +125,34 @@ def test_get_event_list_full_text(language):
         name_fi="Something else",
         location=place_sv,
     )
+    event_ru = EventFactory(
+        id="test:ru",
+        name_ru="Test Event",
+        name_en="Something else",
+        name_fi="Something else",
+        location=place_ru,
+    )
+    event_ar = EventFactory(
+        id="test:ar",
+        name_ar="Test Event",
+        name_en="Something else",
+        name_fi="Something else",
+        location=place_ar,
+    )
+    event_zh_hans = EventFactory(
+        id="test:zh_hans",
+        name_zh_hans="Test Event",
+        name_en="Something else",
+        name_fi="Something else",
+        location=place_zh_hans,
+    )
 
     event_fi.keywords.set([kw_fi])
     event_en.keywords.set([kw_en])
     event_sv.keywords.set([kw_sv])
+    event_ru.keywords.set([kw_ru])
+    event_ar.keywords.set([kw_ar])
+    event_zh_hans.keywords.set([kw_zh_hans])
 
     call_command("rebuild_event_search_index")
 

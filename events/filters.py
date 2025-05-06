@@ -33,6 +33,9 @@ from events.models import Event, EventAggregate, Place
 from events.search_index.utils import extract_word_bases
 from events.widgets import DistanceWithinWidget
 from linkedevents.filters import LinkedEventsOrderingFilter
+from linkedevents.utils import get_fixed_lang_codes
+
+languages = get_fixed_lang_codes()
 
 
 def _annotate_queryset_for_filtering_by_enrolment_start_or_end(
@@ -462,11 +465,12 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             return qs
 
         language = self.request.query_params.get("x_full_text_language", "fi")
-        if language not in ["fi", "en", "sv"]:
+        if language not in languages:
             raise serializers.ValidationError(
                 {
                     "x_full_text_language": _(
-                        "x_full_text supports the following languages: fi, en, sv"
+                        f"x_full_text supports the following "
+                        f"languages: {', '.join(languages)}"
                     )
                 }
             )
