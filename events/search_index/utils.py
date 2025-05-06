@@ -60,30 +60,25 @@ def get_word_bases(word: str) -> set:
     return words
 
 
-def extract_word_bases(word: str, words: set, lang: str = "fi") -> set:
+def extract_word_bases(text: str, words: set, lang: str = "fi") -> set:
     """
     Splits the word into its bases and adds them to the set of words.
-    :param word: the word to split
+    :param text: the text to split
     :param words: the set of words to add the bases to
     :param lang: the language of the word (default: "fi")
     :return: the set of words
     """
     # replace common separators with spaces
-    word = re.sub(r"[;:,.?!-]", " ", word or "")
+    cleaned_text = re.sub(r"[;:,.?!-]", " ", text or "")
     # remove html tags and newlines
-    word = clean_text(word, strip_newlines=True, parse_html=True)
-    if lang == "fi":
-        w_array = word or []
-        if isinstance(word, str):
-            w_array = word.split()
-        for word in w_array:
-            # convert numbers to words
-            words.update(convert_numbers(word, lang=lang))
-            word_bases = get_word_bases(word)
-            words.update(word_bases)
-    else:
-        # for other languages, just add the word itself
-        words.add(word)
+    cleaned_text = clean_text(cleaned_text, strip_newlines=True, parse_html=True)
+    cleaned_words = cleaned_text.split() if cleaned_text else []
+    for word in cleaned_words:
+        # convert numbers to words
+        words.update(convert_numbers(word, lang=lang))
+        # if the word is in Finnish, get its bases
+        word_bases = get_word_bases(word) if lang == "fi" else {word}
+        words.update(word_bases)
     return words
 
 
@@ -97,8 +92,11 @@ def convert_numbers(word: str, lang: str = "fi") -> set:
     words = set()
     numbers = re.sub(r"\D+", " ", word).split()
     for number in numbers:
-        # convert the number to a Finnish word
-        words.add(num2words(number, lang=lang))
+        # convert the number to language-specific words
+        try:
+            words.add(num2words(number, lang=lang))
+        except NotImplementedError:
+            pass
     # add numbers itself also
     words.update(numbers)
     return words
