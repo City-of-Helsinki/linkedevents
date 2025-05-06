@@ -28,9 +28,11 @@ from django.contrib.gis.db import models
 from django.contrib.postgres.fields import ArrayField, HStoreField
 from django.contrib.postgres.indexes import GinIndex, Index
 from django.contrib.postgres.search import SearchVectorField
+from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Q
+from django.db.models.base import ModelBase
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
@@ -45,6 +47,7 @@ from reversion import revisions as reversion
 
 from events import translation_utils
 from events.translation_utils import TranslatableSerializableMixin
+from linkedevents.utils import get_fixed_lang_codes
 from notifications.models import (
     NotificationTemplateError,
     NotificationType,
@@ -1401,25 +1404,52 @@ class Event(
         return ""
 
     @classmethod
-    def get_words_columns(cls, lang):
+    def get_words_fields(cls, lang, weight):
         """
-        Defines the columns that will be used when populating
-        words to language specific words column. The content
+        Defines the direct model fields that will be used when populating
+        words to language specific words field. The content
         will be tokenized to lexems(to_tsvector) and added to
-        the search_column.
+        the language specific search field with the given weight.
         """
-        return [
-            NAME_FORMAT % lang,
-            PLACE_NAME_FORMAT % lang,
-            SHORT_DESCRIPTION_FORMAT % lang,
-            DESCRIPTION_FORMAT % lang,
-        ]
+        if weight == "A":
+            return [
+                NAME_FORMAT % lang,
+                PLACE_NAME_FORMAT % lang,
+            ]
+        elif weight == "C":
+            return [
+                SHORT_DESCRIPTION_FORMAT % lang,
+            ]
+        elif weight == "D":
+            return [
+                DESCRIPTION_FORMAT % lang,
+            ]
+        return []
 
 
 reversion.register(Event)
 
 
-class EventSearchIndex(models.Model):
+class EventSearchIndexMeta(ModelBase):
+    """
+    Metaclass for EventSearchIndex to ensure that all language-specific
+    fields are present.
+    """
+
+    def __new__(cls, name, bases, attrs):
+        languages = get_fixed_lang_codes()
+        for lang in languages:
+            if not all(
+                f"words_{lang}_weight_{weight}" in attrs
+                for weight in ["a", "b", "c", "d"]
+            ):
+                raise ImproperlyConfigured(
+                    f"Missing words_{lang}_weight_x fields in {name} class"
+                )
+        return super().__new__(cls, name, bases, attrs)
+
+
+class EventSearchIndex(models.Model, metaclass=EventSearchIndexMeta):
     """
     Event full-text search index.
     """
@@ -1437,13 +1467,37 @@ class EventSearchIndex(models.Model):
     event_last_modified_time = models.DateTimeField()
     place_last_modified_time = models.DateTimeField()
 
-    words_fi = ArrayField(models.CharField(max_length=64), default=list)
-    words_en = ArrayField(models.CharField(max_length=64), default=list)
-    words_sv = ArrayField(models.CharField(max_length=64), default=list)
+    words_fi_weight_a = ArrayField(models.CharField(max_length=64), default=list)
+    words_fi_weight_b = ArrayField(models.CharField(max_length=64), default=list)
+    words_fi_weight_c = ArrayField(models.CharField(max_length=64), default=list)
+    words_fi_weight_d = ArrayField(models.CharField(max_length=64), default=list)
+    words_en_weight_a = ArrayField(models.CharField(max_length=64), default=list)
+    words_en_weight_b = ArrayField(models.CharField(max_length=64), default=list)
+    words_en_weight_c = ArrayField(models.CharField(max_length=64), default=list)
+    words_en_weight_d = ArrayField(models.CharField(max_length=64), default=list)
+    words_sv_weight_a = ArrayField(models.CharField(max_length=64), default=list)
+    words_sv_weight_b = ArrayField(models.CharField(max_length=64), default=list)
+    words_sv_weight_c = ArrayField(models.CharField(max_length=64), default=list)
+    words_sv_weight_d = ArrayField(models.CharField(max_length=64), default=list)
+    words_zh_hans_weight_a = ArrayField(models.CharField(max_length=64), default=list)
+    words_zh_hans_weight_b = ArrayField(models.CharField(max_length=64), default=list)
+    words_zh_hans_weight_c = ArrayField(models.CharField(max_length=64), default=list)
+    words_zh_hans_weight_d = ArrayField(models.CharField(max_length=64), default=list)
+    words_ru_weight_a = ArrayField(models.CharField(max_length=64), default=list)
+    words_ru_weight_b = ArrayField(models.CharField(max_length=64), default=list)
+    words_ru_weight_c = ArrayField(models.CharField(max_length=64), default=list)
+    words_ru_weight_d = ArrayField(models.CharField(max_length=64), default=list)
+    words_ar_weight_a = ArrayField(models.CharField(max_length=64), default=list)
+    words_ar_weight_b = ArrayField(models.CharField(max_length=64), default=list)
+    words_ar_weight_c = ArrayField(models.CharField(max_length=64), default=list)
+    words_ar_weight_d = ArrayField(models.CharField(max_length=64), default=list)
 
     search_vector_fi = SearchVectorField()
     search_vector_en = SearchVectorField()
     search_vector_sv = SearchVectorField()
+    search_vector_zh_hans = SearchVectorField()
+    search_vector_ru = SearchVectorField()
+    search_vector_ar = SearchVectorField()
 
     class Meta:
         ordering = ["-pk"]
@@ -1451,6 +1505,9 @@ class EventSearchIndex(models.Model):
             GinIndex(fields=["search_vector_fi"]),
             GinIndex(fields=["search_vector_en"]),
             GinIndex(fields=["search_vector_sv"]),
+            GinIndex(fields=["search_vector_zh_hans"]),
+            GinIndex(fields=["search_vector_ru"]),
+            GinIndex(fields=["search_vector_ar"]),
         )
 
 

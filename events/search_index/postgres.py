@@ -3,13 +3,15 @@ from typing import Optional
 
 from django.conf import settings
 from django.contrib.postgres.search import SearchVector
-from django.db.models import OuterRef, Subquery
 from django.utils import timezone
 
 from events.models import Event, EventSearchIndex
 from events.search_index.utils import batch_qs, extract_word_bases, get_field_attr
+from linkedevents.utils import get_fixed_lang_codes
 
 logger = logging.getLogger(__name__)
+
+languages = get_fixed_lang_codes()
 
 
 class EventSearchIndexService:
@@ -18,20 +20,38 @@ class EventSearchIndexService:
     """
 
     @classmethod
-    def get_words(cls, event: Event, lang: str) -> set:
+    def get_words(cls, event: Event, lang: str, weight: str = "A") -> set:
         words = set()
-        for column in Event.get_words_columns(lang):
+        for column in Event.get_words_fields(lang, weight):
             row_content = get_field_attr(event, column)
             if row_content:
                 extract_word_bases(row_content, words, lang)
 
-        for keyword in event.keywords.values_list("name_%s" % lang, flat=True):
-            extract_word_bases(keyword, words, lang)
+        if weight == "B":
+            for keyword in event.keywords.values_list("name_%s" % lang, flat=True):
+                extract_word_bases(keyword, words, lang)
 
-        for keyword in event.audience.values_list("name_%s" % lang, flat=True):
-            extract_word_bases(keyword, words, lang)
+            for keyword in event.audience.values_list("name_%s" % lang, flat=True):
+                extract_word_bases(keyword, words, lang)
 
         return words
+
+    @classmethod
+    def get_weighted_words(cls, event: Event) -> dict:
+        """
+        Get the words and their weights for a given event.
+        """
+        weighted_words = {}
+        for lang in languages:
+            weighted_words.update(
+                {
+                    f"words_{lang}_weight_a": list(cls.get_words(event, lang, "A")),
+                    f"words_{lang}_weight_b": list(cls.get_words(event, lang, "B")),
+                    f"words_{lang}_weight_c": list(cls.get_words(event, lang, "C")),
+                    f"words_{lang}_weight_d": list(cls.get_words(event, lang, "D")),
+                }
+            )
+        return weighted_words
 
     @classmethod
     def update_search_index(cls, event: Event) -> None:
@@ -49,9 +69,7 @@ class EventSearchIndexService:
                     "place_last_modified_time": event.location.last_modified_time
                     if event and event.location
                     else timezone.now(),
-                    "words_fi": list(cls.get_words(event, "fi")),
-                    "words_sv": list(cls.get_words(event, "sv")),
-                    "words_en": list(cls.get_words(event, "en")),
+                    **cls.get_weighted_words(event),
                 },
             )
             logger.info(f"Updated search index for event: {event.id}")
@@ -73,6 +91,14 @@ class EventSearchIndexService:
             .order_by("pk")
         )
 
+        # pre-generate language-specific words update fields
+        words_fields = (
+            [f"words_{lang}_weight_a" for lang in languages]
+            + [f"words_{lang}_weight_b" for lang in languages]
+            + [f"words_{lang}_weight_c" for lang in languages]
+            + [f"words_{lang}_weight_d" for lang in languages]
+        )
+
         for start, end, total, qs in batch_qs(
             event_qs, batch_size=settings.EVENT_SEARCH_INDEX_REBUILD_BATCH_SIZE
         ):
@@ -88,9 +114,7 @@ class EventSearchIndexService:
                     place_last_modified_time=event.location.last_modified_time
                     if event and event.location
                     else timezone.now(),
-                    words_fi=list(cls.get_words(event, "fi")),
-                    words_sv=list(cls.get_words(event, "sv")),
-                    words_en=list(cls.get_words(event, "en")),
+                    **cls.get_weighted_words(event),
                 )
                 event_index_objects.append(event_index)
                 num_updated += 1
@@ -102,9 +126,7 @@ class EventSearchIndexService:
                     "place",
                     "event_last_modified_time",
                     "place_last_modified_time",
-                    "words_fi",
-                    "words_sv",
-                    "words_en",
+                    *words_fields,
                 ],
             )
         logger.info(f"Search index updated for {num_updated} Events")
@@ -124,47 +146,15 @@ class EventSearchIndexService:
         else:
             qs = EventSearchIndex.objects.all()
 
-        eqs = Event.objects.filter(full_text=OuterRef("pk"))
-        qs.annotate(
-            event_name_fi=Subquery(eqs.values("name_fi")[:1]),
-            event_description_fi=Subquery(eqs.values("description_fi")[:1]),
-            event_short_description_fi=Subquery(eqs.values("short_description_fi")[:1]),
-            place_name_fi=Subquery(eqs.values("location__name_fi")[:1]),
-            event_name_sv=Subquery(eqs.values("name_sv")[:1]),
-            event_description_sv=Subquery(eqs.values("description_sv")[:1]),
-            event_short_description_sv=Subquery(eqs.values("short_description_sv")[:1]),
-            place_name_sv=Subquery(eqs.values("location__name_sv")[:1]),
-            event_name_en=Subquery(eqs.values("name_en")[:1]),
-            event_description_en=Subquery(eqs.values("description_en")[:1]),
-            event_short_description_en=Subquery(eqs.values("short_description_en")[:1]),
-            place_name_en=Subquery(eqs.values("location__name_en")[:1]),
-            keywords_fi=Subquery(eqs.values("keywords__name_fi")[:1]),
-            keywords_sv=Subquery(eqs.values("keywords__name_sv")[:1]),
-            keywords_en=Subquery(eqs.values("keywords__name_en")[:1]),
-            audience_fi=Subquery(eqs.values("audience__name_fi")[:1]),
-            audience_sv=Subquery(eqs.values("audience__name_sv")[:1]),
-            audience_en=Subquery(eqs.values("audience__name_en")[:1]),
-        ).update(
-            search_vector_fi=SearchVector("event_name_fi", config="simple", weight="A")
-            + SearchVector("place_name_fi", config="simple", weight="A")
-            + SearchVector("words_fi", config="simple", weight="A")
-            + SearchVector("keywords_fi", config="simple", weight="B")
-            + SearchVector("audience_fi", config="simple", weight="B")
-            + SearchVector("event_short_description_fi", config="simple", weight="C")
-            + SearchVector("event_description_fi", config="simple", weight="D"),
-            search_vector_sv=SearchVector("event_name_sv", config="simple", weight="A")
-            + SearchVector("place_name_sv", config="simple", weight="A")
-            + SearchVector("words_sv", config="simple", weight="A")
-            + SearchVector("keywords_sv", config="simple", weight="B")
-            + SearchVector("audience_sv", config="simple", weight="B")
-            + SearchVector("event_short_description_sv", config="simple", weight="C")
-            + SearchVector("event_description_sv", config="simple", weight="D"),
-            search_vector_en=SearchVector("event_name_en", config="simple", weight="A")
-            + SearchVector("place_name_en", config="simple", weight="A")
-            + SearchVector("words_en", config="simple", weight="A")
-            + SearchVector("keywords_en", config="simple", weight="B")
-            + SearchVector("audience_en", config="simple", weight="B")
-            + SearchVector("event_short_description_en", config="simple", weight="C")
-            + SearchVector("event_description_en", config="simple", weight="D"),
+        qs.update(
+            **{
+                f"search_vector_{lang}": SearchVector(
+                    f"words_{lang}_weight_a", config="simple", weight="A"
+                )
+                + SearchVector(f"words_{lang}_weight_b", config="simple", weight="B")
+                + SearchVector(f"words_{lang}_weight_c", config="simple", weight="C")
+                + SearchVector(f"words_{lang}_weight_d", config="simple", weight="D")
+                for lang in languages
+            },
         )
         logger.info("Search vectors updated.")
