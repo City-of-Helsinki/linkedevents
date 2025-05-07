@@ -251,10 +251,10 @@ def test_price_group_list_ordering(api_client):
         PriceGroupFactory(description_fi="Bcd"),
         PriceGroupFactory(description_fi="Cde"),
         PriceGroupFactory(description_fi="Dce"),
-        PriceGroupFactory(description_fi="Äää"),
-        PriceGroupFactory(description_fi="Äöö"),
-        PriceGroupFactory(description_fi="Öää"),
-        PriceGroupFactory(description_fi="Ööö"),
+        PriceGroupFactory(description_fi="Efg"),
+        PriceGroupFactory(description_fi="Fgh"),
+        PriceGroupFactory(description_fi="Ghi"),
+        PriceGroupFactory(description_fi="HiQ"),
     ]
 
     # Sanity check for correct translations (use the first object with a non-empty
