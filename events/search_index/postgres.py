@@ -1,8 +1,10 @@
 import logging
 from typing import Optional
 
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib.postgres.search import SearchVector
+from django.db.models import Q
 from django.utils import timezone
 
 from events.models import Event, EventSearchIndex
@@ -84,8 +86,18 @@ class EventSearchIndexService:
         """
         num_updated = 0
         logger.info("Updating search indexes...")
+        # only include events that are less than rebuild time limit
+        # or those without end_time
         event_qs = (
-            Event.objects.all()
+            Event.objects.filter(
+                Q(
+                    end_time__gte=timezone.now()
+                    - relativedelta(
+                        months=settings.EVENT_SEARCH_INDEX_REBUILD_END_TIME_MAX_AGE_MONTHS
+                    )
+                )
+                | Q(end_time=None)
+            )
             .select_related("location")
             .prefetch_related("keywords", "audience")
             .order_by("pk")

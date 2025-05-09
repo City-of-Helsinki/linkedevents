@@ -1,6 +1,8 @@
 import pytest
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.management import call_command
+from django.utils import timezone
 
 from events.models import EventSearchIndex
 from events.search_index.utils import convert_numbers, extract_word_bases
@@ -69,6 +71,9 @@ def test_rebuild_search_index(event, place, keyword):
     assert event_full_text.search_vector_fi is not None
     assert event_full_text.search_vector_sv is not None
     assert event_full_text.search_vector_en is not None
+    assert event_full_text.search_vector_zh_hans is not None
+    assert event_full_text.search_vector_ru is not None
+    assert event_full_text.search_vector_ar is not None
     assert place.name_fi[:4].lower() in str(event_full_text.search_vector_fi)
     assert place.name_sv[:4].lower() in str(event_full_text.search_vector_sv)
     assert place.name_en[:4].lower() in str(event_full_text.search_vector_en)
@@ -99,6 +104,9 @@ def test_auto_update_event_search_index_on_event_create(
     assert event_full_text.search_vector_fi is not None
     assert event_full_text.search_vector_sv is not None
     assert event_full_text.search_vector_en is not None
+    assert event_full_text.search_vector_zh_hans is not None
+    assert event_full_text.search_vector_ru is not None
+    assert event_full_text.search_vector_ar is not None
     event_2 = EventFactory(id="test:2", data_source=data_source, origin_id=2)
     event_2.keywords.add(keyword)
     event_2.save()
@@ -108,6 +116,9 @@ def test_auto_update_event_search_index_on_event_create(
     assert event_2_full_text.search_vector_fi is not None
     assert event_2_full_text.search_vector_sv is not None
     assert event_2_full_text.search_vector_en is not None
+    assert event_2_full_text.search_vector_zh_hans is not None
+    assert event_2_full_text.search_vector_ru is not None
+    assert event_2_full_text.search_vector_ar is not None
 
 
 @pytest.mark.skipif(
@@ -129,6 +140,9 @@ def test_auto_update_event_search_index_on_event_update(
     assert event_full_text.search_vector_fi is not None
     assert event_full_text.search_vector_sv is not None
     assert event_full_text.search_vector_en is not None
+    assert event_full_text.search_vector_zh_hans is not None
+    assert event_full_text.search_vector_ru is not None
+    assert event_full_text.search_vector_ar is not None
     assert event.name_fi[:4].lower() in str(event_full_text.search_vector_fi)
     event.name_fi = "Päivitetty nimi"
     event.save()
@@ -139,6 +153,9 @@ def test_auto_update_event_search_index_on_event_update(
     assert updated_event_full_text.search_vector_fi is not None
     assert updated_event_full_text.search_vector_sv is not None
     assert updated_event_full_text.search_vector_en is not None
+    assert updated_event_full_text.search_vector_zh_hans is not None
+    assert updated_event_full_text.search_vector_ru is not None
+    assert updated_event_full_text.search_vector_ar is not None
     assert event.name_fi[:4].lower() in str(updated_event_full_text.search_vector_fi)
 
 
@@ -170,6 +187,9 @@ def test_auto_update_event_search_index_on_place_update(event, place, data_sourc
     assert event_full_text.search_vector_fi is not None
     assert event_full_text.search_vector_sv is not None
     assert event_full_text.search_vector_en is not None
+    assert event_full_text.search_vector_zh_hans is not None
+    assert event_full_text.search_vector_ru is not None
+    assert event_full_text.search_vector_ar is not None
     assert place.name_fi[:4].lower() in str(event_full_text.search_vector_fi)
     place.name_fi = "Päivitetty paikka"
     place.save()
@@ -180,6 +200,9 @@ def test_auto_update_event_search_index_on_place_update(event, place, data_sourc
     assert updated_event_full_text.search_vector_fi is not None
     assert updated_event_full_text.search_vector_sv is not None
     assert updated_event_full_text.search_vector_en is not None
+    assert updated_event_full_text.search_vector_zh_hans is not None
+    assert updated_event_full_text.search_vector_ru is not None
+    assert updated_event_full_text.search_vector_ar is not None
     assert place.name_fi[:4].lower() in str(updated_event_full_text.search_vector_fi)
 
 
@@ -230,6 +253,9 @@ def test_auto_update_event_search_index_on_keyword_update(
     assert event_full_text.search_vector_fi is not None
     assert event_full_text.search_vector_sv is not None
     assert event_full_text.search_vector_en is not None
+    assert event_full_text.search_vector_zh_hans is not None
+    assert event_full_text.search_vector_ru is not None
+    assert event_full_text.search_vector_ar is not None
     assert keyword.name_fi[:4].lower() in str(event_full_text.search_vector_fi)
     keyword.name_fi = "Päivitetty avainsana"
     keyword.save()
@@ -240,6 +266,9 @@ def test_auto_update_event_search_index_on_keyword_update(
     assert updated_event_full_text.search_vector_fi is not None
     assert updated_event_full_text.search_vector_sv is not None
     assert updated_event_full_text.search_vector_en is not None
+    assert updated_event_full_text.search_vector_zh_hans is not None
+    assert updated_event_full_text.search_vector_ru is not None
+    assert updated_event_full_text.search_vector_ar is not None
     assert keyword.name_fi[:4].lower() in str(updated_event_full_text.search_vector_fi)
 
 
@@ -261,6 +290,9 @@ def test_auto_update_event_search_index_on_keyword_delete(
     assert event_full_text.search_vector_fi is not None
     assert event_full_text.search_vector_sv is not None
     assert event_full_text.search_vector_en is not None
+    assert event_full_text.search_vector_zh_hans is not None
+    assert event_full_text.search_vector_ru is not None
+    assert event_full_text.search_vector_ar is not None
     assert keyword.name_fi[:4].lower() in str(event_full_text.search_vector_fi)
     event.keywords.remove(keyword)
     assert EventSearchIndex.objects.all().count() == 1
@@ -270,6 +302,9 @@ def test_auto_update_event_search_index_on_keyword_delete(
     assert updated_event_full_text.search_vector_fi is not None
     assert updated_event_full_text.search_vector_sv is not None
     assert updated_event_full_text.search_vector_en is not None
+    assert updated_event_full_text.search_vector_zh_hans is not None
+    assert updated_event_full_text.search_vector_ru is not None
+    assert updated_event_full_text.search_vector_ar is not None
     assert keyword.name_fi[:4].lower() not in str(
         updated_event_full_text.search_vector_fi
     )
@@ -293,6 +328,9 @@ def test_auto_update_event_search_index_on_keywords_clear(
     assert event_full_text.search_vector_fi is not None
     assert event_full_text.search_vector_sv is not None
     assert event_full_text.search_vector_en is not None
+    assert event_full_text.search_vector_zh_hans is not None
+    assert event_full_text.search_vector_ru is not None
+    assert event_full_text.search_vector_ar is not None
     assert keyword.name_fi[:4].lower() in str(event_full_text.search_vector_fi)
     event.keywords.clear()
     assert EventSearchIndex.objects.all().count() == 1
@@ -302,6 +340,26 @@ def test_auto_update_event_search_index_on_keywords_clear(
     assert updated_event_full_text.search_vector_fi is not None
     assert updated_event_full_text.search_vector_sv is not None
     assert updated_event_full_text.search_vector_en is not None
+    assert updated_event_full_text.search_vector_zh_hans is not None
+    assert updated_event_full_text.search_vector_ru is not None
+    assert updated_event_full_text.search_vector_ar is not None
     assert keyword.name_fi[:4].lower() not in str(
         updated_event_full_text.search_vector_fi
     )
+
+
+@pytest.mark.django_db
+def test_index_rebuild_time_limit():
+    now = timezone.now()
+    EventFactory(end_time=now + relativedelta(months=1))
+    EventFactory(end_time=now + relativedelta(months=10))
+    EventFactory(end_time=now + relativedelta(months=100))
+    EventFactory(end_time=now - relativedelta(months=1))
+    EventFactory(end_time=now - relativedelta(months=10))
+    EventFactory(end_time=now - relativedelta(months=100))
+    EventFactory(end_time=now - relativedelta(months=35))
+    EventFactory(end_time=now - relativedelta(months=36))
+    EventFactory(end_time=now - relativedelta(months=37))
+    EventFactory(end_time=None)
+    call_command("rebuild_event_search_index")
+    assert EventSearchIndex.objects.all().count() == 7
