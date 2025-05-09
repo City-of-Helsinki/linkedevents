@@ -1,9 +1,9 @@
 import json
 from datetime import datetime
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import pytest
-import pytz
 from django.core import serializers
 from django.utils import timezone
 
@@ -2397,11 +2397,9 @@ class TestEnkoraImporter:
             created = datetime(
                 2023, 6, 16, 11, 32, 23, microsecond=1
             )  # Note: will transform into .000Z
-            event.created_time = timezone.make_aware(
-                created, timezone=pytz.timezone("UTC")
-            )
+            event.created_time = timezone.make_aware(created, timezone=ZoneInfo("UTC"))
             event.last_modified_time = timezone.make_aware(
-                created, timezone=pytz.timezone("UTC")
+                created, timezone=ZoneInfo("UTC")
             )
 
         # Expect 1 event with 10 sub-events
@@ -2418,8 +2416,12 @@ class TestEnkoraImporter:
             "name_ru": None,
             "name_ar": None,
             "origin_id": "50148",
-            "created_time": datetime(2023, 6, 16, 11, 32, 23, 1, tzinfo=pytz.UTC),
-            "last_modified_time": datetime(2023, 6, 16, 11, 32, 23, 1, tzinfo=pytz.UTC),
+            "created_time": datetime(
+                2023, 6, 16, 11, 32, 23, 1, tzinfo=ZoneInfo("UTC")
+            ),
+            "last_modified_time": datetime(
+                2023, 6, 16, 11, 32, 23, 1, tzinfo=ZoneInfo("UTC")
+            ),
             "created_by": None,
             "last_modified_by": None,
             "user_name": None,
@@ -2456,7 +2458,7 @@ class TestEnkoraImporter:
             "short_description_zh_hans": None,
             "short_description_ru": None,
             "short_description_ar": None,
-            "date_published": datetime(2023, 3, 26, 21, 0, tzinfo=pytz.UTC),
+            "date_published": datetime(2023, 3, 26, 21, 0, tzinfo=ZoneInfo("UTC")),
             "headline": None,
             "headline_fi": None,
             "headline_sv": None,
@@ -2498,8 +2500,8 @@ class TestEnkoraImporter:
             "location_extra_info_ru": None,
             "location_extra_info_ar": None,
             "environment": None,
-            "start_time": datetime(2023, 6, 5, 7, 0, tzinfo=pytz.UTC),
-            "end_time": datetime(2023, 6, 16, 7, 0, tzinfo=pytz.UTC),
+            "start_time": datetime(2023, 6, 5, 7, 0, tzinfo=ZoneInfo("UTC")),
+            "end_time": datetime(2023, 6, 16, 7, 0, tzinfo=ZoneInfo("UTC")),
             "has_start_time": True,
             "has_end_time": True,
             "audience_min_age": 7,
@@ -2511,8 +2513,10 @@ class TestEnkoraImporter:
             "replaced_by": None,
             "maximum_attendee_capacity": 8,
             "minimum_attendee_capacity": None,
-            "enrolment_start_time": datetime(2023, 4, 12, 13, 0, tzinfo=pytz.UTC),
-            "enrolment_end_time": datetime(2023, 6, 15, 21, 0, tzinfo=pytz.UTC),
+            "enrolment_start_time": datetime(
+                2023, 4, 12, 13, 0, tzinfo=ZoneInfo("UTC")
+            ),
+            "enrolment_end_time": datetime(2023, 6, 15, 21, 0, tzinfo=ZoneInfo("UTC")),
             "local": False,
             "keywords": list(EnkoraImporter.ALL_COURSES_KEYWORDS)
             + [

@@ -1,8 +1,8 @@
 from collections import Counter
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
-import pytz
 from dateutil import parser
 from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
@@ -1342,8 +1342,8 @@ def test_suitable_for_certain_age(
     # not suitable, neither of age limits defined
     event5 = make_event(
         "5",
-        datetime.now().astimezone(pytz.timezone("UTC")),
-        datetime.now().astimezone(pytz.timezone("UTC")) + timedelta(hours=1),
+        datetime.now().astimezone(ZoneInfo("UTC")),
+        datetime.now().astimezone(ZoneInfo("UTC")) + timedelta(hours=1),
     )
     event5.audience_min_age = None
     event5.audience_max_age = None
@@ -1351,8 +1351,8 @@ def test_suitable_for_certain_age(
     # suitable
     event6 = make_event(
         "6",
-        datetime.now().astimezone(pytz.timezone("UTC")),
-        datetime.now().astimezone(pytz.timezone("UTC")) + timedelta(hours=1),
+        datetime.now().astimezone(ZoneInfo("UTC")),
+        datetime.now().astimezone(ZoneInfo("UTC")) + timedelta(hours=1),
     )
     event6.audience_min_age = 11
     event6.audience_max_age = None

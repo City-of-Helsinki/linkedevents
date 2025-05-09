@@ -269,8 +269,6 @@ python-jose==3.4.0
     # via django-helusers
 python3-openid==3.2.0
     # via social-auth-core
-pytz==2025.2
-    # via -r requirements.in
 pyyaml==6.0.2
     # via
     #   -r requirements.in

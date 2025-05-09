@@ -1,7 +1,7 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pytest
-import pytz
 from django.utils import timezone
 from django.utils.translation import activate
 
@@ -111,7 +111,7 @@ def test_notification_template_format_datetime(notification_template):
     notification_template.body_en = "{{ datetime|format_datetime('en') }}"
     notification_template.save()
 
-    dt = datetime(2020, 2, 22, 12, 0, 0, 0, pytz.utc)
+    dt = datetime(2020, 2, 22, 12, 0, 0, 0, ZoneInfo("UTC"))
 
     context = {
         "subject_var": "bar",
@@ -119,7 +119,7 @@ def test_notification_template_format_datetime(notification_template):
         "html_body_var": "foo <b>bar</b> baz",
     }
 
-    timezone.activate(pytz.timezone("Europe/Helsinki"))
+    timezone.activate(ZoneInfo("Europe/Helsinki"))
 
     rendered = render_notification_template(NotificationType.TEST, context, "en")
     assert rendered["body"] == "22 Feb 2020 at 14:00"

@@ -17,10 +17,8 @@ schema_org_type can be used to define custom types. Override jsonld_context
 attribute to change @context when need to define schemas for custom fields.
 """
 
-import datetime
 import logging
 
-import pytz
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -395,7 +393,7 @@ class BaseModel(models.Model):
 
     @staticmethod
     def now():
-        return datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        return timezone.now()
 
     def __str__(self):
         return self.name
@@ -471,7 +469,7 @@ class KeywordLabel(TranslatableSerializableMixin):
 
 class UpcomingEventsUpdater(BaseSerializableManager):
     def has_upcoming_events_update(self):
-        now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
+        now = timezone.now()
         qs = self.model.objects.filter(n_events__gte=1)
         if self.model.__name__ == "Keyword":
             qs = qs.filter(deprecated=False)

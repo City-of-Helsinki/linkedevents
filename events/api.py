@@ -1,14 +1,12 @@
 import logging
 import re
 import urllib.parse
-from datetime import datetime
 from datetime import time as datetime_time
 from functools import partial, reduce
 from operator import or_
 from typing import Literal, Union
 
 import django_filters
-import pytz
 import regex
 from django.conf import settings
 from django.contrib.gis.gdal import GDALException
@@ -20,7 +18,7 @@ from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
 from django.db.models.functions import Greatest
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.template.loader import render_to_string
-from django.utils import translation
+from django.utils import timezone, translation
 from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
@@ -1712,9 +1710,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         kwargs = {f"search_vector_{language}": query}
         queryset = (
             queryset.filter(**kwargs)
-            .filter(
-                end_time__gte=datetime.utcnow().replace(tzinfo=pytz.utc), deleted=False
-            )
+            .filter(end_time__gte=timezone.now(), deleted=False)
             .filter(Q(location__id__endswith="internet") | Q(local=True))
         )
 
@@ -3368,7 +3364,7 @@ class SearchViewSet(
             if not start and not end and hasattr(queryset.query, "add_decay_function"):
                 # If no time-based filters are set, make the relevancy score
                 # decay the further in the future the event is.
-                now = datetime.utcnow()
+                now = timezone.now()
                 queryset = queryset.filter(end_time__gt=now).decay(
                     {"gauss": {"end_time": {"origin": now, "scale": DATE_DECAY_SCALE}}}
                 )
