@@ -1245,7 +1245,7 @@ class EnkoraImporter(Importer):
 
         # Section 0:
         # Meta section
-        now = datetime.utcnow()
+        now = timezone.now()
         now_str = now.strftime("%Y-%m-%d %H:%M UTC")
         doc.add_paragraph(f"Document generated at: {now_str}")
         doc.add_paragraph(f"Git commit: {commit_sha}")

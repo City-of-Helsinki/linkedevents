@@ -1,9 +1,9 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import pytest
-import pytz
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
 from django.core.management import call_command
@@ -68,7 +68,9 @@ def test__create_a_minimal_event_with_naive_datetime(
 
     # API should have assumed UTC datetime
     minimal_event_dict["start_time"] = (
-        pytz.utc.localize(dateutil_parse(minimal_event_dict["start_time"]))
+        timezone.make_aware(
+            dateutil_parse(minimal_event_dict["start_time"]), timezone=ZoneInfo("UTC")
+        )
         .isoformat()
         .replace("+00:00", "Z")
     )
@@ -339,7 +341,7 @@ def test__autopopulated_fields_at_create(
     # events are automatically marked as ending at midnight, local time
     assert event.end_time == timezone.localtime(
         timezone.now() + timedelta(days=2)
-    ).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
+    ).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(ZoneInfo("UTC"))
     assert event.has_end_time is False
 
 
@@ -369,7 +371,7 @@ def test__autopopulated_fields_at_create_dst(
     # events are automatically marked as ending at midnight, local time
     assert event.end_time == timezone.localtime(
         timezone.now() + timedelta(days=2)
-    ).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(pytz.utc)
+    ).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(ZoneInfo("UTC"))
     assert event.has_end_time is False
 
 

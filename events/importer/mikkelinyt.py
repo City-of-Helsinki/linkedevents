@@ -4,8 +4,8 @@ import os
 import re
 from datetime import datetime
 from html import unescape
+from zoneinfo import ZoneInfo
 
-import pytz
 import requests
 import requests_cache
 from django_orghierarchy.models import Organization
@@ -38,7 +38,7 @@ class MikkeliNytImporter(Importer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.timezone = pytz.timezone("Europe/Helsinki")
+        self.timezone = ZoneInfo("Europe/Helsinki")
 
     def items_from_url(self, url):
         logger.info(url)

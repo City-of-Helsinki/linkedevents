@@ -1,10 +1,10 @@
 import datetime
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import haystack
 from django.conf import settings
 from django.test import TestCase
-from pytz import timezone
 from rest_framework import status
 
 # from haystack.management.commands import rebuild_index, clear_index
@@ -35,8 +35,8 @@ class EventSearchTests(TestCase, TestDataMixin):
             name="dummy event",
             data_source=self.test_ds,
             publisher=self.test_org,
-            start_time=datetime.datetime.now().astimezone(timezone("UTC")),
-            end_time=datetime.datetime.now().astimezone(timezone("UTC")),
+            start_time=datetime.datetime.now().astimezone(ZoneInfo("UTC")),
+            end_time=datetime.datetime.now().astimezone(ZoneInfo("UTC")),
         )
         self.dummy.save()
 
