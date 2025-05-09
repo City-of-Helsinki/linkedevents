@@ -44,7 +44,6 @@ psycopg2
 pyYAML
 python-dateutil
 python-docx
-pytz
 rdflib==6.3.2
 regex
 requests-cache

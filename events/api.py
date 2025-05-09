@@ -6,9 +6,9 @@ from datetime import time as datetime_time
 from functools import partial, reduce
 from operator import or_
 from typing import Literal, Union
+from zoneinfo import ZoneInfo
 
 import django_filters
-import pytz
 import regex
 from django.conf import settings
 from django.contrib.gis.gdal import GDALException
@@ -1713,7 +1713,8 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         queryset = (
             queryset.filter(**kwargs)
             .filter(
-                end_time__gte=datetime.utcnow().replace(tzinfo=pytz.utc), deleted=False
+                end_time__gte=datetime.utcnow().replace(tzinfo=ZoneInfo("UTC")),
+                deleted=False,
             )
             .filter(Q(location__id__endswith="internet") | Q(local=True))
         )

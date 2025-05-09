@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
-import pytz
 from django.conf import settings as django_settings
 from django.utils import timezone
 from freezegun import freeze_time
@@ -21,13 +21,13 @@ from events.utils import (
 
 @pytest.fixture
 def local_tz():
-    return pytz.timezone(django_settings.TIME_ZONE)
+    return ZoneInfo(django_settings.TIME_ZONE)
 
 
 @pytest.mark.django_db
 def test_parse_time_iso8601(local_tz):
     assert parse_time("2022-07-17T17:17:17+03:00") == (
-        local_tz.localize(datetime(2022, 7, 17, 17, 17, 17)),
+        timezone.make_aware(datetime(2022, 7, 17, 17, 17, 17), timezone=local_tz),
         False,
     )
 
@@ -62,11 +62,11 @@ def test_parse_time_overflow_error(local_tz):
 @pytest.mark.django_db
 def test_parse_time_dst_handling(local_tz):
     assert parse_end_time("2022-3-27") == (
-        local_tz.localize(datetime(2022, 3, 28)),
+        timezone.make_aware(datetime(2022, 3, 28), timezone=local_tz),
         True,
     )
     assert parse_end_time("2022-10-30") == (
-        local_tz.localize(datetime(2022, 10, 31)),
+        timezone.make_aware(datetime(2022, 10, 31), timezone=local_tz),
         True,
     )
 
@@ -75,11 +75,11 @@ def test_parse_time_dst_handling(local_tz):
     # be ambiguous
     with freeze_time("2022-10-30 03:30:00+02:00"):
         assert parse_time("today") == (
-            local_tz.localize(datetime(2022, 10, 30)),
+            timezone.make_aware(datetime(2022, 10, 30), timezone=local_tz),
             True,
         )
         assert parse_end_time("today") == (
-            local_tz.localize(datetime(2022, 10, 31)),
+            timezone.make_aware(datetime(2022, 10, 31), timezone=local_tz),
             True,
         )
 
@@ -90,8 +90,8 @@ def test_parse_time_dst_handling(local_tz):
 @pytest.mark.django_db
 def test_start_of_day(local_tz):
     naive_dt = datetime(2022, 3, 27)
-    aware_dt = local_tz.localize(naive_dt)
-    utc_dt = aware_dt.astimezone(pytz.utc)
+    aware_dt = timezone.make_aware(naive_dt, timezone=local_tz)
+    utc_dt = aware_dt.astimezone(ZoneInfo("UTC"))
 
     assert start_of_day(aware_dt) == aware_dt
     assert start_of_day(utc_dt) == aware_dt
@@ -100,11 +100,11 @@ def test_start_of_day(local_tz):
 @pytest.mark.django_db
 def test_start_of_next_day(local_tz):
     naive_dt = datetime(2022, 3, 27)
-    aware_dt = local_tz.localize(naive_dt)
-    utc_dt = aware_dt.astimezone(pytz.utc)
+    aware_dt = timezone.make_aware(naive_dt, local_tz)
+    utc_dt = aware_dt.astimezone(ZoneInfo("UTC"))
 
     naive_tomorrow_dt = datetime(2022, 3, 28)
-    aware_tomorrow_dt = local_tz.localize(naive_tomorrow_dt)
+    aware_tomorrow_dt = timezone.make_aware(naive_tomorrow_dt, timezone=local_tz)
 
     assert start_of_next_day(aware_dt) == aware_tomorrow_dt
     assert start_of_next_day(utc_dt) == aware_tomorrow_dt
@@ -113,11 +113,11 @@ def test_start_of_next_day(local_tz):
 @pytest.mark.django_db
 def test_start_of_previous_day(local_tz):
     naive_dt = datetime(2022, 3, 27)
-    aware_dt = local_tz.localize(naive_dt)
-    utc_dt = aware_dt.astimezone(pytz.utc)
+    aware_dt = timezone.make_aware(naive_dt, timezone=local_tz)
+    utc_dt = aware_dt.astimezone(ZoneInfo("UTC"))
 
     naive_previous_dt = datetime(2022, 3, 26)
-    aware_previous_dt = local_tz.localize(naive_previous_dt)
+    aware_previous_dt = timezone.make_aware(naive_previous_dt, timezone=local_tz)
 
     assert start_of_previous_day(aware_dt) == aware_previous_dt
     assert start_of_previous_day(utc_dt) == aware_previous_dt

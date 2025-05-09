@@ -6,7 +6,6 @@ from typing import Iterable, Optional
 from zoneinfo import ZoneInfo
 
 import django_filters
-import pytz
 from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
@@ -569,7 +568,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             postponed_q = Q()
 
         # Inconsistent behaviour, see test_inconsistent_tz_default
-        dt = utils.parse_time(value, default_tz=pytz.timezone(settings.TIME_ZONE))[0]
+        dt = utils.parse_time(value, default_tz=ZoneInfo(settings.TIME_ZONE))[0]
 
         # only return events with specified end times, or unspecified start times, during the whole of the event  # noqa: E501
         # this gets of rid pesky one-day events with no known end time (but known
@@ -582,9 +581,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         )
 
     def filter_end(self, queryset, name, value):
-        dt = utils.parse_end_time(value, default_tz=pytz.timezone(settings.TIME_ZONE))[
-            0
-        ]
+        dt = utils.parse_end_time(value, default_tz=ZoneInfo(settings.TIME_ZONE))[0]
         return queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     def filter_hide_recurring_children_sub_events(
