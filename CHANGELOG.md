@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.14.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.13.1...linkedevents-v3.14.0) (2025-05-10)
+
+
+### Features
+
+* Add all supported languages to search ([675953e](https://github.com/City-of-Helsinki/linkedevents/commit/675953ea7412341fb295d37073b0ea46db60a488))
+* Add event audience to search index ([30ed8a7](https://github.com/City-of-Helsinki/linkedevents/commit/30ed8a7fe0fb6240c71f3b06389dff03c0154abd))
+* Add time limit to event search index rebuild ([82c008f](https://github.com/City-of-Helsinki/linkedevents/commit/82c008f4ac17a6271a74ee62948a5146a059731e))
+* Convert numbers to words for fi-index ([dd9cec8](https://github.com/City-of-Helsinki/linkedevents/commit/dd9cec845e72806aece405fc0e4c484cc2b895fe))
+* Convert numbers to words in other languages ([984c3d2](https://github.com/City-of-Helsinki/linkedevents/commit/984c3d274fe55d086c1a8dcd7937d0a0130a8144))
+* Enhance index creation input ([78fb391](https://github.com/City-of-Helsinki/linkedevents/commit/78fb39152fdec113b37716afc9d6444fb3f7828c))
+* Remove html tags and newlines from index ([0fa2b10](https://github.com/City-of-Helsinki/linkedevents/commit/0fa2b104d12a5ebe35c14d8133a7b073676557df))
+* Replace non-word characters with space ([46b765f](https://github.com/City-of-Helsinki/linkedevents/commit/46b765f51f09a83322d07a416349bc5466235af9))
+* Use weighted words fields ([a93483d](https://github.com/City-of-Helsinki/linkedevents/commit/a93483d1ab61fe63f6cc4f25bada790389752222))
+
+
+### Dependencies
+
+* Add num2words package ([b973528](https://github.com/City-of-Helsinki/linkedevents/commit/b9735289fd2a18f0538adc8ea7e1b6405fb503fc))
+
 ## [3.13.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.13.0...linkedevents-v3.13.1) (2025-04-16)
 
 
