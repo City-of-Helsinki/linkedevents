@@ -4,6 +4,7 @@ from functools import cache
 from typing import Generator
 
 import libvoikko
+from django.conf import settings
 from django.db.models import QuerySet
 from num2words import num2words
 
@@ -14,6 +15,9 @@ logger = logging.getLogger(__name__)
 # setup libvoikko
 voikko = libvoikko.Voikko("fi", "/etc/voikko")
 voikko.setNoUglyHyphenation(True)
+
+stop_word_classes = set(settings.VOIKKO_FINNISH_STOPWORD_CLASSES)
+check_stop_words = len(stop_word_classes) > 0
 
 
 def get_field_attr(obj: object, field: str) -> str:
@@ -51,10 +55,16 @@ def get_word_bases(word: str) -> set:
         words.add(word)
         return words
     for item in analysis:
+        if check_stop_words and "CLASS" in item and item["CLASS"] in stop_word_classes:
+            # if the word is a stop word, skip it
+            continue
         # extract the bases from the string
         if "WORDBASES" in item:
             word_bases = re.findall(r"\(([^+].*?)\)", item["WORDBASES"])
-            words.update(word_bases)
+            for base in word_bases:
+                # remove non-word characters
+                base = re.sub(r"\W", "", base)
+                words.add(base)
         else:
             words.add(word)
     return words
