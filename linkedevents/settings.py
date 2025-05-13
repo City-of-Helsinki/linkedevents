@@ -113,6 +113,17 @@ env = environ.Env(
     EVENT_SEARCH_INDEX_REBUILD_BATCH_SIZE=(int, 500),
     EVENT_SEARCH_INDEX_REBUILD_END_TIME_MAX_AGE_MONTHS=(int, 36),
     EVENT_SEARCH_INDEX_SIGNALS_ENABLED=(bool, False),
+    VOIKKO_FINNISH_STOPWORD_CLASSES=(
+        list,
+        [
+            "huudahdussana",
+            "seikkasana",
+            "asemosana",
+            "sidesana",
+            "suhdesana",
+            "kieltosana",
+        ],
+    ),
     GDPR_API_QUERY_SCOPE=(str, ""),
     GDPR_API_DELETE_SCOPE=(str, ""),
     GDPR_API_DELETE_EVENT_END_THRESHOLD_DAYS=(int, 30),
@@ -726,6 +737,7 @@ EVENT_SEARCH_INDEX_REBUILD_END_TIME_MAX_AGE_MONTHS = env(
     "EVENT_SEARCH_INDEX_REBUILD_END_TIME_MAX_AGE_MONTHS"
 )
 EVENT_SEARCH_INDEX_SIGNALS_ENABLED = env("EVENT_SEARCH_INDEX_SIGNALS_ENABLED")
+VOIKKO_FINNISH_STOPWORD_CLASSES = env("VOIKKO_FINNISH_STOPWORD_CLASSES")
 
 # Talpa web store integration
 WEB_STORE_INTEGRATION_ENABLED = env("WEB_STORE_INTEGRATION_ENABLED")  # Temporary flag

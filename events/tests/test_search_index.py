@@ -19,6 +19,8 @@ from events.tests.factories import EventFactory, PlaceFactory
         ("kissoja", {"kissa"}),
         ("saippuakivimittakaava", {"saippua", "kivi", "mitta", "kaava"}),
         ("kokonaisvaltainen", {"koko", "nainen", "kokonainen", "valta"}),
+        ("ei ole olemassa", {"olla"}),
+        ("ja hei huomenna ennen sitä sinä hyppäät yli riman", {"hypätä", "rima"}),
     ],
 )
 def test_extract_word_bases(word, expected_result):
