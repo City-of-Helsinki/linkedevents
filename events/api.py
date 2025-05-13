@@ -2406,17 +2406,14 @@ class EventViewSet(
         """
         TODO: convert to use proper filter framework
         """
-        original_queryset = super().filter_queryset(queryset)
         if self.action == "list":
             # we cannot use distinct for performance reasons
-            public_queryset = original_queryset.filter(
+            public_queryset = queryset.filter(
                 publication_status=PublicationStatus.PUBLIC
             )
-            editable_queryset = original_queryset.none()
+            editable_queryset = queryset.none()
             if self.request.user.is_authenticated:
-                editable_queryset = self.request.user.get_editable_events(
-                    original_queryset
-                )
+                editable_queryset = self.request.user.get_editable_events(queryset)
             # by default, only public events are shown in the event list
             queryset = public_queryset
             # however, certain query parameters allow customizing the listing for
@@ -2464,7 +2461,7 @@ class EventViewSet(
 
                 queryset = self.request.user.get_editable_events(original_queryset)
 
-        return queryset.filter()
+        return super().filter_queryset(queryset)
 
     def allow_bulk_destroy(self, qs, filtered):
         return False
