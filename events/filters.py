@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, SearchRank
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import (
     BooleanField,
     Case,
@@ -222,6 +223,20 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
 
 
 class EventFilter(django_filters.rest_framework.FilterSet):
+    @classmethod
+    def check_filter_order(cls):
+        """Class method to validate that the hide_recurring_children filter is placed
+        in last. It needs to be placed in last to be able to apply all selected filters
+        to sub events.
+        """
+
+        filters = list(cls.declared_filters.keys())
+        if filters[-1] != "hide_recurring_children":
+            raise ImproperlyConfigured(
+                "Hide recurring children must be the last filter to be able to apply "
+                "other filters to sub-events."
+            )
+
     division = django_filters.Filter(
         field_name="location__divisions",
         widget=django_filters.widgets.CSVWidget(),
@@ -681,3 +696,6 @@ class PlaceFilter(django_filters.rest_framework.FilterSet):
 
     def filter_divisions(self, queryset, name, value):
         return filter_division(queryset, name, value)
+
+
+EventFilter.check_filter_order()
