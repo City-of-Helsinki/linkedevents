@@ -51,10 +51,10 @@ def test_get_event_list_hide_recurring_children_false():
 
 def test_filter_full_text_wrong_language():
     request = Mock()
-    request.query_params = {"x_full_text_language": "unknown"}
+    request.query_params = {"full_text_language": "unknown"}
     filter_set = EventFilter(request=request)
     with pytest.raises(ValidationError):
-        filter_set.filter_x_full_text(None, "x_full_text", "something")
+        filter_set.filter_full_text(None, "full_text", "something")
 
 
 @pytest.mark.django_db
@@ -163,14 +163,12 @@ def test_get_event_list_full_text(language, query_event, query_place, query_keyw
     call_command("rebuild_event_search_index")
 
     request = Mock()
-    request.query_params = {"x_full_text_language": language}
+    request.query_params = {"full_text_language": language}
 
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_x_full_text(
-            Event.objects.all(), "x_full_text", f"{query}"
-        )
+        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
 
     result = do_filter(query_event)
     assert result.count() == 1
@@ -207,14 +205,12 @@ def test_get_event_search_full_text():
     call_command("rebuild_event_search_index")
 
     request = Mock()
-    request.query_params = {"x_full_text_language": "fi"}
+    request.query_params = {"full_text_language": "fi"}
 
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_x_full_text(
-            Event.objects.all(), "x_full_text", f"{query}"
-        )
+        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
 
     result = do_filter("kissoja")
     assert result.count() == 1
@@ -285,14 +281,12 @@ def test_get_event_search_full_text_special_characters():
     call_command("rebuild_event_search_index")
 
     request = Mock()
-    request.query_params = {"x_full_text_language": "fi"}
+    request.query_params = {"full_text_language": "fi"}
 
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_x_full_text(
-            Event.objects.all(), "x_full_text", f"{query}"
-        )
+        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
 
     result = do_filter("kevääksi .,:;()[]{}*'\"^¨+=-_<>")
     assert result.count() == 1
@@ -336,14 +330,12 @@ def test_get_event_search_full_text_with_embedded_html():
     call_command("rebuild_event_search_index")
 
     request = Mock()
-    request.query_params = {"x_full_text_language": "fi"}
+    request.query_params = {"full_text_language": "fi"}
 
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_x_full_text(
-            Event.objects.all(), "x_full_text", f"{query}"
-        )
+        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
 
     result = do_filter("tapahtuma,eläkeläisille")
     assert result.count() == 1
@@ -382,14 +374,12 @@ def test_get_event_search_full_text_default_order():
     call_command("rebuild_event_search_index")
 
     request = Mock()
-    request.query_params = {"x_full_text_language": "fi"}
+    request.query_params = {"full_text_language": "fi"}
 
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_x_full_text(
-            Event.objects.all(), "x_full_text", f"{query}"
-        )
+        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
 
     result = do_filter("Testisana")
     assert result.count() == 4
@@ -643,7 +633,7 @@ def test_get_event_list_ongoing(ongoing):
 
     filter_set = EventFilter()
 
-    qs = filter_set.filter_x_ongoing(Event.objects.all(), "x_ongoing", ongoing)
+    qs = filter_set.filter_ongoing(Event.objects.all(), "ongoing", ongoing)
 
     assert qs.count() == 1
     if ongoing:

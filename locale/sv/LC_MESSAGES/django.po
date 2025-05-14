@@ -175,7 +175,7 @@ msgid "Search for events that are at most as long as the given duration."
 msgstr ""
 
 #: events/filters.py:401
-msgid "x_full_text supports the following languages: fi, en, sv"
+msgid "full_text supports the following languages: fi, en, sv"
 msgstr ""
 
 #: events/filters.py:449
