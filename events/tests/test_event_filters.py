@@ -57,91 +57,95 @@ def test_filter_full_text_wrong_language():
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "language",
+    "language,query_event,query_place,query_keyword",
     [
-        "fi",
-        "en",
-        "sv",
-        "ru",
-        "ar",
-        "zh_hans",
+        ("fi", "Testitapahtuma", "Testipaikka", "Testiavainsana"),
+        ("en", "Test event", "Test place", "Test keyword"),
+        ("sv", "Testhändelse", "Testplats", "Testnyckelord"),
+        ("ru", "Тестовое событие", "Тестовый участок", "Тестовое ключевое слово"),
+        ("ar", "حدث اختباري", "مكان الاختبار", "اختبار الكلمة الرئيسية"),
+        ("zh_hans", "测试事件", "考试地点", "测试关键字"),
     ],
 )
-def test_get_event_list_full_text(language):
+def test_get_event_list_full_text(language, query_event, query_place, query_keyword):
     place_fi = PlaceFactory(
-        name_fi="Test Place", name_en="Something else", name_sv="Something else"
+        name_fi="Testipaikka", name_en="Something else", name_sv="Something else"
     )
     place_en = PlaceFactory(
-        name_en="Test Place", name_fi="Something else", name_sv="Something else"
+        name_en="Test place", name_fi="Something else", name_sv="Something else"
     )
     place_sv = PlaceFactory(
-        name_sv="Test Place", name_en="Something else", name_fi="Something else"
+        name_sv="Testplats", name_en="Something else", name_fi="Something else"
     )
     place_zh_hans = PlaceFactory(
-        name_zh_hans="Test Place", name_en="Something else", name_fi="Something else"
+        name_zh_hans="考试地点", name_en="Something else", name_fi="Something else"
     )
     place_ru = PlaceFactory(
-        name_ru="Test Place", name_en="Something else", name_fi="Something else"
+        name_ru="Тестовый участок", name_en="Something else", name_fi="Something else"
     )
     place_ar = PlaceFactory(
-        name_ar="Test Place", name_en="Something else", name_fi="Something else"
+        name_ar="مكان الاختبار", name_en="Something else", name_fi="Something else"
     )
     kw_fi = KeywordFactory(
-        name_fi="Test Keyword", name_en="Something else", name_sv="Something else"
+        name_fi="Testiavainsana", name_en="Something else", name_sv="Something else"
     )
     kw_en = KeywordFactory(
-        name_en="Test Keyword", name_fi="Something else", name_sv="Something else"
+        name_en="Test keyword", name_fi="Something else", name_sv="Something else"
     )
     kw_sv = KeywordFactory(
-        name_sv="Test Keyword", name_en="Something else", name_fi="Something else"
+        name_sv="Testnyckelord", name_en="Something else", name_fi="Something else"
     )
     kw_zh_hans = KeywordFactory(
-        name_zh_hans="Test Keyword", name_en="Something else", name_fi="Something else"
+        name_zh_hans="测试关键字", name_en="Something else", name_fi="Something else"
     )
     kw_ru = KeywordFactory(
-        name_ru="Test Keyword", name_en="Something else", name_fi="Something else"
+        name_ru="Тестовое ключевое слово",
+        name_en="Something else",
+        name_fi="Something else",
     )
     kw_ar = KeywordFactory(
-        name_ar="Test Keyword", name_en="Something else", name_fi="Something else"
+        name_ar="اختبار الكلمة الرئيسية",
+        name_en="Something else",
+        name_fi="Something else",
     )
     event_fi = EventFactory(
         id="test:fi",
-        name_fi="Test Event",
+        name_fi="Testitapahtuma",
         name_en="Something else",
         name_sv="Something else",
         location=place_fi,
     )
     event_en = EventFactory(
         id="test:en",
-        name_en="Test Event",
+        name_en="Test event",
         name_fi="Something else",
         name_sv="Something else",
         location=place_en,
     )
     event_sv = EventFactory(
         id="test:sv",
-        name_sv="Test Event",
+        name_sv="Testhändelse",
         name_en="Something else",
         name_fi="Something else",
         location=place_sv,
     )
     event_ru = EventFactory(
         id="test:ru",
-        name_ru="Test Event",
+        name_ru="Тестовое событие",
         name_en="Something else",
         name_fi="Something else",
         location=place_ru,
     )
     event_ar = EventFactory(
         id="test:ar",
-        name_ar="Test Event",
+        name_ar="حدث اختباري",
         name_en="Something else",
         name_fi="Something else",
         location=place_ar,
     )
     event_zh_hans = EventFactory(
         id="test:zh_hans",
-        name_zh_hans="Test Event",
+        name_zh_hans="测试事件",
         name_en="Something else",
         name_fi="Something else",
         location=place_zh_hans,
@@ -166,15 +170,15 @@ def test_get_event_list_full_text(language):
             Event.objects.all(), "x_full_text", f"{query}"
         )
 
-    result = do_filter("Test Event")
+    result = do_filter(query_event)
     assert result.count() == 1
     assert result[0].id == f"test:{language}"
 
-    result = do_filter("Test Place")
+    result = do_filter(query_place)
     assert result.count() == 1
     assert result[0].id == f"test:{language}"
 
-    result = do_filter("Test Keyword")
+    result = do_filter(query_keyword)
     assert result.count() == 1
     assert result[0].id == f"test:{language}"
 
