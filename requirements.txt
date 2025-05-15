@@ -79,6 +79,7 @@ django==4.2.21
     #   drf-spectacular
     #   easy-thumbnails
     #   helsinki-profile-gdpr-api
+    #   sentry-sdk
     #   social-auth-app-django
 django-admin-autocomplete-filter==0.7.1
     # via -r requirements.in
@@ -308,7 +309,7 @@ rpds-py==0.24.0
     #   referencing
 rsa==4.9.1
     # via python-jose
-sentry-sdk==2.27.0
+sentry-sdk[django]==2.27.0
     # via -r requirements.in
 six==1.17.0
     # via
