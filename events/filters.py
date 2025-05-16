@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from django.contrib.postgres.search import SearchQuery, SearchRank
+from django.core.exceptions import ImproperlyConfigured
 from django.db.models import (
     BooleanField,
     Case,
@@ -29,6 +30,7 @@ from munigeo.api import srid_to_srs
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 
+from events import utils
 from events.models import Event, EventAggregate, Place
 from events.search_index.utils import extract_word_bases
 from events.widgets import DistanceWithinWidget
@@ -221,6 +223,20 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
 
 
 class EventFilter(django_filters.rest_framework.FilterSet):
+    @classmethod
+    def check_filter_order(cls):
+        """Class method to validate that the hide_recurring_children filter is placed
+        in last. It needs to be placed in last to be able to apply all selected filters
+        to sub events.
+        """
+
+        filters = list(cls.declared_filters.keys())
+        if filters[-1] != "hide_recurring_children":
+            raise ImproperlyConfigured(
+                "Hide recurring children must be the last filter to be able to apply "
+                "other filters to sub-events."
+            )
+
     division = django_filters.Filter(
         field_name="location__divisions",
         widget=django_filters.widgets.CSVWidget(),
@@ -283,12 +299,6 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             "applied parameter."
         ),
     )
-    hide_recurring_children = django_filters.BooleanFilter(
-        method="filter_hide_recurring_children",
-        help_text=_(
-            "Hide all child events for super events which are of type <code>recurring</code>."  # noqa: E501
-        ),
-    )
     hide_super_event = django_filters.BooleanFilter(
         method="filter_hide_super_event",
         help_text=_("Hide all events which are super events."),
@@ -325,6 +335,49 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         distinct=False,
         widget=django_filters.widgets.CSVWidget(),
         help_text=_("Filter events by their occurring weekday using iso format."),
+    )
+
+    days = django_filters.CharFilter(
+        method="filter_days",
+        help_text=_(
+            "Search for events that intersect with the current time and specified "
+            "amount of days from current time."
+        ),
+    )
+
+    start = django_filters.CharFilter(
+        method="filter_start",
+        help_text=_(
+            "Search for events beginning or ending after this time. Dates can be "
+            "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+            "`today` and `now`."
+        ),
+    )
+
+    end = django_filters.CharFilter(
+        method="filter_end",
+        help_text=_(
+            "Search for events beginning or ending before this time. Dates can be "
+            "specified using ISO 8601 (for example, '2024-01-12') and additionally "
+            "`today` and `now`."
+        ),
+    )
+
+    hide_recurring_children_sub_events = django_filters.BooleanFilter(
+        required=False,
+        help_text=_(
+            "Extension filter to hide_recurring_children. If set to true, "
+            "filtering will also consider events' sub-events."
+        ),
+        method="filter_hide_recurring_children_sub_events",
+    )
+
+    # Must be the last defined filter so that can include sub-events.
+    hide_recurring_children = django_filters.BooleanFilter(
+        method="filter_hide_recurring_children",
+        help_text=_(
+            "Hide all child events for super events which are of type <code>recurring</code>."  # noqa: E501
+        ),
     )
 
     class Meta:
@@ -439,18 +492,6 @@ class EventFilter(django_filters.rest_framework.FilterSet):
 
         return queryset.filter(location__in=places)
 
-    def filter_hide_recurring_children(self, queryset, name, value: Optional[bool]):
-        if not value:
-            return queryset
-
-        # There are two different structures that can define a super event
-        # for recurring events.
-        return queryset.exclude(
-            super_event__super_event_type=Event.SuperEventType.RECURRING
-        ).exclude(
-            eventaggregatemember__event_aggregate__super_event__super_event_type=Event.SuperEventType.RECURRING
-        )
-
     def filter_hide_super_event(self, queryset, name, value: Optional[bool]):
         if not value:
             return queryset
@@ -512,6 +553,106 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         else:
             return queryset.none()
 
+    def filter_days(self, queryset, name, value):
+        try:
+            days = int(value)
+        except ValueError:
+            raise ParseError(_("Error while parsing days."))
+        if days < 1:
+            raise serializers.ValidationError(_("Days must be 1 or more."))
+        if "start" in self.data or "end" in self.data:
+            raise serializers.ValidationError(
+                _("Start or end cannot be used with days.")
+            )
+
+        today = datetime.now(datetime_timezone.utc).date()
+
+        start = today.isoformat()
+        end = (today + timedelta(days=days)).isoformat()
+
+        queryset = self.filter_start(queryset, "start", start)
+        queryset = self.filter_end(queryset, "end", end)
+        return queryset
+
+    def filter_start(self, queryset, name, value):
+        if "end" not in self.data:
+            # postponed events are considered to be "far" in the future and should be
+            # included if end is *not* given
+            postponed_q = Q(event_status=Event.Status.POSTPONED)
+        else:
+            postponed_q = Q()
+
+        # Inconsistent behaviour, see test_inconsistent_tz_default
+        dt = utils.parse_time(value, default_tz=ZoneInfo(settings.TIME_ZONE))[0]
+
+        # only return events with specified end times, or unspecified start times, during the whole of the event  # noqa: E501
+        # this gets of rid pesky one-day events with no known end time (but known
+        # start) after they started
+        return queryset.filter(
+            Q(end_time__gt=dt, has_end_time=True)
+            | Q(end_time__gt=dt, has_start_time=False)
+            | Q(start_time__gte=dt)
+            | postponed_q
+        )
+
+    def filter_end(self, queryset, name, value):
+        dt = utils.parse_end_time(value, default_tz=ZoneInfo(settings.TIME_ZONE))[0]
+        return queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
+
+    def filter_hide_recurring_children_sub_events(
+        self, queryset, name, value: Optional[bool]
+    ):
+        """
+        This is a boolean filter that determines whether to include sub_events
+        matches to results. This is used only with the hide_recurring_children filter,
+        and that said, this is an extension of the latter.
+        """
+        return queryset
+
+    def filter_hide_recurring_children(self, queryset, name, value: Optional[bool]):
+        """
+        This filter must be applied last so that it can work with
+        the hide_recurring_children_sub_events parameter.
+        """
+        if not value:
+            return queryset
+
+        cleaned_data = getattr(self.form, "cleaned_data", None)
+        super_events = None
+        if cleaned_data and cleaned_data.get(
+            "hide_recurring_children_sub_events", False
+        ):
+            # If sub_events is set to true, we need to include the super events.
+            super_events = Event.objects.filter(
+                Exists(
+                    queryset.filter(
+                        Q(super_event=OuterRef("pk"))
+                        | Q(
+                            eventaggregatemember__event_aggregate__super_event=OuterRef(
+                                "pk"
+                            )
+                        )
+                    )
+                )
+            )
+
+            super_events = super_events.filter(
+                Exists(queryset.filter(super_event=OuterRef("pk")))
+            )
+
+        # There are two different structures that can define a super event
+        # for recurring events.
+        queryset = queryset.exclude(
+            super_event__super_event_type=Event.SuperEventType.RECURRING
+        ).exclude(
+            eventaggregatemember__event_aggregate__super_event__super_event_type=Event.SuperEventType.RECURRING
+        )
+
+        if super_events:
+            return queryset | super_events
+
+        return queryset
+
 
 class OrganizationFilter(django_filters.rest_framework.FilterSet):
     dissolved = django_filters.BooleanFilter(
@@ -555,3 +696,6 @@ class PlaceFilter(django_filters.rest_framework.FilterSet):
 
     def filter_divisions(self, queryset, name, value):
         return filter_division(queryset, name, value)
+
+
+EventFilter.check_filter_order()

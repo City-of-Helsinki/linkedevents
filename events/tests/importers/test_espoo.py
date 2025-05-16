@@ -1,10 +1,10 @@
 import io
 from http.client import HTTPMessage, HTTPResponse
 from unittest.mock import Mock, patch
+from zoneinfo import ZoneInfo
 
 import factory
 import pytest
-import pytz
 from django.conf import settings as django_settings
 from django.utils import timezone
 from django_orghierarchy.models import Organization
@@ -289,19 +289,19 @@ def event_mock_data(
     external_links = external_links or []
 
     faker = Faker()
-    end_time = end_time or faker.date_time(tzinfo=pytz.utc)
+    end_time = end_time or faker.date_time(tzinfo=ZoneInfo("UTC"))
     return {
         "id": _id,
         "data_source": "espoo",
-        "created_time": faker.iso8601(tzinfo=pytz.utc),
-        "date_published": faker.iso8601(tzinfo=pytz.utc),
+        "created_time": faker.iso8601(tzinfo=ZoneInfo("UTC")),
+        "date_published": faker.iso8601(tzinfo=ZoneInfo("UTC")),
         "deleted": False,
         "end_time": end_time.isoformat(),
-        "last_modified_time": faker.iso8601(tzinfo=pytz.utc),
+        "last_modified_time": faker.iso8601(tzinfo=ZoneInfo("UTC")),
         "start_time": (
             start_time.isoformat()
             if start_time
-            else faker.iso8601(tzinfo=pytz.utc, end_datetime=end_time)
+            else faker.iso8601(tzinfo=ZoneInfo("UTC"), end_datetime=end_time)
         ),
         "super_event_type": None,
         "name": {

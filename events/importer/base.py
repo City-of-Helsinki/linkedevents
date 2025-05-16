@@ -4,8 +4,8 @@ import operator
 import os
 from collections import defaultdict, namedtuple
 from functools import partial
+from zoneinfo import ZoneInfo
 
-import pytz
 from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point, Polygon
@@ -28,7 +28,7 @@ EXTENSION_COURSE_FIELDS = (
     "minimum_attendee_capacity",
     "remaining_attendee_capacity",
 )
-LOCAL_TZ = pytz.timezone(settings.TIME_ZONE)
+LOCAL_TZ = ZoneInfo(settings.TIME_ZONE)
 
 
 # Using a recursive default dictionary
@@ -376,7 +376,7 @@ class Importer(object):
         if not info["has_start_time"]:
             # Event start time is not exactly defined.
             # Use midnight in event timezone, or, if given in utc, local timezone
-            if info["start_time"].tzinfo == pytz.utc:
+            if info["start_time"].tzinfo == ZoneInfo("UTC"):
                 info["start_time"] = info["start_time"].astimezone(LOCAL_TZ)
             info["start_time"] = info["start_time"].replace(hour=0, minute=0, second=0)
 
@@ -393,7 +393,7 @@ class Importer(object):
         if not info["has_end_time"]:
             # Event end time is not exactly defined.
             # Use midnight in event timezone, or, if given in utc, local timezone
-            if info["end_time"].tzinfo == pytz.utc:
+            if info["end_time"].tzinfo == ZoneInfo("UTC"):
                 info["end_time"] = info["start_time"].astimezone(LOCAL_TZ)
             info["end_time"] = utils.start_of_next_day(info["end_time"])
 
