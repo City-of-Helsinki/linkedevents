@@ -1,15 +1,12 @@
 import logging
 import re
 import urllib.parse
-from datetime import datetime, timedelta
 from datetime import time as datetime_time
-from datetime import timezone as datetime_timezone
 from functools import partial, reduce
 from operator import or_
 from typing import Literal, Union
 
 import django_filters
-import pytz
 import regex
 from django.conf import settings
 from django.contrib.gis.gdal import GDALException
@@ -21,7 +18,7 @@ from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
 from django.db.models.functions import Greatest
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.template.loader import render_to_string
-from django.utils import translation
+from django.utils import timezone, translation
 from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
@@ -1713,9 +1710,7 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         kwargs = {f"search_vector_{language}": query}
         queryset = (
             queryset.filter(**kwargs)
-            .filter(
-                end_time__gte=datetime.utcnow().replace(tzinfo=pytz.utc), deleted=False
-            )
+            .filter(end_time__gte=timezone.now(), deleted=False)
             .filter(Q(location__id__endswith="internet") | Q(local=True))
         )
 
@@ -1956,54 +1951,6 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
         # time of writing, so go figure.
         dt = utils.parse_end_time(val)[0]
         queryset = queryset.filter(Q(last_modified_time__gte=dt))
-
-    start = params.get("start")
-    end = params.get("end")
-    days = params.get("days")
-
-    if days:
-        try:
-            days = int(days)
-        except ValueError:
-            raise ParseError(_("Error while parsing days."))
-        if days < 1:
-            raise serializers.ValidationError(_("Days must be 1 or more."))
-
-        if start or end:
-            raise serializers.ValidationError(
-                _("Start or end cannot be used with days.")
-            )
-
-        today = datetime.now(datetime_timezone.utc).date()
-
-        start = today.isoformat()
-        end = (today + timedelta(days=days)).isoformat()
-
-    if not end:
-        # postponed events are considered to be "far" in the future and should be
-        # included if end is *not* given
-        postponed_q = Q(event_status=Event.Status.POSTPONED)
-    else:
-        postponed_q = Q()
-
-    if start:
-        # Inconsistent behaviour, see test_inconsistent_tz_default
-        dt = utils.parse_time(start, default_tz=pytz.timezone(settings.TIME_ZONE))[0]
-
-        # only return events with specified end times, or unspecified start times, during the whole of the event  # noqa: E501
-        # this gets of rid pesky one-day events with no known end time (but known
-        # start) after they started
-        queryset = queryset.filter(
-            Q(end_time__gt=dt, has_end_time=True)
-            | Q(end_time__gt=dt, has_start_time=False)
-            | Q(start_time__gte=dt)
-            | postponed_q
-        )
-
-    if end:
-        # Inconsistent behaviour, see test_inconsistent_tz_default
-        dt = utils.parse_end_time(end, default_tz=pytz.timezone(settings.TIME_ZONE))[0]
-        queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     val = params.get("bbox", None)
     if val:
@@ -2455,17 +2402,14 @@ class EventViewSet(
         """
         TODO: convert to use proper filter framework
         """
-        original_queryset = super().filter_queryset(queryset)
         if self.action == "list":
             # we cannot use distinct for performance reasons
-            public_queryset = original_queryset.filter(
+            public_queryset = queryset.filter(
                 publication_status=PublicationStatus.PUBLIC
             )
-            editable_queryset = original_queryset.none()
+            editable_queryset = queryset.none()
             if self.request.user.is_authenticated:
-                editable_queryset = self.request.user.get_editable_events(
-                    original_queryset
-                )
+                editable_queryset = self.request.user.get_editable_events(queryset)
             # by default, only public events are shown in the event list
             queryset = public_queryset
             # however, certain query parameters allow customizing the listing for
@@ -2513,7 +2457,7 @@ class EventViewSet(
 
                 queryset = self.request.user.get_editable_events(original_queryset)
 
-        return queryset.filter()
+        return super().filter_queryset(queryset)
 
     def allow_bulk_destroy(self, qs, filtered):
         return False
@@ -3420,7 +3364,7 @@ class SearchViewSet(
             if not start and not end and hasattr(queryset.query, "add_decay_function"):
                 # If no time-based filters are set, make the relevancy score
                 # decay the further in the future the event is.
-                now = datetime.utcnow()
+                now = timezone.now()
                 queryset = queryset.filter(end_time__gt=now).decay(
                     {"gauss": {"end_time": {"origin": now, "scale": DATE_DECAY_SCALE}}}
                 )

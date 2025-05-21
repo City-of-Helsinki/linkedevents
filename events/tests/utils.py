@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
-import pytz
 from django.conf import settings
 from rest_framework.reverse import reverse
 from rest_framework.settings import api_settings
@@ -156,7 +156,7 @@ def put_event(api_client, event, event_data):
 
 def datetime_zone_aware(year, month, day, hour, minute):
     return datetime(year, month, day, hour, minute).astimezone(
-        pytz.timezone(settings.TIME_ZONE)
+        ZoneInfo(settings.TIME_ZONE)
     )
 
 

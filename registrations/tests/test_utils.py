@@ -1,10 +1,10 @@
 from datetime import timedelta
 from unittest.mock import patch
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import freezegun
 import pytest
-import pytz
 import requests_mock
 from django.conf import settings as django_settings
 from django.test import override_settings
@@ -792,7 +792,7 @@ def test_create_web_store_api_order_expiration_datetime(
         )
 
     localized_expiration_datetime = localtime().astimezone(
-        pytz.timezone(expiration_datetime_timezone)
+        ZoneInfo(expiration_datetime_timezone)
     )
     with patch(
         "web_store.order.clients.WebStoreOrderAPIClient.create_order"

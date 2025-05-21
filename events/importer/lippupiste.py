@@ -3,9 +3,9 @@ import re
 from collections import defaultdict
 from datetime import datetime
 from os.path import commonprefix
+from zoneinfo import ZoneInfo
 
 import bleach
-import pytz
 import requests
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, ValidationError
@@ -99,7 +99,7 @@ DATA_SOURCES_TO_CHECK_FOR_DUPLICATES = (
 
 LIPPUPISTE_EVENT_API_URL = getattr(settings, "LIPPUPISTE_EVENT_API_URL", None)
 
-LOCAL_TZ = pytz.timezone("Europe/Helsinki")
+LOCAL_TZ = ZoneInfo("Europe/Helsinki")
 
 HTML_BREAK_LINE_REGEX = re.compile(r"<br\s*/?>", re.IGNORECASE)
 
@@ -115,7 +115,7 @@ def mark_deleted(obj):
 def check_deleted(obj):
     # we don't want to delete past events, so as far as the importer cares,
     # they are considered deleted
-    if obj.deleted or obj.end_time < datetime.now(pytz.utc):
+    if obj.deleted or obj.end_time < datetime.now(ZoneInfo("UTC")):
         return True
     return False
 
@@ -447,9 +447,7 @@ class LippupisteImporter(Importer):
 
         event_date = datetime.strptime(source_event["EventDate"], "%d.%m.%Y").date()
         event_time = datetime.strptime(source_event["EventTime"], "%H:%M").time()
-        event_datetime = LOCAL_TZ.localize(datetime.combine(event_date, event_time))
-        # we would prefer to retain the local timezone, so as to better communicate it to base importer  # noqa: E501
-        # event_datetime = event_datetime.astimezone(pytz.utc)
+        event_datetime = datetime.combine(event_date, event_time).astimezone(LOCAL_TZ)
         event["start_time"] = event_datetime
         provider = source_event["EventPromoterName"]
         if provider:
@@ -680,7 +678,7 @@ class LippupisteImporter(Importer):
                         deleted=False,
                         publisher=self.parent_organization,
                         provider_fi__iexact=source_event["EventPromoterName"].lower(),
-                        end_time__gte=datetime.now(pytz.utc),
+                        end_time__gte=datetime.now(ZoneInfo("UTC")),
                     ).extra(where=["%s ILIKE name_fi||'%%'"], params=[event_name]):
                         logger.info("---------")
                         logger.info(source_event["EventName"])

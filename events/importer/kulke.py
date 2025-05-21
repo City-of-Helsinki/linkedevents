@@ -7,6 +7,7 @@ from datetime import datetime, time, timedelta
 from posixpath import join as urljoin
 from textwrap import dedent
 from typing import Iterator, Sequence, Union
+from zoneinfo import ZoneInfo
 
 import dateutil
 import requests
@@ -14,9 +15,9 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models import Count, Q
+from django.utils import timezone
 from django_orghierarchy.models import Organization
 from lxml import etree
-from pytz import timezone
 
 from events.keywords import KeywordMatcher
 from events.models import (
@@ -229,7 +230,7 @@ KEYWORDS_TO_ADD_TO_AUDIENCE = ["yso:{}".format(i) for i in KEYWORDS_TO_ADD_TO_AU
 # category text replacements for keyword determination
 CATEGORY_TEXT_REPLACEMENTS = [("jumppa", "voimistelu"), ("Stoan", "Stoa")]
 
-LOCAL_TZ = timezone("Europe/Helsinki")
+LOCAL_TZ = ZoneInfo("Europe/Helsinki")
 
 
 def make_kulke_id(num):
@@ -622,7 +623,7 @@ class KulkeImporter(Importer):
                 start_time = start_time.astimezone(LOCAL_TZ)
                 event["has_start_time"] = True
             else:
-                start_time = LOCAL_TZ.localize(start_time)
+                start_time = timezone.make_aware(start_time, timezone=LOCAL_TZ)
                 event["has_start_time"] = False
         else:
             start_time = start_time.astimezone(LOCAL_TZ)
@@ -643,7 +644,7 @@ class KulkeImporter(Importer):
                     event["has_end_time"] = True
 
                 else:
-                    end_time = LOCAL_TZ.localize(end_time)
+                    end_time = timezone.make_aware(end_time, timezone=LOCAL_TZ)
                     event["has_end_time"] = False
             else:
                 end_time = end_time.astimezone(LOCAL_TZ)
