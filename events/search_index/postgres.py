@@ -66,7 +66,7 @@ class EventSearchIndexService:
                 defaults={
                     "place": event.location if event else None,
                     "event_last_modified_time": event.last_modified_time
-                    if event
+                    if event and event.last_modified_time
                     else timezone.now(),
                     "place_last_modified_time": event.location.last_modified_time
                     if event and event.location
