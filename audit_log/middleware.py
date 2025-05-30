@@ -4,7 +4,9 @@ from django.conf import settings
 
 from audit_log.utils import commit_to_audit_log
 
-_AUDIT_LOGGED_ENDPOINTS_RE = re.compile(r"^/(v1|v0.1|gdpr-api|data-analytics)/")
+_AUDIT_LOGGED_ENDPOINTS_RE = re.compile(
+    r"^(/linkedevents)?/(v1|v0.1|gdpr-api|data-analytics)/"
+)
 
 
 class AuditLogMiddleware:
