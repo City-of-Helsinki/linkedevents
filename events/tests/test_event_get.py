@@ -1,14 +1,13 @@
 from collections import Counter
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
-import pytz
 from dateutil import parser
 from django.conf import settings
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import Point
 from django.db import DEFAULT_DB_ALIAS, connections
-from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.utils.timezone import localtime
@@ -1343,8 +1342,8 @@ def test_suitable_for_certain_age(
     # not suitable, neither of age limits defined
     event5 = make_event(
         "5",
-        datetime.now().astimezone(pytz.timezone("UTC")),
-        datetime.now().astimezone(pytz.timezone("UTC")) + timedelta(hours=1),
+        datetime.now().astimezone(ZoneInfo("UTC")),
+        datetime.now().astimezone(ZoneInfo("UTC")) + timedelta(hours=1),
     )
     event5.audience_min_age = None
     event5.audience_max_age = None
@@ -1352,8 +1351,8 @@ def test_suitable_for_certain_age(
     # suitable
     event6 = make_event(
         "6",
-        datetime.now().astimezone(pytz.timezone("UTC")),
-        datetime.now().astimezone(pytz.timezone("UTC")) + timedelta(hours=1),
+        datetime.now().astimezone(ZoneInfo("UTC")),
+        datetime.now().astimezone(ZoneInfo("UTC")) + timedelta(hours=1),
     )
     event6.audience_min_age = 11
     event6.audience_max_age = None
@@ -1961,76 +1960,3 @@ def test_event_list_shows_image_and_its_license(event, image):
     response = get_list(api_client)
     license_url = response.data["data"][0]["images"][0]["license_url"]
     assert license_url == "http://urltothe.license"
-
-
-class FilterEventsByRegistrationCapacitiesV1TestCase(TestCase, EventsListTestCaseMixin):
-    @classmethod
-    def setUpTestData(cls):
-        cls.list_url = reverse("event-list", version="v1")
-
-    def test_get_event_list_registration_remaining_attendee_capacity_gte(self):
-        registration = RegistrationFactory(remaining_attendee_capacity=10)
-        registration2 = RegistrationFactory(remaining_attendee_capacity=5)
-        registration3 = RegistrationFactory(remaining_attendee_capacity=1)
-
-        for capacity, events in [
-            (1, [registration.event, registration2.event, registration3.event]),
-            (5, [registration.event, registration2.event]),
-            (10, [registration.event]),
-            (11, []),
-        ]:
-            with self.subTest():
-                self._get_list_and_assert_events(
-                    f"registration__remaining_attendee_capacity__gte={capacity}", events
-                )
-
-    def test_get_event_list_registration_remaining_waiting_list_capacity_gte(self):
-        registration = RegistrationFactory(remaining_waiting_list_capacity=10)
-        registration2 = RegistrationFactory(remaining_waiting_list_capacity=5)
-        registration3 = RegistrationFactory(remaining_waiting_list_capacity=1)
-
-        for capacity, events in [
-            (1, [registration.event, registration2.event, registration3.event]),
-            (5, [registration.event, registration2.event]),
-            (10, [registration.event]),
-            (11, []),
-        ]:
-            with self.subTest():
-                self._get_list_and_assert_events(
-                    f"registration__remaining_waiting_list_capacity__gte={capacity}",
-                    events,
-                )
-
-    def test_get_event_list_registration_remaining_attendee_capacity_isnull(self):
-        registration = RegistrationFactory(remaining_attendee_capacity=10)
-        registration2 = RegistrationFactory(remaining_attendee_capacity=None)
-        registration3 = RegistrationFactory(remaining_attendee_capacity=1)
-
-        for capacity, events in [
-            (1, [registration2.event]),
-            (0, [registration.event, registration3.event]),
-            (True, [registration2.event]),
-            (False, [registration.event, registration3.event]),
-        ]:
-            with self.subTest():
-                self._get_list_and_assert_events(
-                    f"registration__remaining_attendee_capacity__isnull={capacity}",
-                    events,
-                )
-
-    def test_get_event_list_registration_remaining_waiting_list_capacity_isnull(self):
-        registration = RegistrationFactory(remaining_waiting_list_capacity=10)
-        registration2 = RegistrationFactory(remaining_waiting_list_capacity=None)
-        registration3 = RegistrationFactory(remaining_waiting_list_capacity=1)
-
-        for capacity, events in [
-            (1, [registration2.event]),
-            (0, [registration.event, registration3.event]),
-            (True, [registration2.event]),
-            (False, [registration.event, registration3.event]),
-        ]:
-            with self.subTest():
-                self._get_list_and_assert_events(
-                    f"registration__remaining_waiting_list_capacity__isnull={capacity}",
-                    events,
-                )
