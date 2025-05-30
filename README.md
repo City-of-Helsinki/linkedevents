@@ -111,6 +111,8 @@ python manage.py event_import yso --all
 python manage.py add_helsinki_audience
 # Add keyword set to display in the UI main category selection
 python manage.py add_helsinki_topics
+# Add kasko related keywords
+python manage.py add_kasko_keywords
 # Import places from Helsinki metropolitan region service registry (used by events from following sources)
 python manage.py event_import tprek --places
 # Import places from Helsinki metropolitan region address registry (used as fallback locations)
