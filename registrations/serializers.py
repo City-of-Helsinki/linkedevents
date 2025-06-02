@@ -425,6 +425,10 @@ class SignUpSerializer(
 
     def create(self, validated_data):
         registration = validated_data["registration"]
+
+        # Ensure that the registration is locked for tackling race conditions.
+        registration = Registration.objects.select_for_update().get(pk=registration.pk)
+
         protected_data = _get_protected_data(
             validated_data, ["extra_info", "date_of_birth"]
         )
@@ -1489,6 +1493,9 @@ class CreateSignUpsSerializer(serializers.Serializer):
     def create_signups(self, validated_data):
         user = self.context["request"].user
         registration = validated_data["registration"]
+
+        # Ensure that the registration is locked for tackling race conditions.
+        registration = Registration.objects.select_for_update().get(id=registration.id)
 
         add_as_attending, add_as_waitlisted = _get_attending_and_waitlisted_capacities(
             registration, len(validated_data["signups"])
