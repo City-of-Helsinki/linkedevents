@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
+from django.db import transaction
 from django.utils import translation
 from icalendar import Calendar, vText
 from icalendar import Event as CalendarEvent
@@ -139,3 +140,41 @@ def strip_trailing_zeroes_from_decimal(value: Decimal):
         return value.quantize(Decimal(1))
 
     return value.normalize()
+
+
+@transaction.atomic
+def recalculate_registration_capacities(registration_id: int) -> None:
+    from registrations.models import Registration  # To avoid circular import
+
+    registration = (
+        Registration.objects.filter(pk=registration_id).select_for_update().first()
+    )
+
+    new_remaining_attendee_capacity = (
+        registration.calculate_remaining_attendee_capacity()
+    )
+    old_remaining_attendee_capacity = registration.remaining_attendee_capacity
+    registration.remaining_attendee_capacity = new_remaining_attendee_capacity
+
+    registration.remaining_waiting_list_capacity = (
+        registration.calculate_remaining_waiting_list_capacity()
+    )
+
+    registration._capacities_recalculation_save = True
+    registration.save(
+        update_fields=[
+            "remaining_attendee_capacity",
+            "remaining_waiting_list_capacity",
+        ]
+    )
+
+    if (
+        new_remaining_attendee_capacity is not None
+        and old_remaining_attendee_capacity is not None
+    ) and new_remaining_attendee_capacity > old_remaining_attendee_capacity:
+        # Registration attendee capacity has been increased
+        # => it's possible to add more attending signups to the registration from the waiting list  # noqa: E501
+        # => add as many as possible.
+        move_waitlisted_to_attending(
+            registration, count=new_remaining_attendee_capacity
+        )

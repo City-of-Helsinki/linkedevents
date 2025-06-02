@@ -59,6 +59,7 @@ from registrations.utils import (
     get_signup_create_url,
     has_allowed_substitute_user_email_domain,
 )
+from registrations.utils.registration import recalculate_registration_capacities
 from web_store.order.enums import (
     WebStoreOrderWebhookEventType,
     WebStoreRefundWebhookEventType,
@@ -425,6 +426,7 @@ class SignUpSerializer(
 
     def create(self, validated_data):
         registration = validated_data["registration"]
+        recalculate_registration_capacities(registration.id)
         protected_data = _get_protected_data(
             validated_data, ["extra_info", "date_of_birth"]
         )
@@ -1489,6 +1491,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
     def create_signups(self, validated_data):
         user = self.context["request"].user
         registration = validated_data["registration"]
+        recalculate_registration_capacities(registration.id)
 
         add_as_attending, add_as_waitlisted = _get_attending_and_waitlisted_capacities(
             registration, len(validated_data["signups"])

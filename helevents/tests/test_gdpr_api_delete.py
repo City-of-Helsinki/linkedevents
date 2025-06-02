@@ -116,7 +116,7 @@ def test_authenticated_user_can_delete_own_data(
         with (
             requests_mock.Mocker() as req_mock,
             patch(
-                "registrations.signals._recalculate_registration_capacities"
+                "registrations.signals.recalculate_registration_capacities"
             ) as mocked_signup_post_delete,
         ):
             auth_header = get_api_token_for_user_with_scopes(
@@ -154,7 +154,7 @@ def test_authenticated_user_can_delete_own_data_event_user_details_not_nulled(
         with (
             requests_mock.Mocker() as req_mock,
             patch(
-                "registrations.signals._recalculate_registration_capacities"
+                "registrations.signals.recalculate_registration_capacities"
             ) as mocked_signup_post_delete,
         ):
             auth_header = get_api_token_for_user_with_scopes(
