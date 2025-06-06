@@ -1,9 +1,7 @@
-from datetime import datetime
-
-import pytz
 from django.conf import settings
 from django.core.cache import cache
 from django.core.management import BaseCommand
+from django.utils import timezone
 
 from events.models import Event
 from linkedevents.settings import MUNIGEO_MUNI
@@ -19,7 +17,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         local_events = Event.objects.filter(
             location__divisions__ocd_id__endswith=MUNIGEO_MUNI,
-            end_time__gte=datetime.utcnow().replace(tzinfo=pytz.utc),
+            end_time__gte=timezone.now(),
             deleted=False,
         ).values_list(
             "id",
@@ -60,7 +58,7 @@ class Command(BaseCommand):
 
         inet_events = Event.objects.filter(
             location__id__endswith="internet",
-            end_time__gte=datetime.utcnow().replace(tzinfo=pytz.utc),
+            end_time__gte=timezone.now(),
             deleted=False,
         ).values_list(
             "id",

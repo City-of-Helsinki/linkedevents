@@ -1,14 +1,13 @@
-import datetime
 import json
 import re
 
-import pytz
 import requests
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import CommandError
 from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import timezone
 from httmock import HTTMock, all_requests, response
 from icalendar import Calendar
 from icalendar import Event as CalendarEvent
@@ -305,9 +304,7 @@ class CitySDKExporter(Exporter):
             qs = klass.objects.exclude(**imported)
         for model in qs:
             citysdk_model = generate(model)
-            citysdk_model["created"] = datetime.datetime.utcnow().replace(
-                tzinfo=pytz.utc
-            )
+            citysdk_model["created"] = timezone.now()
             if model_name == "Keyword":
                 data = {"list": "event", "category": citysdk_model}
             else:

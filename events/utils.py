@@ -4,9 +4,9 @@ import re
 import warnings
 from datetime import datetime, timedelta
 from typing import Iterable, Optional
+from zoneinfo import ZoneInfo
 
 import bleach
-import pytz
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
 from django.db import transaction
@@ -21,6 +21,8 @@ from events.sql import count_events_for_keywords, count_events_for_places
 from helevents.models import User
 
 logger = logging.getLogger(__name__)
+
+UTC_TIMEZONE = ZoneInfo("UTC")
 
 
 def convert_to_camelcase(s):
@@ -109,7 +111,7 @@ def recache_n_events_in_locations(place_ids, all=False):
             Place.objects.filter(id=place_id).update(n_events=n_events)
 
 
-def parse_time(time_str: str, default_tz=pytz.utc) -> (datetime, bool):
+def parse_time(time_str: str, default_tz=UTC_TIMEZONE) -> (datetime, bool):
     """
     Parse a time string into a datetime object. Accepts ISO8061,
     date format "YYYY-MM-DD", "today" and "now".
@@ -120,7 +122,7 @@ def parse_time(time_str: str, default_tz=pytz.utc) -> (datetime, bool):
              whether the returned datetime represents a date
     :raises: ParseError
     """
-    local_tz = pytz.timezone(settings.TIME_ZONE)
+    local_tz = ZoneInfo(settings.TIME_ZONE)
     time_str = time_str.strip()
 
     if time_str.lower() == "today":
@@ -129,7 +131,8 @@ def parse_time(time_str: str, default_tz=pytz.utc) -> (datetime, bool):
         return timezone.now(), False
 
     try:
-        return local_tz.localize(datetime.strptime(time_str, "%Y-%m-%d")), True
+        dt = datetime.strptime(time_str, "%Y-%m-%d")
+        return dt.astimezone(local_tz), True
     except ValueError:
         pass
 
@@ -144,14 +147,14 @@ def parse_time(time_str: str, default_tz=pytz.utc) -> (datetime, bool):
         # Based on a previous comment, the original intended behaviour is to
         # use UTC if no timezone is given.
         if is_naive_datetime(dt):
-            dt = default_tz.localize(dt)
+            dt = timezone.make_aware(dt, timezone=default_tz)
 
         return dt, False
     except (TypeError, ValueError, OverflowError):
         raise ParseError("time in invalid format (try ISO 8601 or yyyy-mm-dd)")
 
 
-def parse_end_time(time_str: str, default_tz=pytz.utc) -> (datetime, bool):
+def parse_end_time(time_str: str, default_tz=UTC_TIMEZONE) -> (datetime, bool):
     """
     Parse a time string and if it turns out to be a date, convert it to
     end of day (= start of next day)
@@ -179,8 +182,8 @@ def start_of_day(dt: datetime) -> datetime:
     :param dt: a datetime object
     :return: the earliest aware datetime of the same day (at 00:00:00)
     """
-    tz = pytz.timezone(settings.TIME_ZONE)
-    return tz.localize(
+    tz = ZoneInfo(settings.TIME_ZONE)
+    return timezone.make_aware(
         dt.astimezone(tz).replace(
             hour=0, minute=0, second=0, microsecond=0, tzinfo=None
         )
@@ -193,7 +196,7 @@ def start_of_next_day(dt: datetime) -> datetime:
     :param dt: a datetime object
     :return: the earliest datetime of the next day (at 00:00:00)
     """
-    tz = pytz.timezone(settings.TIME_ZONE)
+    tz = ZoneInfo(settings.TIME_ZONE)
     return start_of_day(dt.astimezone(tz).replace(tzinfo=None) + timedelta(days=1))
 
 
@@ -203,7 +206,7 @@ def start_of_previous_day(dt: datetime) -> datetime:
     :param dt: a datetime object
     :return: the earliest aware datetime of the previous day (at 00:00:00)
     """
-    tz = pytz.timezone(settings.TIME_ZONE)
+    tz = ZoneInfo(settings.TIME_ZONE)
     return start_of_day(dt.astimezone(tz).replace(tzinfo=None) - timedelta(days=1))
 
 
