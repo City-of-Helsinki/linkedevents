@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
 
-from events.models import EventSearchIndex
+from events.models import Event, EventSearchIndex
 from events.search_index.utils import convert_numbers, extract_word_bases
 from events.tests.factories import EventFactory, PlaceFactory
 
@@ -85,6 +85,17 @@ def test_rebuild_search_index(event, place, keyword):
     assert keyword.name_fi[:4].lower() in str(event_full_text.search_vector_fi)
     assert keyword.name_sv[:4].lower() in str(event_full_text.search_vector_sv)
     assert keyword.name_en[:4].lower() in str(event_full_text.search_vector_en)
+
+
+@pytest.mark.django_db
+def test_rebuild_search_index_event_last_modified_time_null(event, place, keyword):
+    Event.objects.filter(pk=event.pk).update(last_modified_time=None)
+    event.refresh_from_db()
+    assert event.last_modified_time is None
+    call_command("rebuild_event_search_index")
+    assert EventSearchIndex.objects.all().count() == 1
+    event_full_text = EventSearchIndex.objects.first()
+    assert event_full_text.event_last_modified_time is None
 
 
 @pytest.mark.skipif(

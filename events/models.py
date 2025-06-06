@@ -1464,8 +1464,8 @@ class EventSearchIndex(models.Model, metaclass=EventSearchIndexMeta):
         Place, related_name="full_text_place", on_delete=models.CASCADE, null=True
     )
 
-    event_last_modified_time = models.DateTimeField()
-    place_last_modified_time = models.DateTimeField()
+    event_last_modified_time = models.DateTimeField(null=True, blank=True)
+    place_last_modified_time = models.DateTimeField(null=True, blank=True)
 
     words_fi_weight_a = ArrayField(models.CharField(max_length=64), default=list)
     words_fi_weight_b = ArrayField(models.CharField(max_length=64), default=list)
