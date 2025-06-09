@@ -1,5 +1,38 @@
 # Changelog
 
+## [3.14.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.13.1...linkedevents-v3.14.0) (2025-06-09)
+
+
+### Features
+
+* Add all supported languages to search ([675953e](https://github.com/City-of-Helsinki/linkedevents/commit/675953ea7412341fb295d37073b0ea46db60a488))
+* Add event audience to search index ([30ed8a7](https://github.com/City-of-Helsinki/linkedevents/commit/30ed8a7fe0fb6240c71f3b06389dff03c0154abd))
+* Add more Sentry configuration options ([74c9b0d](https://github.com/City-of-Helsinki/linkedevents/commit/74c9b0dee7dc92212966365f08397ace4eeffa22))
+* Add support for Voikko stopword classes ([ab104da](https://github.com/City-of-Helsinki/linkedevents/commit/ab104da999e17b4fceb8b6704ca007f818d61045))
+* Add time limit to event search index rebuild ([82c008f](https://github.com/City-of-Helsinki/linkedevents/commit/82c008f4ac17a6271a74ee62948a5146a059731e))
+* Convert numbers to words for fi-index ([dd9cec8](https://github.com/City-of-Helsinki/linkedevents/commit/dd9cec845e72806aece405fc0e4c484cc2b895fe))
+* Convert numbers to words in other languages ([984c3d2](https://github.com/City-of-Helsinki/linkedevents/commit/984c3d274fe55d086c1a8dcd7937d0a0130a8144))
+* Delete EventSearchIndex in batches ([3088d48](https://github.com/City-of-Helsinki/linkedevents/commit/3088d48e52818206366c088b45fdca1008f86235))
+* Enhance index creation input ([78fb391](https://github.com/City-of-Helsinki/linkedevents/commit/78fb39152fdec113b37716afc9d6444fb3f7828c))
+* **events:** Command for adding kasko related keywords ([68bf0a1](https://github.com/City-of-Helsinki/linkedevents/commit/68bf0a167fab37353f5b7df9e9bae049359e03c8))
+* Improve index special character handling ([97cbd54](https://github.com/City-of-Helsinki/linkedevents/commit/97cbd5416e803bdadeeccd8b604ee1a39910b4b8))
+* Remove html tags and newlines from index ([0fa2b10](https://github.com/City-of-Helsinki/linkedevents/commit/0fa2b104d12a5ebe35c14d8133a7b073676557df))
+* Replace non-word characters with space ([46b765f](https://github.com/City-of-Helsinki/linkedevents/commit/46b765f51f09a83322d07a416349bc5466235af9))
+* Use weighted words fields ([a93483d](https://github.com/City-of-Helsinki/linkedevents/commit/a93483d1ab61fe63f6cc4f25bada790389752222))
+
+
+### Bug Fixes
+
+* Audit log production urls ([898e37d](https://github.com/City-of-Helsinki/linkedevents/commit/898e37d7e9018a188acadd42a704e678e4997a2e))
+* **events:** Make EventSearchIndex modified times nullable ([1662bc2](https://github.com/City-of-Helsinki/linkedevents/commit/1662bc2b7dcc7e5ee8835d2161d08ea1895a0254))
+
+
+### Dependencies
+
+* Add num2words package ([b973528](https://github.com/City-of-Helsinki/linkedevents/commit/b9735289fd2a18f0538adc8ea7e1b6405fb503fc))
+* Bump django from 4.2.20 to 4.2.21 ([5afdb4d](https://github.com/City-of-Helsinki/linkedevents/commit/5afdb4de51b18e282fa1e3939e968f6bc19810a8))
+* Bump django from 4.2.21 to 4.2.22 ([219a059](https://github.com/City-of-Helsinki/linkedevents/commit/219a0594a86656f7581497ce94909f79dd10d8c3))
+
 ## [3.13.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.13.0...linkedevents-v3.13.1) (2025-04-16)
 
 
