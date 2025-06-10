@@ -286,7 +286,7 @@ referencing==0.36.2
     #   jsonschema-specifications
 regex==2024.11.6
     # via -r requirements.in
-requests==2.32.3
+requests==2.32.4
     # via
     #   -r requirements.in
     #   django-helusers
