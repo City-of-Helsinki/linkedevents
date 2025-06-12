@@ -11,10 +11,10 @@ from events.models import Place
 logger = logging.getLogger(__name__)
 
 
-def clean_text(text, strip_newlines=False, parse_html=False):
+def clean_text(text, strip_newlines=False, parse_html=False, separator: str = ""):
     if parse_html:
         soup = BeautifulSoup(text, features="html.parser")
-        text = soup.get_text()
+        text = soup.get_text(separator=separator)
     # remove non-breaking spaces and separators
     text = text.replace("\xa0", " ").replace("\x1f", "")
     # remove nil bytes and tabs

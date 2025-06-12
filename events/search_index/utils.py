@@ -79,7 +79,9 @@ def extract_word_bases(text: str, words: set, lang: str = "fi") -> set:
     :return: the set of words
     """
     # remove html tags and newlines
-    cleaned_text = clean_text(text or "", strip_newlines=True, parse_html=True)
+    cleaned_text = clean_text(
+        text or "", strip_newlines=True, parse_html=True, separator=" "
+    )
     # replace non-word characters with space
     cleaned_text = re.sub(r"\W", " ", cleaned_text)
     cleaned_words = cleaned_text.split() if cleaned_text else []
