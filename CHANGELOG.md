@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.14.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.14.0...linkedevents-v3.14.1) (2025-06-12)
+
+
+### Dependencies
+
+* Bump requests from 2.32.3 to 2.32.4 ([f98f5e2](https://github.com/City-of-Helsinki/linkedevents/commit/f98f5e2991582aa14f19ba13e6461abf20617b97))
+
 ## [3.14.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.13.1...linkedevents-v3.14.0) (2025-06-09)
 
 
