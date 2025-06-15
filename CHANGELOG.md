@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.14.2...linkedevents-v3.15.0) (2025-06-15)
+
+
+### Features
+
+* **events:** Add space separator to html tags ([f38f423](https://github.com/City-of-Helsinki/linkedevents/commit/f38f423274837ece5a19f71a56de01fcce4d735f))
+
 ## [3.14.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.14.1...linkedevents-v3.14.2) (2025-06-12)
 
 
