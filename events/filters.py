@@ -304,7 +304,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         help_text=_("Hide all events which are super events."),
     )
 
-    x_full_text = django_filters.CharFilter(method="filter_x_full_text")
+    full_text = django_filters.CharFilter(method="filter_full_text")
 
     x_ongoing = django_filters.BooleanFilter(method="filter_x_ongoing")
 
@@ -501,16 +501,16 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             | Exists(EventAggregate.objects.filter(super_event=OuterRef("pk")))
         )
 
-    def filter_x_full_text(self, qs, name, value: Optional[str]):
+    def filter_full_text(self, qs, name, value: Optional[str]):
         if not value:
             return qs
 
-        language = self.request.query_params.get("x_full_text_language", "fi")
+        language = self.request.query_params.get("full_text_language", "fi")
         if language not in languages:
             raise serializers.ValidationError(
                 {
-                    "x_full_text_language": _(
-                        f"x_full_text supports the following "
+                    "full_text_language": _(
+                        f"full_text supports the following "
                         f"languages: {', '.join(languages)}"
                     )
                 }
