@@ -482,7 +482,7 @@ REST_FRAMEWORK = {
     "VIEW_NAME_FUNCTION": "linkedevents.utils.get_view_name",
 }
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = (
     *default_headers,
     "baggage",
