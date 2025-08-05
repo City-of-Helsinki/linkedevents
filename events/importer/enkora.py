@@ -648,6 +648,15 @@ class EnkoraImporter(Importer):
             "epsg:4326": (60.24545426653339, 24.99044444303867),
             "keywords": set(),
         },
+        330: {
+            "enkora-name": "Kivikon jäähalli",
+            "tprek-id": None,
+            "street-address": "Savikiekontie 4",
+            "city": "Helsinki",
+            "zip-code": "00940",
+            "epsg:4326": (60.238055556, 25.052222222),
+            "keywords": {SPORT_ICE_HOCKEY},
+        },
     }
 
     description_word_map = {
