@@ -20,6 +20,7 @@ from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa: N813
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 from sentry_sdk.serializer import add_global_repr_processor
+from sentry_sdk.types import SamplingContext
 
 from linkedevents import __version__
 
@@ -332,6 +333,22 @@ SENTRY_DENYLIST = DEFAULT_DENYLIST + [
     "service_language",
     "extra_info",
 ]
+
+
+def sentry_traces_sampler(sampling_context: SamplingContext) -> float:
+    # Respect parent sampling decision if one exists. Recommended by Sentry.
+    if (parent_sampled := sampling_context.get("parent_sampled")) is not None:
+        return parent_sampled
+
+    # Exclude health check endpoints from tracing
+    path = sampling_context.get("wsgi_environ", {}).get("PATH_INFO", "")
+    if path.rstrip("/") in ["/healthz", "/readiness"]:
+        return 0
+
+    # Use configured sample rate for all other requests
+    return env("SENTRY_TRACES_SAMPLE_RATE")
+
+
 if env("SENTRY_DSN"):
     sentry_sdk.init(
         dsn=env("SENTRY_DSN"),
@@ -339,7 +356,7 @@ if env("SENTRY_DSN"):
         release=env("SENTRY_RELEASE"),
         integrations=[DjangoIntegration()],
         event_scrubber=EventScrubber(denylist=SENTRY_DENYLIST),
-        traces_sample_rate=env("SENTRY_TRACES_SAMPLE_RATE"),
+        traces_sampler=sentry_traces_sampler,
         profile_session_sample_rate=env("SENTRY_PROFILE_SESSION_SAMPLE_RATE"),
         profile_lifecycle="trace",
     )
