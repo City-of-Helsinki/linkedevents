@@ -21,6 +21,11 @@ select = [
 ]
 extend-per-file-ignores = { "*/migrations/*" = ["E501"], "*/tests/*" = ["E501"] }
 
+[tool.pip-tools.compile]
+allow-unsafe = true
+generate-hashes = true
+strip-extras = true
+
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "linkedevents.test_settings"
 norecursedirs = [".git", "venv"]
