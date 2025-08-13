@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.15.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.14.2...linkedevents-v3.15.0) (2025-08-13)
+
+
+### Features
+
+* **events:** Add filter field order validation ([c186a10](https://github.com/City-of-Helsinki/linkedevents/commit/c186a102b54e97c7729b5aba7542364263141900))
+* **events:** Add space separator to html tags ([f38f423](https://github.com/City-of-Helsinki/linkedevents/commit/f38f423274837ece5a19f71a56de01fcce4d735f))
+* **events:** Add sub_events filter to be paired with hide_recurring ([171a47c](https://github.com/City-of-Helsinki/linkedevents/commit/171a47c97e080cb7381a2071a11129c2ae4a4fb2))
+* **events:** Apply EventFilter filters last ([ad6eabf](https://github.com/City-of-Helsinki/linkedevents/commit/ad6eabfc9f665afeb8f0b196494e76c32c10bda7))
+* **sentry:** Exclude health check endpoints from tracing ([af00353](https://github.com/City-of-Helsinki/linkedevents/commit/af00353fef0a900b21ee2b69db92ed454e192e3b))
+
+
+### Bug Fixes
+
+* Add hashes to requirements ([aab8ad1](https://github.com/City-of-Helsinki/linkedevents/commit/aab8ad1543f3073e91666a8130870f4cc82eeff5))
+* **enkora-importer:** Add place data for Kivikko ice hall ([88c24d4](https://github.com/City-of-Helsinki/linkedevents/commit/88c24d4ca68e11b3112c4b96113554650f349556))
+
+
+### Dependencies
+
+* Bump pillow from 11.2.1 to 11.3.0 ([a2b4d83](https://github.com/City-of-Helsinki/linkedevents/commit/a2b4d837d0638a0fde363bcce990fabb37d7bca9))
+
 ## [3.14.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.14.1...linkedevents-v3.14.2) (2025-06-12)
 
 
