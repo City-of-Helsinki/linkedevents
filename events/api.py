@@ -2334,11 +2334,12 @@ class EventViewSet(
     def _optimize_include(includes, queryset):
         if "location" in includes:
             queryset = queryset.prefetch_related(
-                "location__publisher",
+                "location__data_source",
                 "location__divisions",
                 "location__divisions__type",
                 "location__divisions__municipality",
                 "location__divisions__translations",
+                "location__publisher",
             )
         else:
             queryset = queryset.prefetch_related(
@@ -2348,8 +2349,10 @@ class EventViewSet(
         if "keywords" in includes:
             queryset = queryset.prefetch_related(
                 "audience__alt_labels",
+                "audience__data_source",
                 "audience__publisher",
                 "keywords__alt_labels",
+                "keywords__data_source",
                 "keywords__publisher",
             )
         return queryset
