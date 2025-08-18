@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.1...linkedevents-v3.15.2) (2025-08-18)
+
+
+### Bug Fixes
+
+* **registration:** Lock the registration when creating signups ([e38f714](https://github.com/City-of-Helsinki/linkedevents/commit/e38f7148d6c484d5057cc96ec71007439d7e2470))
+
 ## [3.15.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.0...linkedevents-v3.15.1) (2025-08-18)
 
 
