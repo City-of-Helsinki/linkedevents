@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.0...linkedevents-v3.15.1) (2025-08-18)
+
+
+### Bug Fixes
+
+* Add missing data_sources to _optimize_include ([e746bae](https://github.com/City-of-Helsinki/linkedevents/commit/e746baed59e3794055c7e5f184bd0149c4fe0fa1))
+
 ## [3.15.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.14.2...linkedevents-v3.15.0) (2025-08-13)
 
 
