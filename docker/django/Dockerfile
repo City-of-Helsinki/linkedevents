@@ -1,5 +1,5 @@
 # ==============================
-FROM helsinki.azurecr.io/ubi9/python-39-gdal AS appbase
+FROM helsinki.azurecr.io/ubi9/python-312-gdal AS appbase
 # ==============================
 
 ENV PYTHONDONTWRITEBYTECODE=true
