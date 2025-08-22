@@ -810,7 +810,6 @@ class OrganizationClassSerializerExtension(OpenApiSerializerExtension):
             "Source of the organization data, typically API provider specific identifier. "  # noqa: E501
             "Will also be used to specify standardized namespaces as they are brought into use."  # noqa: E501
         )
-        result["required"].remove("data_source")
 
         result["required"].remove("origin_id")
 
