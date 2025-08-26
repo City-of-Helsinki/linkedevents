@@ -734,13 +734,13 @@ def test_get_event_list_filter_multiple_weekdays(api_client):
     create_events_for_weekdays()
     EventFactory(
         name="everyday",
-        start_time=timezone.datetime(2025, 3, 10, 12, tzinfo=timezone.utc),
-        end_time=timezone.datetime(2025, 3, 16, 12, tzinfo=timezone.utc),
+        start_time=timezone.datetime(2025, 3, 10, 12, tzinfo=timezone.timezone.utc),
+        end_time=timezone.datetime(2025, 3, 16, 12, tzinfo=timezone.timezone.utc),
     )
     EventFactory(
         name="over weekender",
-        start_time=timezone.datetime(2025, 3, 14, 12, tzinfo=timezone.utc),
-        end_time=timezone.datetime(2025, 3, 18, 12, tzinfo=timezone.utc),
+        start_time=timezone.datetime(2025, 3, 14, 12, tzinfo=timezone.timezone.utc),
+        end_time=timezone.datetime(2025, 3, 18, 12, tzinfo=timezone.timezone.utc),
     )
 
     resp = get_list(api_client, query_string="weekday=1,2,3")
@@ -776,18 +776,18 @@ def test_get_event_list_filter_weekdays_spans_over_weekend(
     create_events_for_weekdays()
     EventFactory(
         name="other tuesday event",
-        start_time=timezone.datetime(2025, 3, 11, 12, tzinfo=timezone.utc),
-        end_time=timezone.datetime(2025, 3, 11, 14, tzinfo=timezone.utc),
+        start_time=timezone.datetime(2025, 3, 11, 12, tzinfo=timezone.timezone.utc),
+        end_time=timezone.datetime(2025, 3, 11, 14, tzinfo=timezone.timezone.utc),
     )
     EventFactory(
         name="friday saturday sunday monday tuesday",
-        start_time=timezone.datetime(2025, 3, 14, 12, tzinfo=timezone.utc),
-        end_time=timezone.datetime(2025, 3, 18, 12, tzinfo=timezone.utc),
+        start_time=timezone.datetime(2025, 3, 14, 12, tzinfo=timezone.timezone.utc),
+        end_time=timezone.datetime(2025, 3, 18, 12, tzinfo=timezone.timezone.utc),
     )
     EventFactory(
         name="sunday monday tuesday wednesday",
-        start_time=timezone.datetime(2025, 3, 16, 12, tzinfo=timezone.utc),
-        end_time=timezone.datetime(2025, 3, 19, 12, tzinfo=timezone.utc),
+        start_time=timezone.datetime(2025, 3, 16, 12, tzinfo=timezone.timezone.utc),
+        end_time=timezone.datetime(2025, 3, 19, 12, tzinfo=timezone.timezone.utc),
     )
 
     resp = get_list(api_client, query_string=f"weekday={iso_weekday}")
@@ -831,7 +831,7 @@ def test_get_event_list_hide_recurring_children_weekday_matches_sub_events(api_c
     )
     create_super_event([monday_event, tuesday_event], monday_event.data_source)
 
-    thursday = timezone.datetime(2025, 3, 6, 12, tzinfo=timezone.utc)
+    thursday = timezone.datetime(2025, 3, 6, 12, tzinfo=timezone.timezone.utc)
     event_3 = EventFactory(start_time=thursday, end_time=thursday + timedelta(hours=1))
     super_of_thursday = create_super_event([event_3], event_3.data_source)
 
@@ -851,7 +851,7 @@ def test_get_event_list_hide_recurring_children_start_matches_sub_events(api_cli
     event_2 = EventFactory(start_time=datetime(2025, 1, 7))
     create_super_event([event_1, event_2], event_1.data_source)
 
-    thursday = timezone.datetime(2025, 3, 6, 12, tzinfo=timezone.utc)
+    thursday = timezone.datetime(2025, 3, 6, 12, tzinfo=timezone.timezone.utc)
     event_3 = EventFactory(start_time=thursday, end_time=thursday + timedelta(hours=1))
     super_2 = create_super_event([event_3], event_3.data_source)
 
