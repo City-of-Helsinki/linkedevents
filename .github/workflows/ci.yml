@@ -9,7 +9,7 @@ on:
 
 jobs:
   common:
-    uses: City-of-Helsinki/.github/.github/workflows/ci-django-api.yml@main
+    uses: City-of-Helsinki/.github/.github/workflows/ci-django-api.yml@sonarcube-scan-action-update
     secrets: inherit
     with:
       python-version: 3.9
