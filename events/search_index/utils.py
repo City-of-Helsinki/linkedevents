@@ -1,6 +1,7 @@
 import logging
 import re
 from functools import cache
+from operator import itemgetter
 from typing import Generator
 
 import libvoikko
@@ -36,9 +37,18 @@ def get_field_attr(obj: object, field: str) -> str:
         return get_field_attr(getattr(obj, first_field), remaining_fields)
 
 
+_structure_item_getter = itemgetter("STRUCTURE")
+
+
 @cache
 def analyze_word(word: str) -> list:
-    return voikko.analyze(word)
+    results = voikko.analyze(word)
+    # Voikko appears to not return the results in a stable manner
+    # across different systems so we sort the results to avoid
+    # flaky tests
+    if len(results) > 1:
+        results.sort(key=_structure_item_getter)
+    return results
 
 
 def get_word_bases(word: str) -> list:
