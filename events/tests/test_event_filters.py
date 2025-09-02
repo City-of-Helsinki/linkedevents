@@ -6,10 +6,11 @@ from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django_orghierarchy.models import Organization
 from rest_framework.exceptions import ValidationError
 
 from events.api import EventFilter
-from events.models import Event
+from events.models import DataSource, Event
 from events.tests.factories import EventFactory, KeywordFactory, PlaceFactory
 from events.tests.test_event_get import get_list
 from events.tests.utils import create_events_for_weekdays, create_super_event
@@ -349,6 +350,55 @@ def test_get_event_search_full_text_with_embedded_html():
 
 
 @pytest.mark.django_db
+def test_get_event_search_full_text_order():
+    data_source = DataSource.objects.create(id="test")
+    organization = Organization.objects.create(id="test:fi", data_source=data_source)
+    Event.objects.create(
+        id="test:2",
+        name_fi="Testisana 2",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Event.objects.create(
+        id="test:1",
+        name_fi="Testisana 1",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Event.objects.create(
+        id="test:4",
+        name_fi="Testisana 4",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Event.objects.create(
+        id="test:3",
+        name_fi="Testisana 3",
+        data_source=data_source,
+        publisher=organization,
+    )
+
+    call_command("rebuild_event_search_index")
+
+    request = Mock()
+    request.query_params = {"x_full_text_language": "fi"}
+
+    filter_set = EventFilter(request=request)
+
+    def do_filter(query):
+        return filter_set.filter_x_full_text(
+            Event.objects.all(), "x_full_text", f"{query}"
+        )
+
+    result = do_filter("Testisana")
+    assert result.count() == 4
+    assert result[0].id == "test:1"
+    assert result[1].id == "test:2"
+    assert result[2].id == "test:3"
+    assert result[3].id == "test:4"
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("ongoing", [True, False])
 def test_get_event_list_ongoing(ongoing):
     now = timezone.now()
@@ -385,7 +435,7 @@ def test_get_event_list_min_duration():
 def test_get_event_list_max_duration():
     event_short = EventFactory(start_time=timezone.now(), end_time=timezone.now())
     EventFactory(
-        start_time=timezone.now(), end_time=timezone.now() + timedelta(hours=1)
+        start_time=timezone.now(), end_time=timezone.now() + timedelta(hours=2)
     )
 
     filter_set = EventFilter()

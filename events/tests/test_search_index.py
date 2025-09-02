@@ -12,46 +12,46 @@ from events.tests.factories import EventFactory, PlaceFactory
 @pytest.mark.parametrize(
     "word, expected_result",
     [
-        ("lentokone", {"lentää", "kone"}),
-        ("lentokoneen", {"lentää", "kone"}),
-        ("lentokoneita", {"lentää", "kone"}),
-        ("päiväkoti", {"päivä", "koti"}),
-        ("kissoja", {"kissa"}),
-        ("saippuakivimittakaava", {"saippua", "kivi", "mitta", "kaava"}),
-        ("kokonaisvaltainen", {"koko", "nainen", "kokonainen", "valta"}),
-        ("ei ole olemassa", {"olla"}),
-        ("ja hei huomenna ennen sitä sinä hyppäät yli riman", {"hypätä", "rima"}),
+        ("lentokone", ["lentää", "kone"]),
+        ("lentokoneen", ["lentää", "kone"]),
+        ("lentokoneita", ["lentää", "kone"]),
+        ("päiväkoti", ["päivä", "koti"]),
+        ("kissoja", ["kissa"]),
+        ("saippuakivimittakaava", ["saippua", "kivi", "mitta", "kaava"]),
+        ("kokonaisvaltainen", ["koko", "nainen", "valta", "kokonainen", "valta"]),
+        ("ei ole olemassa", ["olla", "olla", "olla"]),
+        ("ja hei huomenna ennen sitä sinä hyppäät yli riman", ["hypätä", "rima"]),
         (
             "<h1>Otsikko</h1> jälkeen tulee tekstiä ja<br>rivinvaihto",
-            {"otsikko", "jälki", "tulla", "teksti", "rivi", "vaihto"},
+            ["otsikko", "jälki", "tulla", "teksti", "rivi", "vaihto"],
         ),
     ],
 )
 def test_extract_word_bases(word, expected_result):
-    result = extract_word_bases(word, set())
+    result = extract_word_bases(word, [])
     assert result == expected_result
 
 
 @pytest.mark.parametrize(
     "word, expected_result",
     [
-        ("0", {"nolla", "0"}),
-        ("1", {"yksi", "1"}),
-        ("22", {"kaksikymmentäkaksi", "22"}),
-        ("300", {"kolmesataa", "300"}),
-        ("4000", {"neljätuhatta", "4000"}),
-        ("Vuosi 2025", {"kaksituhatta kaksikymmentäviisi", "2025"}),
+        ("0", ["0", "nolla"]),
+        ("1", ["1", "yksi"]),
+        ("22", ["22", "kaksikymmentäkaksi"]),
+        ("300", ["300", "kolmesataa"]),
+        ("4000", ["4000", "neljätuhatta"]),
+        ("Vuosi 2025", ["2025", "kaksituhatta kaksikymmentäviisi"]),
         (
             "Eka 123 toka 456",
-            {"satakaksikymmentäkolme", "neljäsataaviisikymmentäkuusi", "123", "456"},
+            ["123", "456", "satakaksikymmentäkolme", "neljäsataaviisikymmentäkuusi"],
         ),
         (
             "Numero 1234567890",
-            {
+            [
+                "1234567890",
                 "miljardi kaksisataakolmekymmentäneljämiljoonaa "
                 "viisisataakuusikymmentäseitsemäntuhatta kahdeksansataayhdeksänkymmentä",
-                "1234567890",
-            },
+            ],
         ),
     ],
 )
