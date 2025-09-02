@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
@@ -5,7 +7,7 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from events.models import Event, EventSearchIndex
-from events.search_index.utils import convert_numbers, extract_word_bases
+from events.search_index.utils import analyze_word, convert_numbers, extract_word_bases
 from events.tests.factories import EventFactory, PlaceFactory
 
 
@@ -30,6 +32,27 @@ from events.tests.factories import EventFactory, PlaceFactory
 def test_extract_word_bases(word, expected_result):
     result = extract_word_bases(word, [])
     assert result == expected_result
+
+
+@pytest.mark.parametrize(
+    "expected_return_value, voikko_return_value",
+    [
+        (
+            [{"STRUCTURE": "a"}, {"STRUCTURE": "b"}],
+            [{"STRUCTURE": "a"}, {"STRUCTURE": "b"}],
+        ),
+        (
+            [{"STRUCTURE": "a"}, {"STRUCTURE": "b"}],
+            [{"STRUCTURE": "b"}, {"STRUCTURE": "a"}],
+        ),
+    ],
+)
+def test_voikko_analysis_order_is_sorted(expected_return_value, voikko_return_value):
+    analyze_word.cache_clear()
+
+    with patch("events.search_index.utils.voikko.analyze") as mock_analyze:
+        mock_analyze.return_value = voikko_return_value
+        assert expected_return_value == analyze_word(None)
 
 
 @pytest.mark.parametrize(
