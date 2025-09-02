@@ -517,7 +517,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             )
         # replace non-word characters with space
         search_value = re.sub(r"\W", " ", value)
-        words = set()
+        words = []
         extract_word_bases(search_value, words, language)
         search_value = " ".join(words)
         search_vector_name = f"full_text__search_vector_{language}"
@@ -531,7 +531,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         return (
             qs.filter(**{search_vector_name: search_query})
             .annotate(rank=search_rank)
-            .order_by("-rank")
+            .order_by("-rank", "id")
         )
 
     def filter_x_ongoing(self, qs, name, ongoing: Optional[bool]):

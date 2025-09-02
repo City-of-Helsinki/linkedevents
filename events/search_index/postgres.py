@@ -22,8 +22,8 @@ class EventSearchIndexService:
     """
 
     @classmethod
-    def get_words(cls, event: Event, lang: str, weight: str = "A") -> set:
-        words = set()
+    def get_words(cls, event: Event, lang: str, weight: str = "A") -> list:
+        words = []
         for column in Event.get_words_fields(lang, weight):
             row_content = get_field_attr(event, column)
             if row_content:

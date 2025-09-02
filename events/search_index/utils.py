@@ -41,18 +41,18 @@ def analyze_word(word: str) -> list:
     return voikko.analyze(word)
 
 
-def get_word_bases(word: str) -> set:
+def get_word_bases(word: str) -> list:
     """
     Returns a list of word bases of the word.
     :param word: the word to split
     :return: a list of word bases
     """
-    words = set()
+    words = []
     word = word.strip()
     analysis = analyze_word(word)
     if len(analysis) == 0:
         # if the word can't be analyzed, return the word itself
-        words.add(word)
+        words.append(word)
         return words
     for item in analysis:
         if check_stop_words and "CLASS" in item and item["CLASS"] in stop_word_classes:
@@ -64,19 +64,19 @@ def get_word_bases(word: str) -> set:
             for base in word_bases:
                 # remove non-word characters
                 base = re.sub(r"\W", "", base)
-                words.add(base)
+                words.append(base)
         else:
-            words.add(word)
+            words.append(word)
     return words
 
 
-def extract_word_bases(text: str, words: set, lang: str = "fi") -> set:
+def extract_word_bases(text: str, words: list, lang: str = "fi") -> list:
     """
     Splits the word into its bases and adds them to the set of words.
     :param text: the text to split
-    :param words: the set of words to add the bases to
+    :param words: the list of words to add the bases to
     :param lang: the language of the word (default: "fi")
-    :return: the set of words
+    :return: a list of extracted words
     """
     # remove html tags and newlines
     cleaned_text = clean_text(
@@ -87,30 +87,36 @@ def extract_word_bases(text: str, words: set, lang: str = "fi") -> set:
     cleaned_words = cleaned_text.split() if cleaned_text else []
     for word in cleaned_words:
         # convert numbers to words
-        words.update(convert_numbers(word, lang=lang))
+        numbers = convert_numbers(word, lang=lang)
+        if numbers:
+            words.extend(numbers)
         # if the word is in Finnish, get its bases
         word_bases = get_word_bases(word) if lang == "fi" else {word}
-        words.update(word_bases)
+        if word_bases:
+            words.extend(word_bases)
     return words
 
 
-def convert_numbers(word: str, lang: str = "fi") -> set:
+def convert_numbers(word: str, lang: str = "fi") -> list:
     """
     Converts numbers in the word to textual words.
     :param word: the word to process
     :param lang: the language to convert to (default: "fi")
-    :return: a set of words
+    :return: a list of converted words
     """
-    words = set()
+    words = []
     numbers = re.sub(r"\D+", " ", word).split()
+    if numbers:
+        # add numbers itself also
+        words.extend(numbers)
     for number in numbers:
         # convert the number to language-specific words
         try:
-            words.add(num2words(number, lang=lang))
+            num = num2words(number, lang=lang)
+            if num:
+                words.append(num)
         except NotImplementedError:
             pass
-    # add numbers itself also
-    words.update(numbers)
     return words
 
 
