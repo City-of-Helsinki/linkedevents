@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.15.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.2...linkedevents-v3.15.3) (2025-09-03)
+
+
+### Bug Fixes
+
+* Unstable result order from voikko analyze ([2ef39e6](https://github.com/City-of-Helsinki/linkedevents/commit/2ef39e6b3dc6bcdaebd619729854b7a6bbb1c1e1))
+* Use plain lists in fulltext search vectors ([43c1cd4](https://github.com/City-of-Helsinki/linkedevents/commit/43c1cd47f3418dd956a8da00cb00a9bd4ea5f69e))
+
+
+### Performance Improvements
+
+* Cache get_word_bases-function results ([e677e17](https://github.com/City-of-Helsinki/linkedevents/commit/e677e1791949ae6a53f8433182940ad66fa84ecd))
+
+
+### Dependencies
+
+* Bump pip-tools ([dc64d3f](https://github.com/City-of-Helsinki/linkedevents/commit/dc64d3f9407b486b3fcfb580e15176ce95a82e13))
+* Bump postgresql to 17 ([1b0e9a1](https://github.com/City-of-Helsinki/linkedevents/commit/1b0e9a1c74c4504108ef29275f5ffc2f966e9624))
+* Bump psycopg ([7865a09](https://github.com/City-of-Helsinki/linkedevents/commit/7865a09ffaa88894c1c8ab8b7e191ec3ad855bf9))
+
 ## [3.15.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.1...linkedevents-v3.15.2) (2025-08-18)
 
 
