@@ -15,16 +15,16 @@ def count_events_for_keywords(keyword_ids=(), all=False):
     # sorry for the non-DRY-ness; would be easier with an SQL generator like
     # SQLAlchemy, but...
 
-    keyword_ids = tuple(set(keyword_ids))
+    keyword_ids = list(set(keyword_ids))
     with connection.cursor() as cursor:
         if keyword_ids:
             cursor.execute(
                 """
             SELECT t.keyword_id, COUNT(DISTINCT t.event_id)
             FROM (
-              SELECT keyword_id, event_id FROM events_event_keywords WHERE keyword_id IN %s
+              SELECT keyword_id, event_id FROM events_event_keywords WHERE keyword_id = ANY(%s)
               UNION
-              SELECT keyword_id, event_id FROM events_event_audience WHERE keyword_id IN %s
+              SELECT keyword_id, event_id FROM events_event_audience WHERE keyword_id = ANY(%s)
             ) t
             GROUP BY t.keyword_id;
             """,  # noqa: E501
@@ -61,14 +61,14 @@ def count_events_for_places(place_ids=(), all=False):
     # sorry for the non-DRY-ness; would be easier with an SQL generator like
     # SQLAlchemy, but...
 
-    place_ids = tuple(set(place_ids))
+    place_ids = list(set(place_ids))
     with connection.cursor() as cursor:
         if place_ids:
             cursor.execute(
                 """
             SELECT e.location_id, COUNT(*)
             FROM events_event e
-            WHERE location_id IN %s
+            WHERE location_id = ANY(%s)
             GROUP BY e.location_id;
             """,
                 [place_ids],
