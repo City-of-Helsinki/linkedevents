@@ -48,8 +48,6 @@ def test_extract_word_bases(word, expected_result):
     ],
 )
 def test_voikko_analysis_order_is_sorted(expected_return_value, voikko_return_value):
-    analyze_word.cache_clear()
-
     with patch("events.search_index.utils.voikko.analyze") as mock_analyze:
         mock_analyze.return_value = voikko_return_value
         assert expected_return_value == analyze_word(None)
