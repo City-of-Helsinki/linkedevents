@@ -1,6 +1,6 @@
 import logging
 import re
-from functools import cache
+from functools import lru_cache
 from operator import itemgetter
 from typing import Generator
 
@@ -40,7 +40,6 @@ def get_field_attr(obj: object, field: str) -> str:
 _structure_item_getter = itemgetter("STRUCTURE")
 
 
-@cache
 def analyze_word(word: str) -> list:
     results = voikko.analyze(word)
     # Voikko appears to not return the results in a stable manner
@@ -51,6 +50,7 @@ def analyze_word(word: str) -> list:
     return results
 
 
+@lru_cache
 def get_word_bases(word: str) -> list:
     """
     Returns a list of word bases of the word.
