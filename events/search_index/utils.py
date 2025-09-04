@@ -50,7 +50,7 @@ def analyze_word(word: str) -> list:
     return results
 
 
-@lru_cache
+@lru_cache(maxsize=settings.FULL_TEXT_WORDS_CACHE_SIZE)
 def get_word_bases(word: str) -> list:
     """
     Returns a list of word bases of the word.
@@ -82,7 +82,7 @@ def get_word_bases(word: str) -> list:
 
 def extract_word_bases(text: str, words: list, lang: str = "fi") -> list:
     """
-    Splits the word into its bases and adds them to the set of words.
+    Splits the word into its bases and adds them to the list of words.
     :param text: the text to split
     :param words: the list of words to add the bases to
     :param lang: the language of the word (default: "fi")
@@ -101,7 +101,7 @@ def extract_word_bases(text: str, words: list, lang: str = "fi") -> list:
         if numbers:
             words.extend(numbers)
         # if the word is in Finnish, get its bases
-        word_bases = get_word_bases(word) if lang == "fi" else {word}
+        word_bases = get_word_bases(word) if lang == "fi" else [word]
         if word_bases:
             words.extend(word_bases)
     return words
