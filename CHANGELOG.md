@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.4](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.3...linkedevents-v3.15.4) (2025-09-06)
+
+
+### Performance Improvements
+
+* Add maxsize to fulltext words cache ([5ec0722](https://github.com/City-of-Helsinki/linkedevents/commit/5ec07221cd100e64c2531075914e9b6bfb0699f0))
+
 ## [3.15.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.2...linkedevents-v3.15.3) (2025-09-03)
 
 
