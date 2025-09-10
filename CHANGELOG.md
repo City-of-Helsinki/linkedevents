@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.15.4](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.3...linkedevents-v3.15.4) (2025-09-10)
+
+
+### Performance Improvements
+
+* Add maxsize to fulltext words cache ([5ec0722](https://github.com/City-of-Helsinki/linkedevents/commit/5ec07221cd100e64c2531075914e9b6bfb0699f0))
+
+
+### Dependencies
+
+* Bump django from 4.2.23 to 4.2.24 ([5eb1ad4](https://github.com/City-of-Helsinki/linkedevents/commit/5eb1ad473b50081ee2e064deb7adbd6b4d0114eb))
+
 ## [3.15.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.2...linkedevents-v3.15.3) (2025-09-03)
 
 
