@@ -624,13 +624,11 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         ):
             # If sub_events is set to true, we need to include the super events.
             super_events = Event.objects.filter(
-                Exists(
+                Exists(queryset.filter(super_event=OuterRef("pk")))
+                | Exists(
                     queryset.filter(
-                        Q(super_event=OuterRef("pk"))
-                        | Q(
-                            eventaggregatemember__event_aggregate__super_event=OuterRef(
-                                "pk"
-                            )
+                        eventaggregatemember__event_aggregate__super_event=OuterRef(
+                            "pk"
                         )
                     )
                 )
