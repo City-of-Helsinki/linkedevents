@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from datetime import timezone as tz
 from unittest.mock import Mock
 
 import pytest
@@ -14,6 +15,7 @@ from events.models import DataSource, Event
 from events.tests.factories import EventFactory, KeywordFactory, PlaceFactory
 from events.tests.test_event_get import get_list
 from events.tests.utils import create_events_for_weekdays, create_super_event
+from registrations.models import Registration
 
 
 @pytest.mark.django_db
@@ -350,7 +352,7 @@ def test_get_event_search_full_text_with_embedded_html():
 
 
 @pytest.mark.django_db
-def test_get_event_search_full_text_order():
+def test_get_event_search_full_text_default_order():
     data_source = DataSource.objects.create(id="test")
     organization = Organization.objects.create(id="test:fi", data_source=data_source)
     Event.objects.create(
@@ -396,6 +398,241 @@ def test_get_event_search_full_text_order():
     assert result[1].id == "test:2"
     assert result[2].id == "test:3"
     assert result[3].id == "test:4"
+
+
+@pytest.mark.django_db
+def test_get_event_search_full_text_with_sorting_api(api_client):
+    data_source = DataSource.objects.create(id="test")
+    organization = Organization.objects.create(id="test:fi", data_source=data_source)
+    Event.objects.create(
+        id="test:zebra",
+        name_fi="Zebra Testword",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Event.objects.create(
+        id="test:alpha",
+        name_fi="Alpha Testword",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Event.objects.create(
+        id="test:beta",
+        name_fi="Beta Testword",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Event.objects.create(
+        id="test:gamma",
+        name_fi="Gamma NoMatch",
+        data_source=data_source,
+        publisher=organization,
+    )
+
+    call_command("rebuild_event_search_index")
+
+    resp = get_list(
+        api_client,
+        data={"x_full_text": "Testword", "x_full_text_language": "fi", "sort": "name"},
+    )
+    data = resp.data["data"]
+
+    assert len(data) == 3
+    assert data[0]["id"] == "test:alpha"
+    assert data[1]["id"] == "test:beta"
+    assert data[2]["id"] == "test:zebra"
+
+
+@pytest.mark.django_db
+def test_get_event_search_full_text_with_start_time_sorting_api(api_client):
+    data_source = DataSource.objects.create(id="test")
+    organization = Organization.objects.create(id="test:fi", data_source=data_source)
+
+    # Create events with different start times
+    Event.objects.create(
+        id="test:zebra",
+        name_fi="Zebra Testisana",
+        data_source=data_source,
+        publisher=organization,
+        start_time=datetime(2024, 12, 31, tzinfo=tz.utc),
+    )
+    Event.objects.create(
+        id="test:alpha",
+        name_fi="Alpha Testisana",
+        data_source=data_source,
+        publisher=organization,
+        start_time=datetime(2024, 11, 15, tzinfo=tz.utc),
+    )
+    Event.objects.create(
+        id="test:beta",
+        name_fi="Beta Testisana",
+        data_source=data_source,
+        publisher=organization,
+        start_time=datetime(2024, 12, 1, tzinfo=tz.utc),
+    )
+
+    call_command("rebuild_event_search_index")
+
+    resp = get_list(
+        api_client,
+        query_string="x_full_text=Testisana&x_full_text_language=fi&sort=start_time",
+    )
+    data = resp.data["data"]
+
+    assert len(data) == 3
+    # Should be sorted by start_time ascending
+    assert data[0]["id"] == "test:alpha"  # Nov 15
+    assert data[1]["id"] == "test:beta"  # Dec 1
+    assert data[2]["id"] == "test:zebra"  # Dec 31
+
+
+@pytest.mark.django_db
+def test_get_event_search_full_text_with_end_time_sorting_api(api_client):
+    data_source = DataSource.objects.create(id="test")
+    organization = Organization.objects.create(id="test:fi", data_source=data_source)
+
+    # Create events with different end times
+    Event.objects.create(
+        id="test:zebra",
+        name_fi="Zebra Testisana",
+        data_source=data_source,
+        publisher=organization,
+        end_time=datetime(2024, 12, 31, tzinfo=tz.utc),
+    )
+    Event.objects.create(
+        id="test:alpha",
+        name_fi="Alpha Testisana",
+        data_source=data_source,
+        publisher=organization,
+        end_time=datetime(2024, 11, 15, tzinfo=tz.utc),
+    )
+    Event.objects.create(
+        id="test:beta",
+        name_fi="Beta Testisana",
+        data_source=data_source,
+        publisher=organization,
+        end_time=datetime(2024, 12, 1, tzinfo=tz.utc),
+    )
+
+    call_command("rebuild_event_search_index")
+
+    resp = get_list(
+        api_client,
+        query_string="x_full_text=Testisana&x_full_text_language=fi&sort=end_time",
+    )
+    data = resp.data["data"]
+
+    assert len(data) == 3
+    # Should be sorted by end_time ascending
+    assert data[0]["id"] == "test:alpha"  # Nov 15
+    assert data[1]["id"] == "test:beta"  # Dec 1
+    assert data[2]["id"] == "test:zebra"  # Dec 31
+
+
+@pytest.mark.django_db
+def test_get_event_search_full_text_with_enrolment_start_time_sorting_api(api_client):
+    data_source = DataSource.objects.create(id="test")
+    organization = Organization.objects.create(id="test:fi", data_source=data_source)
+
+    # Create events with different enrolment start times
+    event_z = Event.objects.create(
+        id="test:zebra",
+        name_fi="Zebra Testisana",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Registration.objects.create(
+        enrolment_start_time=datetime(2025, 1, 1, tzinfo=tz.utc),
+        enrolment_end_time=datetime(2025, 12, 31, tzinfo=tz.utc),
+        event=event_z,
+    )
+    event_a = Event.objects.create(
+        id="test:alpha",
+        name_fi="Alpha Testisana",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Registration.objects.create(
+        enrolment_start_time=datetime(2025, 2, 1, tzinfo=tz.utc),
+        enrolment_end_time=datetime(2025, 11, 15, tzinfo=tz.utc),
+        event=event_a,
+    )
+    event_b = Event.objects.create(
+        id="test:beta",
+        name_fi="Beta Testisana",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Registration.objects.create(
+        enrolment_start_time=datetime(2025, 3, 1, tzinfo=tz.utc),
+        enrolment_end_time=datetime(2025, 12, 1, tzinfo=tz.utc),
+        event=event_b,
+    )
+
+    call_command("rebuild_event_search_index")
+
+    resp = get_list(
+        api_client,
+        query_string="x_full_text=Testisana&x_full_text_language=fi&sort=registration__enrolment_start_time",
+    )
+    data = resp.data["data"]
+
+    assert len(data) == 3
+    # Should be sorted by enrolment_start_time ascending
+    assert data[0]["id"] == "test:zebra"  # Jan 1
+    assert data[1]["id"] == "test:alpha"  # Feb 1
+    assert data[2]["id"] == "test:beta"  # Mar 1
+
+
+@pytest.mark.django_db
+def test_get_event_search_full_text_with_enrolment_end_time_sorting_api(api_client):
+    data_source = DataSource.objects.create(id="test")
+    organization = Organization.objects.create(id="test:fi", data_source=data_source)
+    # Create events with different enrolment end times
+    event_z = Event.objects.create(
+        id="test:zebra",
+        name_fi="Zebra Testisana",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Registration.objects.create(
+        enrolment_start_time=datetime(2025, 1, 1, tzinfo=tz.utc),
+        enrolment_end_time=datetime(2025, 12, 31, tzinfo=tz.utc),
+        event=event_z,
+    )
+    event_a = Event.objects.create(
+        id="test:alpha",
+        name_fi="Alpha Testisana",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Registration.objects.create(
+        enrolment_start_time=datetime(2025, 2, 1, tzinfo=tz.utc),
+        enrolment_end_time=datetime(2025, 11, 15, tzinfo=tz.utc),
+        event=event_a,
+    )
+    event_b = Event.objects.create(
+        id="test:beta",
+        name_fi="Beta Testisana",
+        data_source=data_source,
+        publisher=organization,
+    )
+    Registration.objects.create(
+        enrolment_start_time=datetime(2025, 3, 1, tzinfo=tz.utc),
+        enrolment_end_time=datetime(2025, 12, 1, tzinfo=tz.utc),
+        event=event_b,
+    )
+    call_command("rebuild_event_search_index")
+    resp = get_list(
+        api_client,
+        query_string="x_full_text=Testisana&x_full_text_language=fi&sort=registration__enrolment_end_time",
+    )
+    data = resp.data["data"]
+    assert len(data) == 3
+    # Should be sorted by enrolment_end_time ascending
+    assert data[0]["id"] == "test:alpha"  # Nov 15
+    assert data[1]["id"] == "test:beta"  # Dec 1
+    assert data[2]["id"] == "test:zebra"  # Dec 31
 
 
 @pytest.mark.django_db

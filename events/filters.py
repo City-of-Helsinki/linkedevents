@@ -524,15 +524,17 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         search_query = SearchQuery(
             search_value, search_type="websearch", config="simple"
         )
-        search_rank = SearchRank(F(search_vector_name), search_query)
 
-        # Warning: order matters, annotate should follow filter
-        # Otherwise Django creates a redundant LEFT OUTER JOIN for sorting
-        return (
-            qs.filter(**{search_vector_name: search_query})
-            .annotate(rank=search_rank)
-            .order_by("-rank", "id")
-        )
+        qs = qs.filter(**{search_vector_name: search_query})
+        sort = self.request.query_params.get("sort", "")
+        if not sort:
+            # default to search rank if no other sorting is defined
+            search_rank = SearchRank(F(search_vector_name), search_query)
+            # Warning: order matters, annotate should follow filter
+            # Otherwise Django creates a redundant LEFT OUTER JOIN for sorting
+            return qs.annotate(rank=search_rank).order_by("-rank", "id")
+        else:
+            return qs
 
     def filter_x_ongoing(self, qs, name, ongoing: Optional[bool]):
         if ongoing is None:

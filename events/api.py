@@ -3193,7 +3193,7 @@ class EventViewSet(
                     "<code>registration__enrolment_start_time</code>, "
                     "<code>registration__enrolment_end_time</code>, <code>enrolment_start</code> "  # noqa: E501
                     "and <code>enrolment_end</code>. The default ordering is "
-                    "<code>-last_modified_time</code>."
+                    "<code>-rank,id</code>."
                 ),
             ),
         ],
