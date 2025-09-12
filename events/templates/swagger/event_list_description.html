@@ -334,7 +334,7 @@ Use <code>local_ongoing_AND=lapset,musiikki</code> to search for the events with
 <pre><code>event/?include=location,keywords</code></pre>
 
 <h2 id="ordering">Ordering</h2>
-<p>Default ordering is descending order by <code>-last_modified_time</code>. You may also order  results by <code>start_time</code>, <code>end_time</code>, <code>name</code>, <code>duration</code>, <code>enrolment_start_time</code>, <code>enrolment_end_time</code>, <code>registration__enrolment_start_time</code>, <code>registration__enrolment_end_time</code>, <code>enrolment_start</code> and <code>enrolment_end</code>. Descending order is denoted by adding <code>-</code> in front of the parameter, default order is ascending.</p>
+<p>Default normal search ordering is descending order by <code>-last_modified_time</code>. Default full text search ordering is based on search relevance rank and id (<code>-rank,id</code>). You may also order results by <code>start_time</code>, <code>end_time</code>, <code>name</code>, <code>duration</code>, <code>enrolment_start_time</code>, <code>enrolment_end_time</code>, <code>registration__enrolment_start_time</code>, <code>registration__enrolment_end_time</code>, <code>enrolment_start</code> and <code>enrolment_end</code>. Descending order is denoted by adding <code>-</code> in front of the parameter, default order is ascending.</p>
 <p>For example:</p>
 <pre><code>event/?sort=-end_time</code></pre>
 
