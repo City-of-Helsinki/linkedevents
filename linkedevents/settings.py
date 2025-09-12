@@ -712,7 +712,7 @@ if env("REDIS_URL"):
 # this is relevant for the fulltext search as implemented in _filter_event_queryset()
 FULLTEXT_SEARCH_LANGUAGES = {"fi": "finnish", "sv": "swedish", "en": "english"}
 
-SESSION_SERIALIZER = "django.contrib.sessions.serializers.PickleSerializer"
+SESSION_SERIALIZER = "helusers.sessions.TunnistamoOIDCSerializer"
 
 HELUSERS_BACK_CHANNEL_LOGOUT_ENABLED = env("HELUSERS_BACK_CHANNEL_LOGOUT_ENABLED")
 

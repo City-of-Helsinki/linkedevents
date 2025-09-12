@@ -20,7 +20,7 @@ django-redis
 django-rest-knox
 django-reversion
 django-searchable-encrypted-fields
-django~=4.2
+django~=5.2
 djangorestframework
 djangorestframework-bulk
 djangorestframework-gis
