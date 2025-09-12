@@ -599,7 +599,11 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin, TranslatableSerializableMi
                 name="keywords_index",
                 fields=("name", "name_fi"),
                 condition=Q(n_events__gt=0),
-            )
+            ),
+            models.Index(
+                fields=["data_source_id", "n_events"],
+                name="data_source_id_n_events_idx",
+            ),
         ]
 
 
@@ -742,6 +746,12 @@ class Place(
         verbose_name = _("place")
         verbose_name_plural = _("places")
         unique_together = (("data_source", "origin_id"),)
+        indexes = [
+            models.Index(
+                fields=["n_events", "data_source_id"],
+                name="n_events_data_source_id_idx",
+            ),
+        ]
 
     def __str__(self):
         values = filter(
@@ -1123,6 +1133,14 @@ class Event(
     class Meta:
         verbose_name = _("event")
         verbose_name_plural = _("events")
+        indexes = [
+            models.Index(
+                fields=["data_source_id", "publication_status"],
+                name="data_source_publ_status_idx",
+            ),
+            models.Index(fields=["publication_status"], name="publication_status_idx"),
+            models.Index(fields=["event_status"], name="event_status_idx"),
+        ]
 
     class MPTTMeta:
         parent_attr = "super_event"
