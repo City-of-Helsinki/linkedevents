@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.15.5](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.4...linkedevents-v3.15.5) (2025-09-13)
+
+
+### Bug Fixes
+
+* Hide_recurring_children_sub_events performance ([9c7a1d1](https://github.com/City-of-Helsinki/linkedevents/commit/9c7a1d157831a0926f53e08f481067f9a52b081c))
+
 ## [3.15.4](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.3...linkedevents-v3.15.4) (2025-09-10)
 
 
