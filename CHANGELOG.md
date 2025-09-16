@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.16.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.4...linkedevents-v3.16.0) (2025-09-16)
+
+
+### Features
+
+* Switch to Python 3.12 ([82ce13d](https://github.com/City-of-Helsinki/linkedevents/commit/82ce13d683da1c46379df4994f36522ae6bcbed0))
+* Update full text sorting ([d06d59c](https://github.com/City-of-Helsinki/linkedevents/commit/d06d59c7a65b9abdc357a1fb350d5c904b420ae8))
+
+
+### Bug Fixes
+
+* Add helusers last_api_use migration ([4ace0b5](https://github.com/City-of-Helsinki/linkedevents/commit/4ace0b5d61eb1f76331953f8a21eb583f24ee433))
+* Hide_recurring_children_sub_events performance ([9c7a1d1](https://github.com/City-of-Helsinki/linkedevents/commit/9c7a1d157831a0926f53e08f481067f9a52b081c))
+* Migrate from PickleSerializer to TunnistamoOIDCSerializer ([f1f6cf9](https://github.com/City-of-Helsinki/linkedevents/commit/f1f6cf9e2b1726f7e00e687545b154d5e9af4d92))
+* Re-generate conflicting migration ([274d971](https://github.com/City-of-Helsinki/linkedevents/commit/274d971b39614788a2529b62d556d2d9ab4314fb))
+* Remove required from data_source in schema generation ([27df7b6](https://github.com/City-of-Helsinki/linkedevents/commit/27df7b66547aa8d063db640427c8d2a596f48a7a))
+
+
+### Performance Improvements
+
+* Add PostgreSQL index recommendations ([b5585f5](https://github.com/City-of-Helsinki/linkedevents/commit/b5585f51e9226da62165f0b0c3973258a4d65acd))
+
+
+### Dependencies
+
+* Bump to django 5.2 and upgrade requirements ([f2e0e25](https://github.com/City-of-Helsinki/linkedevents/commit/f2e0e252b67628060f3804d4a542d7b6e4ad3d11))
+
 ## [3.15.4](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.3...linkedevents-v3.15.4) (2025-09-10)
 
 
