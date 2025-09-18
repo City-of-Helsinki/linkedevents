@@ -1,4 +1,4 @@
-import collections
+import collections.abc
 import logging
 import re
 import warnings
@@ -57,7 +57,7 @@ def update(d, u):
     values at all levels of dict u
     """
     for k, v in u.items():
-        if isinstance(v, collections.Mapping):
+        if isinstance(v, collections.abc.Mapping):
             r = update(d.get(k, {}), v)
             d[k] = r
         else:
