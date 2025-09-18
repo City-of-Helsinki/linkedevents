@@ -335,11 +335,13 @@ SENTRY_DENYLIST = DEFAULT_DENYLIST + [
     "extra_info",
 ]
 
+SENTRY_TRACES_SAMPLE_RATE = env("SENTRY_TRACES_SAMPLE_RATE")
+
 
 def sentry_traces_sampler(sampling_context: SamplingContext) -> float:
     # Respect parent sampling decision if one exists. Recommended by Sentry.
     if (parent_sampled := sampling_context.get("parent_sampled")) is not None:
-        return parent_sampled
+        return float(parent_sampled)
 
     # Exclude health check endpoints from tracing
     path = sampling_context.get("wsgi_environ", {}).get("PATH_INFO", "")
@@ -347,7 +349,7 @@ def sentry_traces_sampler(sampling_context: SamplingContext) -> float:
         return 0
 
     # Use configured sample rate for all other requests
-    return env("SENTRY_TRACES_SAMPLE_RATE")
+    return SENTRY_TRACES_SAMPLE_RATE or 0
 
 
 if env("SENTRY_DSN"):
