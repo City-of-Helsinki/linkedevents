@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.16.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.16.0...linkedevents-v3.16.1) (2025-09-18)
+
+
+### Bug Fixes
+
+* Import Mapping from collections.abc instead of collections ([dcf4151](https://github.com/City-of-Helsinki/linkedevents/commit/dcf415192113a5b5750740a1259c1c8ff28b1f0a))
+
 ## [3.16.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.15.4...linkedevents-v3.16.0) (2025-09-16)
 
 
