@@ -177,6 +177,8 @@ class TestOrganizationAPI(APITestCase):
             data_source=data_source,
             dissolution_date="2020-01-01",
         )
+        user = get_user_model().objects.create(username="testuser")
+        self.client.force_authenticate(user=user)
 
     def test_sub_organizations_and_affiliated_organizations(self):
         url = reverse("organization-detail", kwargs={"pk": self.org.id})
@@ -391,6 +393,7 @@ class TestImageAPI(APITestCase):
 
     def test_image_id_is_audit_logged_on_get_detail(self):
         url = reverse("image-detail", kwargs={"pk": self.image_1.id})
+        self.client.force_authenticate(user=self.user)
 
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK
@@ -402,6 +405,7 @@ class TestImageAPI(APITestCase):
 
     def test_image_id_is_audit_logged_on_get_list(self):
         url = reverse("image-list")
+        self.client.force_authenticate(user=self.user)
 
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK

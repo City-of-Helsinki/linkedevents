@@ -1855,7 +1855,8 @@ def test_filter_events_by_enrolment_open_on(api_client):
 
 
 @pytest.mark.django_db
-def test_event_id_is_audit_logged_on_get_detail(api_client, event):
+def test_event_id_is_audit_logged_on_get_detail(api_client, event, user):
+    api_client.force_authenticate(user)
     response = get_detail(api_client, event.pk)
     assert response.status_code == status.HTTP_200_OK
 
@@ -1864,7 +1865,8 @@ def test_event_id_is_audit_logged_on_get_detail(api_client, event):
 
 
 @pytest.mark.django_db
-def test_event_id_is_audit_logged_on_get_list(api_client, event, event2):
+def test_event_id_is_audit_logged_on_get_list(api_client, event, event2, user):
+    api_client.force_authenticate(user)
     response = get_list(api_client)
     assert response.status_code == status.HTTP_200_OK
 

@@ -40,8 +40,9 @@ def test_get_keyword_detail_check_redirect(api_client, keyword, keyword2):
 
 
 @pytest.mark.django_db
-def test_keyword_id_is_audit_logged_on_get_detail(api_client, keyword):
+def test_keyword_id_is_audit_logged_on_get_detail(api_client, keyword, user):
     url = reverse("keyword-detail", version="v1", kwargs={"pk": keyword.pk})
+    api_client.force_authenticate(user)
 
     response = api_client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -53,7 +54,8 @@ def test_keyword_id_is_audit_logged_on_get_detail(api_client, keyword):
 
 
 @pytest.mark.django_db
-def test_keyword_id_is_audit_logged_on_get_list(api_client, keyword, keyword2):
+def test_keyword_id_is_audit_logged_on_get_list(api_client, keyword, keyword2, user):
+    api_client.force_authenticate(user)
     response = api_client.get(
         reverse("keywords-list"), data={"show_all_keywords": True}
     )
