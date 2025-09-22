@@ -118,8 +118,9 @@ def test_get_language_check_translation_available(api_client, default_languages)
 
 
 @pytest.mark.django_db
-def test_language_id_is_audit_logged_on_get_detail(api_client):
+def test_language_id_is_audit_logged_on_get_detail(api_client, user):
     language = LanguageFactory(pk="fi")
+    api_client.force_authenticate(user)
 
     response = get_detail(api_client, language.pk)
     assert response.status_code == status.HTTP_200_OK
@@ -131,10 +132,10 @@ def test_language_id_is_audit_logged_on_get_detail(api_client):
 
 
 @pytest.mark.django_db
-def test_language_id_is_audit_logged_on_get_list(api_client):
+def test_language_id_is_audit_logged_on_get_list(api_client, user):
     language = LanguageFactory(pk="fi")
     language2 = LanguageFactory(pk="en")
-
+    api_client.force_authenticate(user)
     response = get_list(api_client)
     assert response.status_code == status.HTTP_200_OK
 

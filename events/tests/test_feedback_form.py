@@ -68,9 +68,10 @@ def test_feedback_id_is_audit_logged_on_signed_user_submit(user_api_client):
 
 
 @pytest.mark.django_db
-def test_feedback_id_is_audit_logged_on_guest_submit(api_client):
+def test_feedback_id_is_audit_logged_on_guest_submit(api_client, user):
     guest_url = reverse("guest-feedback-list")
 
+    api_client.force_authenticate(user)
     response = api_client.post(guest_url, load, format="json")
     assert response.status_code == status.HTTP_201_CREATED
 

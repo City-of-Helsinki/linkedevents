@@ -27,4 +27,5 @@ class AuditLogMiddleware:
             settings.AUDIT_LOG_ENABLED
             and re.match(_AUDIT_LOGGED_ENDPOINTS_RE, request.path)
             and 200 <= response.status_code < 300
+            and request.user.is_authenticated
         )
