@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.17.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.16.1...linkedevents-v3.17.0) (2025-09-23)
+
+
+### Features
+
+* Audit log only authenticated requests ([aa6740d](https://github.com/City-of-Helsinki/linkedevents/commit/aa6740da57175a1393bc77bc0e202936a12be455))
+
+
+### Dependencies
+
+* Bump authlib from 1.6.3 to 1.6.4 ([dc4ec4a](https://github.com/City-of-Helsinki/linkedevents/commit/dc4ec4a087eaeb0d1992185a1924689d6b007cfb))
+
 ## [3.16.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.16.0...linkedevents-v3.16.1) (2025-09-18)
 
 
