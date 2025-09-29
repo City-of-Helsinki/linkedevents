@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.17.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.0...linkedevents-v3.17.1) (2025-09-29)
+
+
+### Dependencies
+
+* Update packages ([5b3dd21](https://github.com/City-of-Helsinki/linkedevents/commit/5b3dd21b2dace3f0918b952039271e0a07ddc227))
+
 ## [3.17.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.16.1...linkedevents-v3.17.0) (2025-09-23)
 
 
