@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.17.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.1...linkedevents-v3.17.2) (2025-10-04)
+
+
+### Dependencies
+
+* Bump django from 5.2.6 to 5.2.7 ([96cd28c](https://github.com/City-of-Helsinki/linkedevents/commit/96cd28c7c2397db67c860f093f90fdb680ef69f1))
+
 ## [3.17.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.0...linkedevents-v3.17.1) (2025-09-29)
 
 
