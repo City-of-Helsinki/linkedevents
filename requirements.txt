@@ -1395,9 +1395,9 @@ six==1.17.0 \
     #   isodate
     #   langdetect
     #   python-dateutil
-social-auth-app-django==5.5.1 \
-    --hash=sha256:7a6aac52686b9703af57ad1f5935c55fb97404988067e94c4fa32143bc6a02a5 \
-    --hash=sha256:a1435c17227d07d690b06cca54ea47d4ed939de4749dac45dd4393c8a98dac17
+social-auth-app-django==5.6.0 \
+    --hash=sha256:43ca88cc5cd9161710896165ced58b3155e8aafaaff847e859879194770f138d \
+    --hash=sha256:c695501fcbf6fe87f68f5a79e379abe853662f5129e7ec6cb758a75d5b28c888
     # via -r requirements.in
 social-auth-core==4.7.0 \
     --hash=sha256:2bba127c7b7166a81085ddb0c248d93751b3bc3cdab8569f62d9f70c6bc4ed40 \
