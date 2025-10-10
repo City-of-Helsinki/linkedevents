@@ -39,6 +39,7 @@ from events.fields import (
     LanguagesJSONLDRelatedField,
     LocationJSONLDRelatedField,
     OrganizationUserField,
+    ProxyURLField,
     RegistrationJSONLDRelatedField,
     StringSlugRelatedField,
 )
@@ -218,6 +219,10 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
     )
     created_by = serializers.StringRelatedField(required=False, allow_null=True)
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
+
+    url = ProxyURLField(
+        "image-file", {"version": "v1"}, required=False, allow_null=True
+    )
 
     class Meta:
         model = Image
