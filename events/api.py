@@ -17,6 +17,7 @@ from django.db import transaction
 from django.db.models import Count, Exists, F, OuterRef, Prefetch, Q, QuerySet
 from django.db.models.functions import Greatest
 from django.http import Http404, HttpResponsePermanentRedirect
+from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.functional import cached_property
@@ -44,7 +45,12 @@ from rest_framework import (
     viewsets,
 )
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException, ParseError, ValidationError
+from rest_framework.exceptions import (
+    APIException,
+    NotFound,
+    ParseError,
+    ValidationError,
+)
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.filters import BaseFilterBackend
 from rest_framework.response import Response
@@ -1354,6 +1360,15 @@ class ImageViewSet(
     ordering = ("-last_modified_time",)
     permission_classes = [DataSourceResourceEditPermission & IsObjectEditableByUser]
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["use_proxy_url"] = (
+            parse_bool(proxy_image_url, "proxy_image_url")
+            if (proxy_image_url := self.request.query_params.get("proxy_image_url"))
+            else False
+        )
+        return context
+
     @extend_schema(
         summary="Return a list of images",
         description=render_to_string("swagger/image_list_description.html"),
@@ -1498,6 +1513,25 @@ class ImageViewSet(
     )
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
+
+    @action(detail=True, methods=["get"], url_path="file")
+    @extend_schema(
+        summary="Get image file",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="Image file",
+            ),
+            404: OpenApiResponse(
+                description="Image file was not found.",
+            ),
+        },
+    )
+    def file(self, request, pk=None, *args, **kwargs):
+        image = self.get_object()
+        if not image.url:
+            raise NotFound()
+        return redirect(image.url)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -2327,6 +2361,12 @@ class EventViewSet(
 
         if self.request.method in ("POST", "PUT", "PATCH"):
             context = {**context, **self.cache_related_fields_to_context(self.request)}
+
+        context["use_proxy_url"] = (
+            parse_bool(proxy_image_url, "proxy_image_url")
+            if (proxy_image_url := self.request.query_params.get("proxy_image_url"))
+            else False
+        )
 
         return context
 
