@@ -621,3 +621,17 @@ def test_set_image_license(
     assert response.status_code == status.HTTP_200_OK
     new_image.refresh_from_db()
     assert new_image.license_id == "cc_by"
+
+
+@pytest.mark.django_db
+def test_use_image_proxy(api_client):
+    image = Image.objects.create(
+        url="https://commons.wikimedia.org/wiki/File:Common_Squirrel.jpg"
+    )
+    response = get(api_client, reverse("image-list") + "?use_image_proxy=true")
+    data = response.data["data"]
+    assert len(data) == 1
+    assert data[0]["id"] == image.pk
+    assert data[0]["url"] == reverse(
+        "image-file", kwargs={"pk": image.pk, "version": "v1"}
+    )
