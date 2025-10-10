@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.utils import OpenApiTypes, extend_schema_field, inline_serializer
@@ -214,7 +215,13 @@ class ProxyURLField(serializers.URLField):
 
     def to_representation(self, obj):
         context = self.parent.context
-        if context.get("use_image_proxy") and obj.url:
+        if (
+            context.get("use_image_proxy")
+            and obj.url
+            and not any(
+                obj.url.startswith(skip_url) for skip_url in settings.SKIP_PROXY_URLS
+            )
+        ):
             return context["request"].build_absolute_uri(
                 reverse(
                     self.proxy_view_name,

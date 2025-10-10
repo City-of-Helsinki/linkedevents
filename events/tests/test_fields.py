@@ -61,3 +61,20 @@ def test_proxy_url_field_serializing_proxied():
     assert (
         serializer.data["url"] == f"http://testserver/{PROXY_TEST_PATH}/{TestModel.pk}"
     )
+
+
+def test_proxy_url_field_proxy_skip_urls(settings):
+    class ProxyURLFieldSerializer(serializers.Serializer):
+        url = ProxyURLField(PROXY_TEST_VIEW, {})
+
+    class TestModel:
+        pk = 1
+        url = "https://real-url.local/image.jpg"
+
+    request = APIRequestFactory().get("/test")
+    settings.SKIP_PROXY_URLS = ["https://real-url.local"]
+    serializer = ProxyURLFieldSerializer(
+        TestModel, context={"use_image_proxy": True, "request": request}
+    )
+
+    assert serializer.data["url"] == TestModel.url
