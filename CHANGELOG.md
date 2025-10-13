@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.17.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.1...linkedevents-v3.17.2) (2025-10-13)
+
+
+### Dependencies
+
+* Bump authlib from 1.6.4 to 1.6.5 ([c5ab056](https://github.com/City-of-Helsinki/linkedevents/commit/c5ab05607e308ac95dfdac1fc0cb822e0e52378e))
+* Bump django from 5.2.6 to 5.2.7 ([96cd28c](https://github.com/City-of-Helsinki/linkedevents/commit/96cd28c7c2397db67c860f093f90fdb680ef69f1))
+* Bump social-auth-app-django from 5.5.1 to 5.6.0 ([3012e6a](https://github.com/City-of-Helsinki/linkedevents/commit/3012e6a3392c45d7f9f034d1e0805c4239502e3e))
+
 ## [3.17.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.0...linkedevents-v3.17.1) (2025-09-29)
 
 
