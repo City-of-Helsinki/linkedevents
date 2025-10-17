@@ -171,6 +171,7 @@ env = environ.Env(
     SENTRY_PROFILE_SESSION_SAMPLE_RATE=(float, None),
     SENTRY_RELEASE=(str, None),
     SENTRY_TRACES_SAMPLE_RATE=(float, None),
+    SKIP_PROXY_URLS=(list, []),
     SOCIAL_AUTH_TUNNISTAMO_KEY=(str, "linkedevents-api-dev"),
     SOCIAL_AUTH_TUNNISTAMO_SECRET=(str, ""),
     SOCIAL_AUTH_TUNNISTAMO_OIDC_ENDPOINT=(str, ""),
@@ -897,3 +898,6 @@ if os.path.exists(f):
 
 # get build time from a file in docker image
 APP_BUILD_TIME = datetime.fromtimestamp(os.path.getmtime(__file__))
+
+# list of (base) urls that are never proxied
+SKIP_PROXY_URLS = env("SKIP_PROXY_URLS")
