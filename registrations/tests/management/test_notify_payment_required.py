@@ -5,7 +5,7 @@ from django.test import override_settings
 from django.utils import timezone
 from freezegun import freeze_time
 
-from registrations.models import SignUpContactPerson, SignUpPayment
+from registrations.models import SignUpContactPerson, SignUpGroup, SignUpPayment
 from registrations.tests.factories import (
     SignUpPaymentFactory,
 )
@@ -82,3 +82,41 @@ def test_notify_payment_does_not_send_notification_if_already_sent(signup, signu
         call_command("notify_payment_required")
 
     assert len(mail.outbox) == 1
+
+
+@pytest.mark.django_db
+def test_payment_link_is_sent_to_signup_group_contact_person(registration):
+    signup_group = SignUpGroup.objects.create(registration=registration)
+    SignUpContactPerson.objects.create(
+        signup_group=signup_group, email="group@test.com"
+    )
+
+    creation_time = timezone.now()
+    with freeze_time(creation_time):
+        payment = SignUpPaymentFactory(
+            signup=None,
+            signup_group=signup_group,
+            checkout_url="https://check.out",
+            expires_at=creation_time + timezone.timedelta(days=2),
+        )
+
+    notification_time = creation_time + timezone.timedelta(minutes=60)
+    with freeze_time(notification_time):
+        call_command("notify_payment_required")
+
+    payment.refresh_from_db()
+    assert payment.expiry_notification_sent_at is not None
+
+    assert_payment_link_email_sent(
+        SignUpContactPerson.objects.filter(signup_group=signup_group).first(),
+        SignUpPayment.objects.first(),
+        expected_subject="Maksu vaaditaan ilmoittautumisen vahvistamiseksi - tapahtuma",
+        expected_text="Voit vahvistaa ilmoittautumisesi tapahtumaan "
+        "<strong>tapahtuma</strong> oheisen maksulinkin avulla. Maksulinkki vanhenee "
+        "%(exp_date)s."
+        % {
+            "exp_date": timezone.localtime(payment.expires_at).strftime(
+                "%d.%m.%Y %H:%M"
+            )
+        },
+    )
