@@ -39,7 +39,7 @@ class Command(BaseCommand):
         )
 
         for payment in notify_payments:
-            contact_person = payment.signup.actual_contact_person
+            contact_person = payment.signup_or_signup_group.actual_contact_person
             if not contact_person:
                 logger.error("Contact person not found for payment %s", payment.id)
 
