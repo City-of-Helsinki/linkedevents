@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.17.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.2...linkedevents-v3.17.3) (2025-10-22)
+
+
+### Bug Fixes
+
+* Use signup_group contact person for payment notification ([d12094b](https://github.com/City-of-Helsinki/linkedevents/commit/d12094b8cf91ced8dfb3ebdeec388e4ffdd167b8))
+
 ## [3.17.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.1...linkedevents-v3.17.2) (2025-10-13)
 
 
