@@ -1052,6 +1052,25 @@ class SignUpMixin:
 
         return order_data
 
+    def _check_refund_deadline(self):
+        """Check if refund is allowed based on event start time and deadline setting."""
+        event = self.registration.event
+        if event.start_time:
+            now = localtime()
+            deadline_date = event.start_time.date() - timedelta(
+                days=settings.WEB_STORE_REFUND_DEADLINE_DAYS
+            )
+            current_date = now.date()
+
+            if current_date > deadline_date:
+                raise WebStoreRefundValidationError(
+                    _(
+                        "Refund is not allowed. The event starts in less than %(days)s"
+                        " days."
+                    )
+                    % {"days": settings.WEB_STORE_REFUND_DEADLINE_DAYS}
+                )
+
     def refund_or_cancel_web_store_payment(self, payment):
         """Returns a tuple of two booleans: (payment_refunded, payment_cancelled)."""
 
@@ -1068,6 +1087,7 @@ class SignUpMixin:
             else:
                 raise
         if web_store_payment_status == WebStorePaymentStatus.PAID.value:
+            self._check_refund_deadline()
             self.create_web_store_refund(payment)
 
             class_name = self.__class__.__name__
@@ -1518,6 +1538,7 @@ class SignUp(
             else:
                 raise
         if web_store_payment_status == WebStorePaymentStatus.PAID.value:
+            self._check_refund_deadline()
             self.create_web_store_refund(group_payment)
 
             class_name = self.__class__.__name__

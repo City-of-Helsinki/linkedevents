@@ -2768,3 +2768,8 @@ msgstr "Talpa-rajapinnassa tapahtui virhe"
 #, python-format
 msgid "Payment API experienced an error (code: %(status_code)s)"
 msgstr "Maksurajapinnassa tapahtui virhe (koodi: %(status_code)s)"
+
+#: registrations/models.py:1070
+#, python-format
+msgid "Refund is not allowed. The event starts in less than %(days)s days."
+msgstr "Hyvitys ei ole sallittu. Tapahtuma alkaa alle %(days)s päivän kuluttua."
