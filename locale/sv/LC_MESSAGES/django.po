@@ -2764,3 +2764,8 @@ msgstr "Talpa webbshop API-fel"
 #, python-format
 msgid "Payment API experienced an error (code: %(status_code)s)"
 msgstr "Ett fel uppstod i betalnings-API (kod: %(status_code)s)"
+
+#: registrations/models.py:1070
+#, python-format
+msgid "Refund is not allowed. The event starts in less than %(days)s days."
+msgstr "Återbetalning är inte tillåten. Evenemanget börjar om mindre än %(days)s dagar."

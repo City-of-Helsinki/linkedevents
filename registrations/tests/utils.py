@@ -242,8 +242,12 @@ def create_price_group_for_recurring_event(event_name=None, price=None):
     now = localtime()
 
     registration_kwargs = {
-        "event__start_time": now,
-        "event__end_time": now + timedelta(days=28),
+        # Default event to start far enough in the future so that "now" is before the
+        # default deadline
+        "event__start_time": now
+        + timedelta(days=settings.WEB_STORE_REFUND_DEADLINE_DAYS),
+        "event__end_time": now
+        + timedelta(days=settings.WEB_STORE_REFUND_DEADLINE_DAYS + 28),
         "event__super_event_type": Event.SuperEventType.RECURRING,
     }
     if event_name:
