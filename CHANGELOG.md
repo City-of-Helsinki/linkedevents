@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.18.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.3...linkedevents-v3.18.0) (2025-11-07)
+
+
+### Features
+
+* Add WEB_STORE_REFUND_DEADLINE_DAYS ([d2fb024](https://github.com/City-of-Helsinki/linkedevents/commit/d2fb0240fb81d1ffc2fe00839c3e15b7f254fd33))
+
 ## [3.17.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.2...linkedevents-v3.17.3) (2025-10-22)
 
 
