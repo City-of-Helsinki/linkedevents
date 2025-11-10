@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.18.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.18.0...linkedevents-v3.18.1) (2025-11-10)
+
+
+### Dependencies
+
+* Bump django from 5.2.7 to 5.2.8 ([29f52fb](https://github.com/City-of-Helsinki/linkedevents/commit/29f52fba62db1e21de580d4eef81e223ad0f19e7))
+
 ## [3.18.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.17.3...linkedevents-v3.18.0) (2025-11-07)
 
 
