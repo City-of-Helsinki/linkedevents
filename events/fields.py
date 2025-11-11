@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.utils import OpenApiTypes, extend_schema_field, inline_serializer
@@ -5,6 +6,7 @@ from isodate import Duration, duration_isoformat, parse_duration
 from parler import appsettings as parler_appsettings
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
+from rest_framework.reverse import reverse
 
 from events import utils
 from helevents.models import User
@@ -186,3 +188,44 @@ class TranslationsFieldExtension(OpenApiSerializerFieldExtension):
                 ]: translation_component.ref,
             },
         }
+
+
+class ProxyURLField(serializers.URLField):
+    """
+    ProxyURLField allows overwriting the value of a field
+    when serializing if context has `use_image_proxy` set.
+
+    Note: current implementation uses only attribute access so
+          it works only with model serializers!
+    """
+
+    def __init__(
+        self, proxy_view_name: str, proxy_view_kwargs: dict[str, str], **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.proxy_view_name = proxy_view_name
+        self.proxy_view_kwargs = proxy_view_kwargs
+        self.source = "*"
+
+    def run_validation(self, primitive_value):
+        validated_data = super().run_validation(primitive_value)
+
+        # Using source = "*", so need to ultimately return a dict to the serializer
+        return {self.field_name: validated_data}
+
+    def to_representation(self, obj):
+        context = self.parent.context
+        if (
+            context.get("use_image_proxy")
+            and obj.url
+            and not any(
+                obj.url.startswith(skip_url) for skip_url in settings.SKIP_PROXY_URLS
+            )
+        ):
+            return context["request"].build_absolute_uri(
+                reverse(
+                    self.proxy_view_name,
+                    kwargs={"pk": obj.pk, **self.proxy_view_kwargs},
+                )
+            )
+        return getattr(obj, self.field_name)
