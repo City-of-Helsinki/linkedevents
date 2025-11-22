@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.18.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.18.1...linkedevents-v3.18.2) (2025-11-22)
+
+
+### Dependencies
+
+* Bump pip from 25.2 to 25.3 ([bbe6dfd](https://github.com/City-of-Helsinki/linkedevents/commit/bbe6dfd7587e63d577ee9b32209b640f0ea50e4c))
+
 ## [3.18.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.18.0...linkedevents-v3.18.1) (2025-11-10)
 
 
