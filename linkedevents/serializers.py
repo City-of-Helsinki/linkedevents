@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 from django.conf import settings
 from django.urls import NoReverseMatch
 from django.utils.translation import gettext_lazy as _
@@ -5,6 +7,7 @@ from modeltranslation.translator import NotRegistered, translator
 from rest_framework import relations, serializers
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.reverse import reverse
+from rest_framework.settings import api_settings
 
 from linkedevents import utils
 from linkedevents.fields import JSONLDRelatedField
@@ -81,6 +84,13 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
         :param data:
         :return:
         """
+        if not isinstance(data, Mapping):
+            message = self.error_messages["invalid"].format(
+                datatype=type(data).__name__
+            )
+            raise serializers.ValidationError(
+                {api_settings.NON_FIELD_ERRORS_KEY: [message]}, code="invalid"
+            )
 
         extra_fields = {}  # will contain the transformation result
         for field_name in self.translated_fields:
