@@ -2,6 +2,7 @@ import base64
 import struct
 import time
 import urllib
+from collections.abc import Mapping
 from copy import deepcopy
 from datetime import timedelta
 from zoneinfo import ZoneInfo
@@ -23,6 +24,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail, ParseError
 from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
 from rest_framework.fields import DateTimeField
+from rest_framework.settings import api_settings
 from rest_framework_bulk import BulkListSerializer, BulkSerializerMixin
 
 from events import utils
@@ -941,6 +943,14 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                     self.fields[field].required = True
 
     def parse_datetimes(self, data):
+        if not isinstance(data, Mapping):
+            message = self.error_messages["invalid"].format(
+                datatype=type(data).__name__
+            )
+            raise serializers.ValidationError(
+                {api_settings.NON_FIELD_ERRORS_KEY: [message]}, code="invalid"
+            )
+
         # here, we also set has_start_time and has_end_time accordingly
         for field in ["date_published", "start_time", "end_time"]:
             val = data.get(field, None)
