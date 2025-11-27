@@ -41,7 +41,7 @@ def get_list(api_client: APIClient, query_string: str = None, *args, **kwargs):
     url = reverse("registration-list")
 
     if query_string:
-        url = "%s?%s" % (url, query_string)
+        url = f"{url}?{query_string}"
 
     return api_client.get(url, *args, **kwargs)
 
@@ -70,7 +70,7 @@ def get_detail(api_client: APIClient, pk: str, query: str = None):
     detail_url = reverse("registration-detail", kwargs={"pk": pk})
 
     if query:
-        detail_url = "%s?%s" % (detail_url, query)
+        detail_url = f"{detail_url}?{query}"
 
     return api_client.get(detail_url)
 

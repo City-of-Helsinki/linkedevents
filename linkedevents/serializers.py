@@ -1,5 +1,3 @@
-from typing import Optional
-
 from django.conf import settings
 from django.urls import NoReverseMatch
 from django.utils.translation import gettext_lazy as _
@@ -49,7 +47,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
         # Remove the pre-existing data in the bundle.
         for field_name in self.translated_fields:
             for lang in lang_codes:
-                key = "%s_%s" % (field_name, lang)
+                key = f"{field_name}_{lang}"
                 if key in self.fields:
                     del self.fields[key]
             del self.fields[field_name]
@@ -103,7 +101,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
                 value = obj[language]  # "musiikkiklubit"
                 if language == settings.LANGUAGES[0][0]:  # default language
                     extra_fields[field_name] = value  # { "name": "musiikkiklubit" }
-                extra_fields["{}_{}".format(field_name, language)] = (
+                extra_fields[f"{field_name}_{language}"] = (
                     value  # { "name_fi": "musiikkiklubit" }
                 )
             del data[field_name]  # delete original translated fields
@@ -120,7 +118,7 @@ class TranslatedModelSerializer(serializers.ModelSerializer):
         for field_name in self.translated_fields:
             d = {}
             for lang in utils.get_fixed_lang_codes():
-                key = "%s_%s" % (field_name, lang)
+                key = f"{field_name}_{lang}"
                 val = getattr(obj, key, None)
                 if val is None:
                     continue
@@ -164,7 +162,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     def __init__(
         self,
         *args,
-        skip_fields: Optional[set] = None,
+        skip_fields: set | None = None,
         hide_ld_context=False,
         **kwargs,
     ):
@@ -387,7 +385,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             for language in languages:
                 # null or empty strings are not allowed, they are the same as missing
                 # name!
-                name_lang_key = "name_%s" % language
+                name_lang_key = f"name_{language}"
                 if (
                     data.get(name_lang_key)
                     or self.partial is True

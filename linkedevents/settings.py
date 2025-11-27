@@ -514,8 +514,8 @@ CORS_ALLOW_HEADERS = (
     "baggage",
     "sentry-trace",
 )
-CSRF_COOKIE_NAME = "%s-csrftoken" % env("COOKIE_PREFIX")
-SESSION_COOKIE_NAME = "%s-sessionid" % env("COOKIE_PREFIX")
+CSRF_COOKIE_NAME = f"{env('COOKIE_PREFIX')}-csrftoken"
+SESSION_COOKIE_NAME = f"{env('COOKIE_PREFIX')}-sessionid"
 
 
 TEMPLATES = [
@@ -563,7 +563,7 @@ CITYSDK_API_SETTINGS = {
     "CITYSDK_URL": "http://api.tourism.helsinki.citysdk.eu/CitySDK/",
     "USERNAME": "admin",
     "PASSWORD": "defaultCitySDKPassword",
-    "SRS_URL": "http://www.opengis.net/def/crs/EPSG/0/%d" % PROJECTION_SRID,
+    "SRS_URL": f"http://www.opengis.net/def/crs/EPSG/0/{PROJECTION_SRID:d}",
     "DEFAULT_POI_CATEGORY": "53562f3238653c0a842a3bf7",
 }
 
@@ -896,7 +896,7 @@ if os.path.exists(f):
     import sys
     import types
 
-    module_name = "%s.local_settings" % ROOT_URLCONF.split(".")[0]
+    module_name = f"{ROOT_URLCONF.split('.')[0]}.local_settings"
     module = types.ModuleType(module_name)
     module.__file__ = f
     sys.modules[module_name] = module

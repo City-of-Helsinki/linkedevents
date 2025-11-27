@@ -25,7 +25,7 @@ def test_api_page_size(api_client, event):
     event_count = 200
     id_base = event.id
     for i in range(event_count):
-        event.pk = "%s-%d" % (id_base, i)
+        event.pk = f"{id_base}-{i:d}"
         event.save(force_insert=True)
     resp = api_client.get(reverse("event-list") + "?page_size=10")
     assert resp.status_code == 200
@@ -346,19 +346,19 @@ class TestImageAPI(APITestCase):
 
     def test_get_image_list_with_publisher(self):
         # test filtering with replaced organization
-        url = "{0}?publisher=ds:org-1".format(reverse("image-list"))
+        url = f"{reverse('image-list')}?publisher=ds:org-1"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 2)
 
         # test filtering with organization that replaces organization
-        url = "{0}?publisher=ds:org-2".format(reverse("image-list"))
+        url = f"{reverse('image-list')}?publisher=ds:org-2"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 2)
 
         # test filtering with normal organization
-        url = "{0}?publisher=ds:org-3".format(reverse("image-list"))
+        url = f"{reverse('image-list')}?publisher=ds:org-3"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 1)
@@ -382,7 +382,7 @@ class TestImageAPI(APITestCase):
         self.assertEqual(license_url, "http://urltothe.license")
 
     def test_text_search_by_image_alt_text(self):
-        url = "{0}?text=lorem".format(reverse("image-list"))
+        url = f"{reverse('image-list')}?text=lorem"
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

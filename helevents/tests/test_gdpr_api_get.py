@@ -1,4 +1,3 @@
-from typing import Optional
 from uuid import UUID
 
 import pytest
@@ -81,7 +80,7 @@ def _get_contact_person_data(contact_person: SignUpContactPerson) -> dict:
     }
 
 
-def _get_signup_group_profile_data(signup_group: Optional[SignUpGroup]) -> dict:
+def _get_signup_group_profile_data(signup_group: SignUpGroup | None) -> dict:
     if not signup_group:
         return {"key": "SIGNUP_GROUP", "value": None}
 

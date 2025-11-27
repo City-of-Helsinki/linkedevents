@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from typing import Optional
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -194,7 +193,7 @@ class EventCancellationNotificationAPITestCase(APITestCase):
             )
 
     @staticmethod
-    def _create_signup_payments(payments_kwargs: Optional[list[dict]] = None):
+    def _create_signup_payments(payments_kwargs: list[dict] | None = None):
         if payments_kwargs:
             for payment_kwargs in payments_kwargs:
                 SignUpPaymentFactory(**payment_kwargs)
@@ -220,8 +219,8 @@ class EventCancellationNotificationAPITestCase(APITestCase):
     @staticmethod
     def _create_sub_event(
         event,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ):
         sub_event = EventFactory(
             data_source=event.data_source,
@@ -237,8 +236,8 @@ class EventCancellationNotificationAPITestCase(APITestCase):
     @staticmethod
     def _make_super_event(
         event,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ):
         event.super_event_type = Event.SuperEventType.RECURRING
         event.start_time = start_time or localtime()

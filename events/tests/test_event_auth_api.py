@@ -165,7 +165,7 @@ class TestEventAPI(APITestCase):
 
     def test_event_list_with_show_all_filter(self):
         # test with public request
-        url = "{0}?show_all=1".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?show_all=1"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
@@ -179,7 +179,7 @@ class TestEventAPI(APITestCase):
         # test with authenticated data source and *replaced* publisher organization
         self.org_2.admin_users.add(self.user)
         self.client.force_authenticate(self.user)
-        url = "{0}?show_all=1".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?show_all=1"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Previously, the show_all filter only displayed drafts for one organization.
@@ -198,7 +198,7 @@ class TestEventAPI(APITestCase):
 
     def test_event_list_with_admin_user_filter(self):
         # test with public request
-        url = "{0}?admin_user=true".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?admin_user=true"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 0)  # public users are not admins
@@ -206,7 +206,7 @@ class TestEventAPI(APITestCase):
         # test with authenticated data source and *replaced* publisher organization
         self.org_2.admin_users.add(self.user)
         self.client.force_authenticate(self.user)
-        url = "{0}?admin_user=true".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?admin_user=true"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # We should see everything else but not public events outside the admin orgs
@@ -220,7 +220,7 @@ class TestEventAPI(APITestCase):
     @override_settings(SYSTEM_DATA_SOURCE_ID="ds")
     def test_event_list_with_created_by_filter(self):
         # test with public request
-        url = "{0}?created_by=me".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?created_by=me"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
@@ -239,7 +239,7 @@ class TestEventAPI(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # test with admin user
-        url = "{0}?created_by=me".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?created_by=me"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # We should only see the event created by us
@@ -252,11 +252,11 @@ class TestEventAPI(APITestCase):
 
     def test_event_list_with_publisher_filters(self):
         # test with public request
-        url = "{0}?show_all=1&publisher=neds:org-3".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?show_all=1&publisher=neds:org-3"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 1)  # event-4
-        url = "{0}?admin_user=1&publisher=neds:org-3".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?admin_user=1&publisher=neds:org-3"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 0)  # public users are not admins
@@ -264,7 +264,7 @@ class TestEventAPI(APITestCase):
         # test with authenticated data source and publisher
         self.org_2.admin_users.add(self.user)
         self.client.force_authenticate(self.user)
-        url = "{0}?show_all=1&publisher=neds:org-2".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?show_all=1&publisher=neds:org-2"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # note that org-2 is replaced by org-1
@@ -279,7 +279,7 @@ class TestEventAPI(APITestCase):
             self.assertIn("created_by", event)
             self.assertIn("last_modified_by", event)
 
-        url = "{0}?admin_user=1&publisher=neds:org-2".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?admin_user=1&publisher=neds:org-2"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # note that org-2 is replaced by org-1
@@ -293,7 +293,7 @@ class TestEventAPI(APITestCase):
             # now we should only have events with admin rights
             self.assertIn("created_by", event)
             self.assertIn("last_modified_by", event)
-        url = "{0}?admin_user=1&publisher=neds:org-1".format(reverse("event-list"))
+        url = f"{reverse('event-list')}?admin_user=1&publisher=neds:org-1"
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # with publisher filter, we only display drafts and public events for that organization.

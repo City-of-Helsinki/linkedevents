@@ -6,7 +6,7 @@ from django.conf import settings
 # original author @akx (Aarni Koskela)
 
 
-class EventExtension(object):
+class EventExtension:
     #: The identifier for the extension (as referred to in the `extensions` argument)
     identifier = None
 

@@ -1,8 +1,9 @@
 import logging
 import time
 import urllib
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Annotated, Any, Callable, Optional, Type, TypeVar, Union
+from typing import Annotated, Any, TypeVar
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -77,7 +78,7 @@ def _build_url(path):
     return urllib.parse.urljoin(base_url, urllib.parse.quote(path))
 
 
-def _get_data(url: str, params: Optional[dict] = None) -> dict:
+def _get_data(url: str, params: dict | None = None) -> dict:
     session = requests.Session()
     retries = Retry(
         total=settings.ESPOO_MAX_RETRIES,
@@ -94,7 +95,7 @@ def _get_data(url: str, params: Optional[dict] = None) -> dict:
     return response.json()
 
 
-def _list_data(url: str, params: Optional[dict] = None) -> list[dict]:
+def _list_data(url: str, params: dict | None = None) -> list[dict]:
     results = []
     request_params = params
     for _ in range(settings.ESPOO_MAX_PAGES):
@@ -125,7 +126,7 @@ def _build_pre_map(mapping: dict[str, str]) -> PreMapper:
     """  # noqa: E501
 
     def pre_map(
-        field_name, field_data: Optional[Union[str, dict]], data: dict
+        field_name, field_data: str | dict | None, data: dict
     ) -> dict[str, Any]:
         """
         Map a single field from origin object to target object
@@ -163,7 +164,7 @@ def _build_pre_map_to_id(mapping: dict[str, str]) -> PreMapper:
     pre_mapper = _build_pre_map(mapping)
 
     def pre_map_to_id(
-        field_name: str, field_data: Optional[Union[str, dict]], data: dict
+        field_name: str, field_data: str | dict | None, data: dict
     ) -> dict[str, Any]:
         return pre_mapper(f"{field_name}_id", field_data, data)
 
@@ -171,7 +172,7 @@ def _build_pre_map_to_id(mapping: dict[str, str]) -> PreMapper:
 
 
 def _pre_map_value_to_id(
-    field_name: str, field_data: Optional[Union[str, dict]], data: dict
+    field_name: str, field_data: str | dict | None, data: dict
 ) -> dict[str, Any]:
     """
     Direct map a value to the relevant id (foreign key)
@@ -179,9 +180,7 @@ def _pre_map_value_to_id(
     return {**data, f"{field_name}_id": field_data}
 
 
-def _pre_map_translation(
-    field_name: str, field_data: Optional[dict], data: dict
-) -> dict:
+def _pre_map_translation(field_name: str, field_data: dict | None, data: dict) -> dict:
     """
     Translation field mapper
     """
@@ -200,9 +199,9 @@ def _pre_map_translation(
     }
 
 
-def _post_map_to_self_id(
+def _post_map_to_self_id[M: Model](
     field_name: str,
-    field_data: Optional[Union[str, dict]],
+    field_data: str | dict | None,
     data: dict,
     instance: M,
     instance_map: dict[str, str],
@@ -211,7 +210,9 @@ def _post_map_to_self_id(
     return mapper(field_name, field_data, data)
 
 
-def _build_post_map_m2m_obj(mapping: dict[str, str], id_getter=None) -> PostMapper:
+def _build_post_map_m2m_obj[M: Model](
+    mapping: dict[str, str], id_getter=None
+) -> PostMapper:
     """
     Post mapper for ManyToMany fields
     """
@@ -231,7 +232,7 @@ def _build_post_map_m2m_obj(mapping: dict[str, str], id_getter=None) -> PostMapp
     return post_map_m2m_obj
 
 
-def _post_recreate_m2o(
+def _post_recreate_m2o[M: Model](
     field_name: str,
     field_data: list[dict],
     data: dict,
@@ -259,7 +260,7 @@ def _post_recreate_m2o(
     return {**data}
 
 
-def _post_recreate_external_links(
+def _post_recreate_external_links[M: Model](
     field_name: str,
     field_data: list[dict],
     data: dict,
@@ -287,9 +288,9 @@ def _post_recreate_external_links(
     )
 
 
-def _import_origin_obj(
+def _import_origin_obj[M: Model](
     obj_data,
-    model: Type[M],
+    model: type[M],
     data_source,
     copy_fields,
     pre_field_mappers,
@@ -331,17 +332,17 @@ def _import_origin_obj(
     return instance
 
 
-def _import_origin_objs(
-    model: Type[M],
+def _import_origin_objs[M: Model](
+    model: type[M],
     data_source: DataSource,
     common_objs: list[M],
     origin_objs: list[dict],
-    copy_fields: Optional[list[str]] = None,
-    pre_field_mappers: Optional[dict[str, PreMapper]] = None,
-    post_field_mappers: Optional[dict[str, PostMapper]] = None,
+    copy_fields: list[str] | None = None,
+    pre_field_mappers: dict[str, PreMapper] | None = None,
+    post_field_mappers: dict[str, PostMapper] | None = None,
     auto_pk=False,
-    instance_id_field: Optional[str] = "origin_id",
-    origin_id_field: Optional[str] = "id",
+    instance_id_field: str | None = "origin_id",
+    origin_id_field: str | None = "id",
 ) -> tuple[dict[str, str], ModelSyncher]:
     """
     Import data from origin_objs into model instances using mapping
@@ -412,8 +413,8 @@ def _import_origin_objs(
     return instance_mapping, syncher
 
 
-def _split_common_objs(
-    model: Type[M],
+def _split_common_objs[M: Model](
+    model: type[M],
     data_source: DataSource,
     origin_objs: list[dict],
 ) -> tuple[list[M], list[dict]]:
@@ -731,4 +732,4 @@ class EspooImporter(Importer):
         image_syncher.finish(force=force)
         org_syncher.finish(force=force)
 
-        logger.info("{} events processed".format(len(events_data)))
+        logger.info(f"{len(events_data)} events processed")

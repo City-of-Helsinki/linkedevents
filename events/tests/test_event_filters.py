@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta
-from datetime import timezone as tz
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
@@ -454,21 +453,21 @@ def test_get_event_search_full_text_with_start_time_sorting_api(api_client):
         name_fi="Zebra Testisana",
         data_source=data_source,
         publisher=organization,
-        start_time=datetime(2024, 12, 31, tzinfo=tz.utc),
+        start_time=datetime(2024, 12, 31, tzinfo=UTC),
     )
     Event.objects.create(
         id="test:alpha",
         name_fi="Alpha Testisana",
         data_source=data_source,
         publisher=organization,
-        start_time=datetime(2024, 11, 15, tzinfo=tz.utc),
+        start_time=datetime(2024, 11, 15, tzinfo=UTC),
     )
     Event.objects.create(
         id="test:beta",
         name_fi="Beta Testisana",
         data_source=data_source,
         publisher=organization,
-        start_time=datetime(2024, 12, 1, tzinfo=tz.utc),
+        start_time=datetime(2024, 12, 1, tzinfo=UTC),
     )
 
     call_command("rebuild_event_search_index")
@@ -497,21 +496,21 @@ def test_get_event_search_full_text_with_end_time_sorting_api(api_client):
         name_fi="Zebra Testisana",
         data_source=data_source,
         publisher=organization,
-        end_time=datetime(2024, 12, 31, tzinfo=tz.utc),
+        end_time=datetime(2024, 12, 31, tzinfo=UTC),
     )
     Event.objects.create(
         id="test:alpha",
         name_fi="Alpha Testisana",
         data_source=data_source,
         publisher=organization,
-        end_time=datetime(2024, 11, 15, tzinfo=tz.utc),
+        end_time=datetime(2024, 11, 15, tzinfo=UTC),
     )
     Event.objects.create(
         id="test:beta",
         name_fi="Beta Testisana",
         data_source=data_source,
         publisher=organization,
-        end_time=datetime(2024, 12, 1, tzinfo=tz.utc),
+        end_time=datetime(2024, 12, 1, tzinfo=UTC),
     )
 
     call_command("rebuild_event_search_index")
@@ -542,8 +541,8 @@ def test_get_event_search_full_text_with_enrolment_start_time_sorting_api(api_cl
         publisher=organization,
     )
     Registration.objects.create(
-        enrolment_start_time=datetime(2025, 1, 1, tzinfo=tz.utc),
-        enrolment_end_time=datetime(2025, 12, 31, tzinfo=tz.utc),
+        enrolment_start_time=datetime(2025, 1, 1, tzinfo=UTC),
+        enrolment_end_time=datetime(2025, 12, 31, tzinfo=UTC),
         event=event_z,
     )
     event_a = Event.objects.create(
@@ -553,8 +552,8 @@ def test_get_event_search_full_text_with_enrolment_start_time_sorting_api(api_cl
         publisher=organization,
     )
     Registration.objects.create(
-        enrolment_start_time=datetime(2025, 2, 1, tzinfo=tz.utc),
-        enrolment_end_time=datetime(2025, 11, 15, tzinfo=tz.utc),
+        enrolment_start_time=datetime(2025, 2, 1, tzinfo=UTC),
+        enrolment_end_time=datetime(2025, 11, 15, tzinfo=UTC),
         event=event_a,
     )
     event_b = Event.objects.create(
@@ -564,8 +563,8 @@ def test_get_event_search_full_text_with_enrolment_start_time_sorting_api(api_cl
         publisher=organization,
     )
     Registration.objects.create(
-        enrolment_start_time=datetime(2025, 3, 1, tzinfo=tz.utc),
-        enrolment_end_time=datetime(2025, 12, 1, tzinfo=tz.utc),
+        enrolment_start_time=datetime(2025, 3, 1, tzinfo=UTC),
+        enrolment_end_time=datetime(2025, 12, 1, tzinfo=UTC),
         event=event_b,
     )
 
@@ -596,8 +595,8 @@ def test_get_event_search_full_text_with_enrolment_end_time_sorting_api(api_clie
         publisher=organization,
     )
     Registration.objects.create(
-        enrolment_start_time=datetime(2025, 1, 1, tzinfo=tz.utc),
-        enrolment_end_time=datetime(2025, 12, 31, tzinfo=tz.utc),
+        enrolment_start_time=datetime(2025, 1, 1, tzinfo=UTC),
+        enrolment_end_time=datetime(2025, 12, 31, tzinfo=UTC),
         event=event_z,
     )
     event_a = Event.objects.create(
@@ -607,8 +606,8 @@ def test_get_event_search_full_text_with_enrolment_end_time_sorting_api(api_clie
         publisher=organization,
     )
     Registration.objects.create(
-        enrolment_start_time=datetime(2025, 2, 1, tzinfo=tz.utc),
-        enrolment_end_time=datetime(2025, 11, 15, tzinfo=tz.utc),
+        enrolment_start_time=datetime(2025, 2, 1, tzinfo=UTC),
+        enrolment_end_time=datetime(2025, 11, 15, tzinfo=UTC),
         event=event_a,
     )
     event_b = Event.objects.create(
@@ -618,8 +617,8 @@ def test_get_event_search_full_text_with_enrolment_end_time_sorting_api(api_clie
         publisher=organization,
     )
     Registration.objects.create(
-        enrolment_start_time=datetime(2025, 3, 1, tzinfo=tz.utc),
-        enrolment_end_time=datetime(2025, 12, 1, tzinfo=tz.utc),
+        enrolment_start_time=datetime(2025, 3, 1, tzinfo=UTC),
+        enrolment_end_time=datetime(2025, 12, 1, tzinfo=UTC),
         event=event_b,
     )
     call_command("rebuild_event_search_index")

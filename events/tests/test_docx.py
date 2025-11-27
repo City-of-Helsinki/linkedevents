@@ -11,7 +11,6 @@ def test_docx_renderer(api_client, event, place):
     event.save()
 
     response = api_client.get(
-        reverse("event-list")
-        + "?format=docx&location=%s" % (place.id.replace(" ", "%20"))
+        f"{reverse('event-list')}?format=docx&location={place.id.replace(' ', '%20')}"
     )
     assert response.status_code == 200

@@ -63,9 +63,7 @@ class RegistrationUserAccessInline(admin.TabularInline):
         # Allow to select only language which has service_language set to true
         if db_field.name == "language":
             kwargs["queryset"] = Language.objects.filter(service_language=True)
-        return super(RegistrationUserAccessInline, self).formfield_for_foreignkey(
-            db_field, request, **kwargs
-        )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 class RegistrationPriceGroupInline(admin.TabularInline):

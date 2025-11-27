@@ -184,7 +184,7 @@ def replace_location(
         replace.replaced_by = by
         replace.save(update_fields=["deleted", "replaced_by"])
         logger.info(
-            "Location %s (%s) was deleted. Discovered replacement location %s"
-            % (replace.id, str(replace), by.id)
+            f"Location {replace.id} ({str(replace)}) was deleted. "
+            f"Discovered replacement location {by.id}"
         )
     return True

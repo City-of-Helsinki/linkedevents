@@ -132,10 +132,7 @@ def test_get_place_list_verify_division_filter(
     assert place.id in [entry["id"] for entry in data]
 
     # filter using two values
-    filter_value = "%s,%s" % (
-        administrative_division.ocd_id,
-        administrative_division2.ocd_id,
-    )
+    filter_value = f"{administrative_division.ocd_id},{administrative_division2.ocd_id}"
     response = get_list(
         api_client, data={"show_all_places": 1, "division": filter_value}
     )

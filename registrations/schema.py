@@ -76,6 +76,10 @@ class OfferPriceGroupSerializerExtension(OpenApiSerializerExtension):
     def map_serializer(self, auto_schema, direction):
         result = super().map_serializer(auto_schema, direction)
 
+        vat_percentages = ", ".join(
+            [f"<code>{vat[0]}</code>" for vat in VAT_PERCENTAGES]
+        )
+
         result["description"] = (
             "Customer group selection with concrete pricing for an event's price offer. Used as "  # noqa: E501
             "initial values for registration customer groups when creating a registration for "  # noqa: E501
@@ -94,12 +98,8 @@ class OfferPriceGroupSerializerExtension(OpenApiSerializerExtension):
             "Price of this customer group including VAT."
         )
         result["properties"]["vat_percentage"]["description"] = (
-            "VAT percentage of this customer group. Possible values are %(vat_values)s."
-        ) % {
-            "vat_values": ", ".join(
-                [f"<code>{vat[0]}</code>" for vat in VAT_PERCENTAGES]
-            )
-        }
+            f"VAT percentage of this customer group. Possible values are {vat_percentages}."  # noqa: E501
+        )
         result["properties"]["price_without_vat"]["description"] = (
             "Price of this customer group excluding VAT. Calculated automatically based on "  # noqa: E501
             "<code>price</code> and <code>vat_percentage</code>."
@@ -296,6 +296,10 @@ class RegistrationPriceGroupSerializerExtension(OpenApiSerializerExtension):
     def map_serializer(self, auto_schema, direction):
         result = super().map_serializer(auto_schema, direction)
 
+        vat_percentages = ", ".join(
+            [f"<code>{vat[0]}</code>" for vat in VAT_PERCENTAGES]
+        )
+
         result["description"] = (
             "Customer group selection with concrete pricing for a registration."
         )
@@ -313,12 +317,8 @@ class RegistrationPriceGroupSerializerExtension(OpenApiSerializerExtension):
             "Price of this customer group including VAT."
         )
         result["properties"]["vat_percentage"]["description"] = (
-            "VAT percentage of this customer group. Possible values are %(vat_values)s."
-        ) % {
-            "vat_values": ", ".join(
-                [f"<code>{vat[0]}</code>" for vat in VAT_PERCENTAGES]
-            )
-        }
+            f"VAT percentage of this customer group. Possible values are {vat_percentages}."  # noqa: E501
+        )
         result["properties"]["price_without_vat"]["description"] = (
             "Price of this customer group excluding VAT. Calculated automatically based on "  # noqa: E501
             "<code>price</code> and <code>vat_percentage</code>."
@@ -486,6 +486,10 @@ class SignUpContactPersonSerializerExtension(OpenApiSerializerExtension):
     def map_serializer(self, auto_schema, direction):
         result = super().map_serializer(auto_schema, direction)
 
+        notifaction_options = ", ".join(
+            [f"<code>{option[0]}</code>" for option in NOTIFICATION_TYPES]
+        )
+
         result["description"] = (
             "Provides contact information for an attendee or an attendee group. In case of a "  # noqa: E501
             "group, the information will be shared for the whole group."
@@ -521,12 +525,8 @@ class SignUpContactPersonSerializerExtension(OpenApiSerializerExtension):
 
         result["properties"]["notifications"]["description"] = (
             "Methods to send notifications to the contact person. Options are "
-            "%(notification_options)s."
-        ) % {
-            "notification_options": ", ".join(
-                [f"<code>{option[0]}</code>" for option in NOTIFICATION_TYPES]
-            )
-        }
+            f"{notifaction_options}."
+        )
         result["properties"]["notifications"]["example"] = NotificationType.SMS_EMAIL
 
         return result
@@ -605,6 +605,10 @@ class SignUpPaymentSerializerExtension(OpenApiSerializerExtension):
     def map_serializer(self, auto_schema, direction):
         result = super().map_serializer(auto_schema, direction)
 
+        payment_statuses = ", ".join(
+            [f"<code>{status[0]}</code>" for status in SignUpPayment.PAYMENT_STATUSES]
+        )
+
         result["description"] = (
             "A payment created for a signup or a signup group using the web store integration. "  # noqa: E501
             "A signup is confirmed only when the payment is paid."
@@ -629,15 +633,8 @@ class SignUpPaymentSerializerExtension(OpenApiSerializerExtension):
             "Amount of the payment with VAT included."
         )
         result["properties"]["status"]["description"] = (
-            "Status of the payment. Possible values are %(payment_statuses)s."
-        ) % {
-            "payment_statuses": ", ".join(
-                [
-                    f"<code>{status[0]}</code>"
-                    for status in SignUpPayment.PAYMENT_STATUSES
-                ]
-            )
-        }
+            f"Status of the payment. Possible values are {payment_statuses}."
+        )
         result["properties"]["created_time"]["description"] = (
             "Time when this payment was created."
         )

@@ -1,9 +1,9 @@
 import html
 import logging
 import re
+from collections.abc import Generator
 from copy import deepcopy
 from datetime import date, datetime, timedelta
-from typing import Generator, Optional
 from zoneinfo import ZoneInfo
 
 import requests
@@ -1007,7 +1007,7 @@ class EnkoraImporter(Importer):
         errors = []
         for course_id, course in reservation_event_groups.items():
             course_count += 1
-            logger.debug("{}) Enkora course ID {}".format(course_count, course_id))
+            logger.debug(f"{course_count}) Enkora course ID {course_id}")
             if self.options["single"]:
                 course_id = "enkora:{}".format(course["reservation_event_group_id"])
                 if course_id != self.options["single"]:
@@ -1028,9 +1028,7 @@ class EnkoraImporter(Importer):
                 errors.append(exc)
                 if len(errors) > self.ERRORS_ALLOWED_BEFORE_STOP:
                     logging.exception(
-                        "Event conversion failed {} times. Stop iterating.".format(
-                            len(errors)
-                        )
+                        f"Event conversion failed {len(errors)} times. Stop iterating."
                     )
                     raise
                 logging.debug("Soft-fail: conversion failed. Continue iteration.")
@@ -1075,19 +1073,15 @@ class EnkoraImporter(Importer):
         # Delayed conversion exception?
         if errors:
             logger.error(
-                "Enkora course import finished with {} courses with {} events seen. {} courses synchronized. "  # noqa: E501
-                "{} errors encounterd.".format(
-                    course_count, course_event_count, course_sync_count, len(errors)
-                )
+                f"Enkora course import finished with {course_count} courses with {course_event_count} events seen. {course_sync_count} courses synchronized. "  # noqa: E501
+                f"{len(errors)} errors encounterd."
             )
             raise errors[0]
 
         # Success
         logger.info(
-            "Enkora course import finished with {} courses with {} events seen. {} courses synchronized. "  # noqa: E501
-            "No errors encounterd.".format(
-                course_count, course_event_count, course_sync_count
-            )
+            f"Enkora course import finished with {course_count} courses with {course_event_count} events seen. {course_sync_count} courses synchronized. "  # noqa: E501
+            "No errors encounterd."
         )
 
     def mark_deleted(self, event: Event) -> bool:
@@ -1162,7 +1156,7 @@ class EnkoraImporter(Importer):
         places_done = set()
         for course_id, course in reservation_event_groups.items():
             course_count += 1
-            logger.debug("{}) Enkora course ID {}".format(course_count, course_id))
+            logger.debug(f"{course_count}) Enkora course ID {course_id}")
             if self.options["single"]:
                 course_id = "enkora:{}".format(course["reservation_event_group_id"])
                 if course_id != self.options["single"]:
@@ -1206,9 +1200,8 @@ class EnkoraImporter(Importer):
 
         # Success
         logger.info(
-            "Enkora place import finished with {} courses having {} unique Enkora-places. No errors encounterd.".format(  # noqa: E501
-                course_count, place_count
-            )
+            f"Enkora place import finished with {course_count} courses having "
+            f"{place_count} unique Enkora-places. No errors encounterd."
         )
 
     @staticmethod
@@ -1265,17 +1258,17 @@ class EnkoraImporter(Importer):
                 try:
                     kw = Keyword.objects.get(id=kw_id)
                 except ObjectDoesNotExist:
-                    logger.error("Unknown keyword '{}'!".format(kw_id))
+                    logger.error(f"Unknown keyword '{kw_id}'!")
                     raise
                 if kw.id.startswith("yso:"):
                     yso_id = kw.id[4:]
                     text = str(
-                        Paragraph("[{}] {}".format(kw.id, kw.name)).insert_link(
+                        Paragraph(f"[{kw.id}] {kw.name}").insert_link(
                             kw.id, yso_base_url.format(yso_id)
                         )
                     )
                 else:
-                    text = "[{}] {}".format(kw.id, kw.name)
+                    text = f"[{kw.id}] {kw.name}"
                 kws.append(text)
 
             return kws
@@ -1284,15 +1277,9 @@ class EnkoraImporter(Importer):
         # Contact information
         doc.add_heading("Course contact information", level=2)
         ul = []
-        ul.append(
-            "Liikuntaluuri, phone: {}".format(EnkoraImporter.COURSE_CONTACT_PHONE)
-        )
-        ul.append("Liikuntaluuri, link: {}".format(EnkoraImporter.COURSE_CONTACT_LINK))
-        ul.append(
-            "Event provider info: {}".format(
-                EnkoraImporter.COURSE_PROVIDER_CONTACT_INFO
-            )
-        )
+        ul.append(f"Liikuntaluuri, phone: {EnkoraImporter.COURSE_CONTACT_PHONE}")
+        ul.append(f"Liikuntaluuri, link: {EnkoraImporter.COURSE_CONTACT_LINK}")
+        ul.append(f"Event provider info: {EnkoraImporter.COURSE_PROVIDER_CONTACT_INFO}")
         doc.add_block(MDList(ul))
 
         # Section 0.7:
@@ -1303,7 +1290,7 @@ class EnkoraImporter(Importer):
         for var_value in EnkoraImporter.ALL_COURSES_KEYWORDS:
             value_set = {var_value}
             kws = _keyword_helper(value_set)
-            sport = str(Paragraph("Keyword: {}".format(kws[0])))
+            sport = str(Paragraph(f"Keyword: {kws[0]}"))
             ul.append(sport)
 
         doc.add_block(MDList(ul))
@@ -1323,7 +1310,7 @@ class EnkoraImporter(Importer):
             var_value = getattr(EnkoraImporter, var)
             value_set = {var_value}
             kws = _keyword_helper(value_set)
-            sport = str(Paragraph("{}: {}".format(var[6:], kws[0])))
+            sport = str(Paragraph(f"{var[6:]}: {kws[0]}"))
             ul.append(sport)
 
         doc.add_block(MDList(ul))
@@ -1342,7 +1329,7 @@ class EnkoraImporter(Importer):
             var_value = getattr(EnkoraImporter, var)
             value_set = {var_value}
             kws = _keyword_helper(value_set)
-            audience = str(Paragraph("{}: {}".format(var[9:], kws[0])))
+            audience = str(Paragraph(f"{var[9:]}: {kws[0]}"))
             ul.append(audience)
 
         doc.add_block(MDList(ul))
@@ -1369,12 +1356,12 @@ class EnkoraImporter(Importer):
                 try:
                     place = Place.objects.get(id=place_id)
                 except Place.DoesNotExist:
-                    logger.error("Unknown place '{}'!".format(place_id))
+                    logger.error(f"Unknown place '{place_id}'!")
                     raise
                 tprek = str(
-                    Paragraph(
-                        "Place: [{}] {}".format(place.id, place.name)
-                    ).insert_link(place.id, tprek_base_url.format(mapping["tprek-id"]))
+                    Paragraph(f"Place: [{place.id}] {place.name}").insert_link(
+                        place.id, tprek_base_url.format(mapping["tprek-id"])
+                    )
                 )
             elif "street-address" in mapping:
                 longitude = mapping["epsg:4326"][1]
@@ -1422,7 +1409,7 @@ class EnkoraImporter(Importer):
             if not image_url:
                 image = "Image URL: -missing-"
             else:
-                image = Paragraph("Image URL: {}".format(image_url)).insert_link(
+                image = Paragraph(f"Image URL: {image_url}").insert_link(
                     image_url, image_url
                 )
             ul.append(MDList([details, image]))
@@ -1505,10 +1492,10 @@ class EnkoraImporter(Importer):
         )
         ul = []
         for service_id, link_url_base in EnkoraImporter.liikuntakauppa_links.items():
-            link_url = "{}/<course-ID>".format(link_url_base)
-            text = str(Paragraph("{}".format(link_url)).insert_link(link_url, link_url))
+            link_url = f"{link_url_base}/<course-ID>"
+            text = str(Paragraph(f"{link_url}").insert_link(link_url, link_url))
 
-            item_text = "{}: {}:".format(service_id, text)
+            item_text = f"{service_id}: {text}:"
             ul.append(Inline(item_text))
 
         doc.add_block(MDList(ul))
@@ -1677,13 +1664,10 @@ class EnkoraImporter(Importer):
         keyword_accuracy = len(keyword_types) / 4
         if keyword_accuracy < 0.5:
             logging.warning(
-                "Enkora event ID {0} '{1}': Poor mapping ({2:.0f}%) into keywords! "
-                "Suggest improving mapping on: {3}".format(
-                    course["reservation_event_group_id"],
-                    course["reservation_event_group_name"].strip(),
-                    keyword_accuracy * 100,
-                    ", ".join(keyword_types),
-                )
+                f"Enkora event ID {course['reservation_event_group_id']} "
+                f"'{course['reservation_event_group_name'].strip()}': "
+                f"Poor mapping ({(keyword_accuracy * 100):.0f}%) into keywords! "
+                f"Suggest improving mapping on: {', '.join(keyword_types)}"
             )
 
         # Price [€ cents]
@@ -1836,14 +1820,14 @@ class EnkoraImporter(Importer):
             try:
                 kw = Keyword.objects.get(id=kw_id)
             except (Keyword.DoesNotExist, ObjectDoesNotExist):
-                logger.error("Unknown keyword '{}'!".format(kw_id))
+                logger.error(f"Unknown keyword '{kw_id}'!")
                 raise
             kws.append(kw)
 
         return kws
 
     @staticmethod
-    def convert_title(course: dict) -> tuple[dict, Optional[dict]]:
+    def convert_title(course: dict) -> tuple[dict, dict | None]:
         """
         Add information to course title about event hour and weekday
         :param course: dict, Enkora course information as returned from API
@@ -1927,9 +1911,9 @@ class EnkoraImporter(Importer):
     @staticmethod
     def convert_description(
         course: dict,
-        capacity_full: Optional[bool],
-        has_queue_capacity: Optional[bool],
-    ) -> Optional[dict]:
+        capacity_full: bool | None,
+        has_queue_capacity: bool | None,
+    ) -> dict | None:
         """
         Convert course description into HTML with additional information on course reservation status
         :param course: dict, Enkora course information as returned from API
@@ -2007,7 +1991,7 @@ class EnkoraImporter(Importer):
         return description
 
     @staticmethod
-    def convert_location(course: dict) -> Optional[dict]:
+    def convert_location(course: dict) -> dict | None:
         """
         Convert Enkora course information into location and extra information.
         Not all locations have Tprek mapping, then a street address will be returned.
@@ -2061,7 +2045,7 @@ class EnkoraImporter(Importer):
         info = {f"{key}_fi": value for key, value in info_in.items()}
 
         # For any non-TPR Place, we'll create an own place.
-        place_id = "enkora:{}".format(enkora_place_id)
+        place_id = f"enkora:{enkora_place_id}"
 
         longitude = info_in["epsg:4326"][1]
         latitude = info_in["epsg:4326"][0]
@@ -2106,9 +2090,9 @@ class EnkoraImporter(Importer):
 
         if obj._changed:
             if obj._created:
-                logger.info("- Creating place {}".format(place_id))
+                logger.info(f"- Creating place {place_id}")
             else:
-                logger.info("- Updating place {}".format(place_id))
+                logger.info(f"- Updating place {place_id}")
             obj.save()
 
     def convert_price(self, course: dict, url: str) -> list[dict]:
@@ -2127,7 +2111,7 @@ class EnkoraImporter(Importer):
                 offer = recur_dict()
                 price_in_cents = float(fare_product["price"])
                 if price_in_cents > 0.0:
-                    offer["price"] = {"fi": "{0:.2f}€".format(price_in_cents / 100)}
+                    offer["price"] = {"fi": f"{price_in_cents / 100:.2f}€"}
                     if do_fare_description:
                         offer["description"] = {"fi": offer_desc}
                     price_is_free = False
@@ -2146,7 +2130,7 @@ class EnkoraImporter(Importer):
 
     def convert_audience(
         self, course: dict
-    ) -> tuple[str, set, set, Optional[int], Optional[int], str]:
+    ) -> tuple[str, set, set, int | None, int | None, str]:
         """
         Light NLP operation
         Based on given input text, determine audience and sport keywords
@@ -2168,9 +2152,7 @@ class EnkoraImporter(Importer):
                 audience_mapping = self.audience_tag_map[tag_id]
                 audience_kw_ids |= audience_mapping["keywords"]
 
-        def _ranges_overlap(
-            x1: Optional[int], x2: Optional[int], y1: int, y2: int
-        ) -> bool:
+        def _ranges_overlap(x1: int | None, x2: int | None, y1: int, y2: int) -> bool:
             if not x1 or not x2:
                 # raise ValueError("Cannot compare null-ranges!")
                 return False
@@ -2254,7 +2236,7 @@ class EnkoraImporter(Importer):
         return chosen_link
 
     @staticmethod
-    def _parse_title_age(course_title: str) -> tuple[Optional[int], Optional[int]]:
+    def _parse_title_age(course_title: str) -> tuple[int | None, int | None]:
         min_age = None
         max_age = None
 
@@ -2403,7 +2385,7 @@ class Enkora:
         http_session = self._setup_client()
 
         data = {
-            "authentication": (None, "{},{}".format(self._username, self._password)),
+            "authentication": (None, f"{self._username},{self._password}"),
             "output_format": (None, "json"),
         }
         for key in payload:
@@ -2453,7 +2435,7 @@ class Kurssidata(Enkora):
             "reservation_event_group_id": course_id,
         }
 
-        logger.debug("Requesting Enkora course data for ID {}".format(course_id))
+        logger.debug(f"Requesting Enkora course data for ID {course_id}")
 
         response = self._request(self.endpoint_url, payload, retries=3)
         json = response.json()
@@ -2472,9 +2454,8 @@ class Kurssidata(Enkora):
         # Sanity:
         if len(reservation_event_groups) != 1:
             raise RuntimeError(
-                "Getting reservation event group {} resulted in {} items!".format(
-                    course_id, len(reservation_event_groups)
-                )
+                f"Getting reservation event group {course_id} resulted in "
+                f"{len(reservation_event_groups)} items!"
             )
         reservation_event_group = reservation_event_groups[0]
 
@@ -2500,8 +2481,9 @@ class Kurssidata(Enkora):
         end_date = end_date - timedelta(days=1)
 
         payload = {
-            "start_date": "{0}-{1}-{2}--{0}-{1}-{3}".format(
-                start_date.year, start_date.month, start_date.day, end_date.day
+            "start_date": (
+                f"{start_date.year}-{start_date.month}-{start_date.day}--"
+                f"{start_date.year}-{start_date.month}-{end_date.day}"
             ),
         }
 
@@ -2530,13 +2512,9 @@ class Kurssidata(Enkora):
         :return: reservation generator
         """  # noqa: E501
         payload = {
-            "start_date": "{0}-{1}-{2}--{3}-{4}-{5}".format(
-                first_date.year,
-                first_date.month,
-                first_date.day,
-                last_date.year,
-                last_date.month,
-                last_date.day,
+            "start_date": (
+                f"{first_date.year}-{first_date.month}-{first_date.day}--"
+                f"{last_date.year}-{last_date.month}-{last_date.day}"
             ),
         }
 
@@ -2577,20 +2555,15 @@ class Kurssidata(Enkora):
 
         payload = {
             "region_id": region,
-            "start_date": "{}-{}-{}--{}-{}-{}".format(
-                start_date.year,
-                start_date.month,
-                start_date.day,
-                end_date.year,
-                end_date.month,
-                end_date.day,
+            "start_date": (
+                f"{start_date.year}-{start_date.month}-{start_date.day}--"
+                f"{end_date.year}-{end_date.month}-{end_date.day}"
             ),
         }
 
         logger.debug(
-            "Requesting Enkora course data between {} and {} for region {}".format(
-                start_date, end_date, region
-            )
+            f"Requesting Enkora course data between {start_date} and {end_date} for "
+            f"region {region}"
         )
 
         response = self._request(self.endpoint_url, payload, retries=3)
@@ -2786,7 +2759,7 @@ class Kurssidata(Enkora):
         course_ids = set()
         for course_id in json["result"]:
             if course_id in course_ids:
-                raise RuntimeError("Course id {} already seen!".format(course_id))
+                raise RuntimeError(f"Course id {course_id} already seen!")
             course_ids.add(int(course_id))
 
         return course_ids

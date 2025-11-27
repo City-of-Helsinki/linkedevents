@@ -100,14 +100,14 @@ class CitySDKExporter(Exporter):
         username = settings.CITYSDK_API_SETTINGS["USERNAME"]
         password = settings.CITYSDK_API_SETTINGS["PASSWORD"]
         session_response = requests.get(
-            "%sauth?username=%s&password=%s" % (BASE_API_URL, username, password)
+            f"{BASE_API_URL}auth?username={username}&password={password}"
         )
         if session_response.status_code == 200:
             self.session_cookies = session_response.cookies
-            print("Authentication successful with response: %s" % session_response.text)  # noqa: T201
+            print(f"Authentication successful with response: {session_response.text}")  # noqa: T201
         else:
             raise CommandError(
-                "Authentication failed with credentials %s:%s" % ((username, password))
+                f"Authentication failed with credentials {username}:{password}"
             )
 
     def _generate_exportable_event(self, event):
@@ -153,7 +153,7 @@ class CitySDKExporter(Exporter):
         ]:
             citysdk_event[to_field_name] = []
             for lang in [x[0] for x in settings.LANGUAGES]:
-                value = getattr(event, "%s_%s" % (from_field_name, lang))
+                value = getattr(event, f"{from_field_name}_{lang}")
                 if value:
                     lang_dict = {}
                     if to_field_name == "link":
@@ -181,7 +181,7 @@ class CitySDKExporter(Exporter):
         to_field_name = "label"
         citysdk_category[to_field_name] = []
         for lang in [x[0] for x in settings.LANGUAGES]:
-            value = getattr(event, "%s_%s" % ("name", lang))
+            value = getattr(event, f"name_{lang}")
             if value:
                 lang_dict = {
                     "term": "primary",
@@ -223,7 +223,7 @@ class CitySDKExporter(Exporter):
         ]:
             citysdk_place[to_field_name] = []
             for lang in [x[0] for x in settings.LANGUAGES]:
-                value = getattr(place, "%s_%s" % (from_field_name, lang))
+                value = getattr(place, f"{from_field_name}_{lang}")
                 if value:
                     lang_dict = {}
                     if to_field_name == "link":
@@ -273,8 +273,8 @@ class CitySDKExporter(Exporter):
                     if modify_response.status_code == 200:
                         export_info.save()  # refresh last export date
                         print(  # noqa: T201
-                            "%s updated (original id: %s, target id: %s)"
-                            % (model_name, model.pk, export_info.target_id)
+                            f"{model_name} updated (original id: {model.pk}, "
+                            f"target id: {export_info.target_id})"
                         )
                         modify_count += 1
 
@@ -290,9 +290,9 @@ class CitySDKExporter(Exporter):
                 if delete_response.status_code == 200:
                     export_info.delete()
                     print(  # noqa: T201
-                        "%s removed (original id: %d, target id: %s) "
+                        f"{model_name} removed (original id: {export_info.object_id:d},"
+                        f" target id: {export_info.target_id}) "
                         "from target system"
-                        % (model_name, export_info.object_id, export_info.target_id)
                     )
                     delete_count += 1
 
@@ -318,8 +318,8 @@ class CitySDKExporter(Exporter):
                     new_id = new
                 if VERBOSE:
                     print(  # noqa: T201
-                        "%s exported (original id: %d, target id: %s)"
-                        % (model_name, model.pk, new_id)
+                        f"{model_name} exported (original id: {model.pk:d}, "
+                        f"target id: {new_id})"
                     )
                 new_export_info = ExportInfo(
                     content_object=model,
@@ -330,7 +330,7 @@ class CitySDKExporter(Exporter):
                 new_export_info.save()
                 new_count += 1
             else:
-                print("%s export failed (original id: %s)" % (model_name, model.pk))  # noqa: T201
+                print(f"{model_name} export failed (original id: {model.pk})")  # noqa: T201
 
         print(model_name + " items added: " + str(new_count))  # noqa: T201
         print(model_name + " items modified: " + str(modify_count))  # noqa: T201
@@ -377,17 +377,13 @@ class CitySDKExporter(Exporter):
         self._export_models(Event, self._generate_exportable_event, EVENTS_URL, "event")
 
     def __delete_resource(self, resource, url):
-        response = self._do_req("delete", "%s/%s" % (url, resource.target_id))
+        response = self._do_req("delete", f"{url}/{resource.target_id}")
         if response.status_code == 200:
             resource.delete()
             print(  # noqa: T201
-                "%s removed (original id: %d, target id: %s) from "
+                f"{str(resource.content_type).capitalize()} removed (original id: "
+                f"{resource.object_id:d}, target id: {resource.target_id}) from "
                 "target system"
-                % (
-                    str(resource.content_type).capitalize(),
-                    resource.object_id,
-                    resource.target_id,
-                )
             )
 
     def _delete_exported_from_target(self):
@@ -420,14 +416,14 @@ class CitySDKExporter(Exporter):
                 if category_response.status_code == 200:
                     category_info.delete()
                     print(  # noqa: T201
-                        "Category removed (original id: %d, target id: %s) "
+                        f"Category removed (original id: {category_info.object_id:d}, "
+                        f"target id: {category_info.target_id}) "
                         "from target system"
-                        % (category_info.object_id, category_info.target_id)
                     )
             except ObjectDoesNotExist:
                 print(  # noqa: T201
-                    "ERROR: Category (original id: %d) "
-                    "does not exist in local database" % category_info.object_id
+                    f"ERROR: Category (original id: {category_info.object_id:d}) "
+                    "does not exist in local database"
                 )
 
     def export_events(self, is_delete=False):

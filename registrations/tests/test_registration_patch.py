@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Union
 
 import pytest
 import requests_mock
@@ -46,7 +45,7 @@ from web_store.tests.product.test_web_store_product_api_client import (
 
 def patch_registration(
     api_client: APIClient,
-    pk: Union[str, int],
+    pk: str | int,
     data: dict,
 ):
     url = reverse("registration-detail", kwargs={"pk": pk})
@@ -57,7 +56,7 @@ def patch_registration(
 
 def assert_patch_registration(
     api_client: APIClient,
-    pk: Union[str, int],
+    pk: str | int,
     data: dict,
 ):
     response = patch_registration(api_client, pk, data)

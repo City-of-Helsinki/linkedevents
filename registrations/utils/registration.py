@@ -76,7 +76,7 @@ def get_access_code_for_contact_person(contact_person, user):
 def get_email_noreply_address():
     return (
         settings.DEFAULT_FROM_EMAIL
-        or "noreply-linkedevents@%s" % Site.objects.get_current().domain
+        or f"noreply-linkedevents@{Site.objects.get_current().domain}"
     )
 
 
