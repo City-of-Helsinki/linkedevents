@@ -21,10 +21,10 @@ django-redis
 django-rest-knox
 django-reversion
 django-searchable-encrypted-fields
-django~=5.2
 djangorestframework
 djangorestframework-bulk
 djangorestframework-gis
+django~=5.2
 drf-oidc-auth
 drf-spectacular
 easy_thumbnails
@@ -47,10 +47,12 @@ python-dateutil
 python-docx
 rdflib==6.3.2
 regex
-requests-cache
 requests
+requests-cache
 sentry-sdk[django]
 social-auth-app-django
 social-auth-core
+uwsgi
+uwsgitop
 whitenoise
 xlsxwriter
