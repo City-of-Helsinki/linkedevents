@@ -52,6 +52,5 @@ requests
 sentry-sdk[django]
 social-auth-app-django
 social-auth-core
-ujson
 whitenoise
 xlsxwriter
