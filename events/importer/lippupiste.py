@@ -153,7 +153,7 @@ def clean_short_description(text):
 
 
 def get_namespaced_event_serie_id(event_serie_id):
-    return "serie-%s" % event_serie_id
+    return f"serie-{event_serie_id}"
 
 
 @register_importer
@@ -439,7 +439,7 @@ class LippupisteImporter(Importer):
     def _update_event_data(self, event, source_event):
         lang = "fi"
         event_source_id = source_event["EventId"]
-        event["id"] = "%s:%s" % (self.data_source.id, event_source_id)
+        event["id"] = f"{self.data_source.id}:{event_source_id}"
         event["origin_id"] = event_source_id
         event["data_source"] = self.data_source
         event["publisher"] = self.organization
@@ -507,8 +507,8 @@ class LippupisteImporter(Importer):
             event["location"]["id"] = place_id
         else:
             logger.warning(
-                "No match found for place '%s' (event %s)"
-                % (source_event["EventVenue"], event["name"][lang])
+                f"No match found for place '{source_event['EventVenue']}' "
+                f"(event {event['name'][lang]})"
             )
         # regardless of match, venue might have some extra info not found in tprek
         location_extra_info = source_event["EventVenue"]
@@ -610,7 +610,7 @@ class LippupisteImporter(Importer):
         ) in self.sub_event_count_by_super_event_source_id.items():
             if sub_event_count < 2 and super_event_source_id not in existing_event_ids:
                 logger.info(
-                    "Skipping super event creation (id: %s)" % super_event_source_id
+                    f"Skipping super event creation (id: {super_event_source_id})"
                 )
                 del events[super_event_source_id]
 
@@ -708,4 +708,4 @@ class LippupisteImporter(Importer):
         for super_event in super_events:
             self._update_superevent_details(super_event)
 
-        logger.info("%d events processed" % len(events.values()))
+        logger.info(f"{len(events.values())} events processed")

@@ -89,9 +89,9 @@ class SeatReservationCodeFactory(factory.django.DjangoModelFactory):
 
 class PriceGroupFactory(factory.django.DjangoModelFactory):
     publisher = factory.SubFactory(OrganizationFactory)
-    description_fi = factory.Sequence(lambda n: "FI Price Group {0}".format(n))
-    description_sv = factory.Sequence(lambda n: "SV Price Group {0}".format(n))
-    description_en = factory.Sequence(lambda n: "EN Price Group {0}".format(n))
+    description_fi = factory.Sequence(lambda n: f"FI Price Group {n}")
+    description_sv = factory.Sequence(lambda n: f"SV Price Group {n}")
+    description_en = factory.Sequence(lambda n: f"EN Price Group {n}")
 
     class Meta:
         model = PriceGroup
@@ -185,7 +185,7 @@ class SignUpPaymentCancellationFactory(factory.django.DjangoModelFactory):
 class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
     organization = factory.SubFactory(OrganizationFactory)
 
-    name = factory.Sequence(lambda n: "Merchant {0}".format(n))
+    name = factory.Sequence(lambda n: f"Merchant {n}")
     street_address = factory.Faker("street_address", locale="fi_FI")
     zipcode = factory.Faker("postcode", locale="fi_FI")
     city = factory.Faker("city", locale="fi_FI")
@@ -194,7 +194,7 @@ class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
     terms_of_service_url = factory.Faker("url")
     business_id = factory.Faker("company_business_id", locale="fi_FI")
 
-    paytrail_merchant_id = factory.Sequence(lambda n: "{0}".format(n))
+    paytrail_merchant_id = factory.Sequence(lambda n: f"{n}")
 
     class Meta:
         model = WebStoreMerchant
@@ -203,7 +203,7 @@ class WebStoreMerchantFactory(factory.django.DjangoModelFactory):
 class WebStoreAccountFactory(factory.django.DjangoModelFactory):
     organization = factory.SubFactory(OrganizationFactory)
 
-    name = factory.Sequence(lambda n: "Account {0}".format(n))
+    name = factory.Sequence(lambda n: f"Account {n}")
     company_code = "1234"
     main_ledger_account = "123456"
     balance_profit_center = "1234567890"

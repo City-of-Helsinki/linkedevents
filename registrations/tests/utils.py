@@ -1,6 +1,5 @@
 from datetime import timedelta
 from decimal import Decimal
-from typing import Optional
 
 from django.conf import settings
 from django.core import mail
@@ -42,9 +41,9 @@ def assert_invitation_email_is_sent(
     email: str,
     event_name: str,
     registration_user_access: RegistrationUserAccess,
-    ui_locale: Optional[str] = None,
-    expected_subject: Optional[str] = None,
-    expected_body: Optional[str] = None,
+    ui_locale: str | None = None,
+    expected_subject: str | None = None,
+    expected_body: str | None = None,
 ) -> None:
     first_email = mail.outbox[0]
     assert first_email.to[0] == email
@@ -125,8 +124,8 @@ def assert_attending_and_waitlisted_signups(
 
 def create_user_by_role(
     user_role: str,
-    organization: Optional[Organization] = None,
-    additional_roles: Optional[dict] = None,
+    organization: Organization | None = None,
+    additional_roles: dict | None = None,
 ) -> User:
     user = UserFactory(is_superuser=user_role == "superuser")
 
@@ -161,9 +160,9 @@ def create_user_by_role(
 def assert_signup_payment_data_is_correct(
     payment_data,
     user,
-    signup: Optional[SignUp] = None,
-    signup_group: Optional[SignUpGroup] = None,
-    service_language: Optional[str] = None,
+    signup: SignUp | None = None,
+    signup_group: SignUpGroup | None = None,
+    service_language: str | None = None,
 ):
     checkout_url = DEFAULT_GET_ORDER_DATA["checkoutUrl"]
     logged_in_checkout_url = DEFAULT_GET_ORDER_DATA["loggedInCheckoutUrl"]

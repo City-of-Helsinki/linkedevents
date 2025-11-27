@@ -38,7 +38,7 @@ def recur_dict():
     return defaultdict(recur_dict)
 
 
-class Importer(object):
+class Importer:
     default_timeout = 30
 
     def __init__(self, options):
@@ -244,9 +244,7 @@ class Importer(object):
             and obj.is_user_edited()
             and not isinstance(val, bool)
         ):
-            logger.debug(
-                "%s edited by user, will not change field %s" % (obj, field_name)
-            )
+            logger.debug(f"{obj} edited by user, will not change field {field_name}")
             return
         setattr(obj, field_name, val)
         obj._changed = True
@@ -262,7 +260,7 @@ class Importer(object):
         else:
             val = None
         if max_length and val and len(val) > max_length:
-            self.logger.warning("%s: field %s too long" % (obj, info_field_name))
+            self.logger.warning(f"{obj}: field {info_field_name} too long")
             val = None
         self._set_field(obj, obj_field_name, val)
 
@@ -272,8 +270,8 @@ class Importer(object):
         # atm only used by place importers, do some extra cleaning and validation
         # before setting value
         for lang in self.supported_languages:
-            key = "%s_%s" % (info_field_name, lang)
-            obj_key = "%s_%s" % (obj_field_name, lang)
+            key = f"{info_field_name}_{lang}"
+            obj_key = f"{obj_field_name}_{lang}"
 
             self._save_field(obj, obj_key, info, key, max_length)
             if lang == "fi":
@@ -350,7 +348,7 @@ class Importer(object):
         info = info.copy()
 
         args = dict(data_source=info["data_source"], origin_id=info["origin_id"])
-        obj_id = "%s:%s" % (info["data_source"].id, info["origin_id"])
+        obj_id = f"{info['data_source'].id}:{info['origin_id']}"
         try:
             obj = Event.objects.get(**args)
             obj._created = False
@@ -413,7 +411,7 @@ class Importer(object):
             try:
                 obj.save()
             except ValidationError as error:
-                logger.error("Event {} could not be saved: {}".format(obj, error))
+                logger.error(f"Event {obj} could not be saved: {error}")
                 raise
 
         # many-to-many fields
@@ -577,15 +575,15 @@ class Importer(object):
             if obj._created:
                 verb = "created"
             else:
-                verb = "changed (fields: %s)" % ", ".join(obj._changed_fields)
-            logger.debug("{} {}".format(obj, verb))
+                verb = f"changed (fields: {', '.join(obj._changed_fields)})"
+            logger.debug(f"{obj} {verb}")
 
         return obj
 
     @transaction.atomic
     def save_place(self, info):
         args = dict(data_source=info["data_source"], origin_id=info["origin_id"])
-        obj_id = "%s:%s" % (info["data_source"].id, info["origin_id"])
+        obj_id = f"{info['data_source'].id}:{info['origin_id']}"
         try:
             obj = Place.objects.get(**args)
             obj._created = False
@@ -609,7 +607,7 @@ class Importer(object):
                     p.transform(self.gps_to_target_ct)
                 position = p
             else:
-                logger.warning("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
+                logger.warning(f"Invalid coordinates ({n:f}, {e:f}) for {obj}")
 
         if position and obj.position:
             # If the distance is less than 10cm, assume the position
@@ -634,7 +632,7 @@ class Importer(object):
                 verb = "created"
             else:
                 verb = "changed"
-            logger.debug("%s %s" % (obj, verb))
+            logger.debug(f"{obj} {verb}")
             obj.save()
 
         return obj
@@ -659,6 +657,6 @@ def get_importers():
             continue
         if module in ("__init__", "base"):
             continue
-        full_path = "%s.%s" % (__package__, module)
+        full_path = f"{__package__}.{module}"
         ret = __import__(full_path, locals(), globals())
     return importers

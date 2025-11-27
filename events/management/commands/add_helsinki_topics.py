@@ -41,12 +41,12 @@ HELSINKI_KEYWORD_IDS = [
 class Command(BaseCommand):
     help = "Creates Helsinki topics keyword set."
 
-    @lru_cache()  # noqa: B019
+    @lru_cache  # noqa: B019
     def get_keyword_obj(self, keyword_id):
         try:
             keyword = Keyword.objects.get(id=keyword_id)
         except Keyword.DoesNotExist:
-            raise CommandError('keyword "%s" does not exist' % keyword_id)
+            raise CommandError(f'keyword "{keyword_id}" does not exist')
         return keyword
 
     @transaction.atomic
@@ -59,11 +59,11 @@ class Command(BaseCommand):
         )
         if created:
             self.stdout.write(
-                'created keyword set "%s"' % HELSINKI_KEYWORD_SET_DATA["id"]
+                f'created keyword set "{HELSINKI_KEYWORD_SET_DATA["id"]}"'
             )
         else:
             self.stdout.write(
-                'keyword set "%s" already exist' % HELSINKI_KEYWORD_SET_DATA["id"]
+                f'keyword set "{HELSINKI_KEYWORD_SET_DATA["id"]}" already exist'
             )
 
         # add the keywords to the set
@@ -75,7 +75,7 @@ class Command(BaseCommand):
                 keyword_set.keywords.add(keyword)
                 existing_keywords.add(keyword)
                 self.stdout.write(
-                    "added %s (%s) to the keyword set" % (keyword.name, keyword_id)
+                    f"added {keyword.name} ({keyword_id}) to the keyword set"
                 )
 
     def handle(self, *args, **options):

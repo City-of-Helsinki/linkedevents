@@ -47,10 +47,10 @@ class TprekImporter(Importer):
             self.check_deleted = lambda x: False
 
     def pk_get(self, resource_name, res_id=None):
-        url = "%s%s/" % (URL_BASE, resource_name)
+        url = f"{URL_BASE}{resource_name}/"
         if res_id is not None:
-            url = "%s%s/" % (url, res_id)
-        logger.info("Fetching URL %s" % url)
+            url = f"{url}{res_id}/"
+        logger.info(f"Fetching URL {url}")
         resp = requests.get(url, timeout=self.default_timeout)
         assert resp.status_code == 200
         return resp.json()
@@ -65,11 +65,10 @@ class TprekImporter(Importer):
             replaced = replace_location(replace=obj, by_source="tprek")
             if not replaced:
                 logger.warning(
-                    "Tprek deleted location %s (%s) with events."
+                    f"Tprek deleted location {obj.id} ({str(obj)}) with events."
                     "No unambiguous replacement was found. "
                     "Please look for a replacement location and save it in the replaced_by field. "  # noqa: E501
                     "Until then, events will stay mapped to the deleted location."
-                    % (obj.id, str(obj))
                 )
         return True
 
@@ -84,7 +83,7 @@ class TprekImporter(Importer):
     @transaction.atomic
     def _import_unit(self, syncher, info):
         obj = syncher.get(str(info["id"]))
-        obj_id = "tprek:%s" % str(info["id"])
+        obj_id = f"tprek:{str(info['id'])}"
         if not obj:
             obj = Place(data_source=self.data_source, origin_id=info["id"])
             obj._changed = True
@@ -128,7 +127,7 @@ class TprekImporter(Importer):
                     p.transform(self.gps_to_target_ct)
                 position = p
             else:
-                logger.warning("Invalid coordinates (%f, %f) for %s" % (n, e, obj))
+                logger.warning(f"Invalid coordinates ({n:f}, {e:f}) for {obj}")
 
         picture_url = info.get("picture_url", "").strip()
         if picture_url:
@@ -161,8 +160,8 @@ class TprekImporter(Importer):
             if obj._created:
                 verb = "created"
             else:
-                verb = "changed (fields: %s)" % ", ".join(obj._changed_fields)
-            logger.info("%s %s" % (obj, verb))
+                verb = f"changed (fields: {', '.join(obj._changed_fields)})"
+            logger.info(f"{obj} {verb}")
             obj.save()
 
         syncher.mark(obj)
@@ -179,7 +178,7 @@ class TprekImporter(Importer):
         else:
             logger.info("Loading units...")
             obj_list = self.pk_get("unit")
-            logger.info("%s units loaded" % len(obj_list))
+            logger.info(f"{len(obj_list)} units loaded")
         syncher = ModelSyncher(
             queryset,
             lambda obj: obj.origin_id,
@@ -188,7 +187,7 @@ class TprekImporter(Importer):
         )
         for idx, info in enumerate(obj_list):
             if idx and (idx % 1000) == 0:
-                logger.info("%s units processed" % idx)
+                logger.info(f"{idx} units processed")
             self._import_unit(syncher, info)
 
         syncher.finish(self.options.get("remap", False))

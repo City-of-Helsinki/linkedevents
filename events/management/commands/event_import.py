@@ -18,8 +18,8 @@ class Command(BaseCommand):
         self.importers = get_importers()
         self.imp_list = ", ".join(sorted(self.importers.keys()))
         self.missing_args_message = (
-            "Enter the name of the event importer module. Valid importers: %s"
-            % self.imp_list
+            "Enter the name of the event importer module. "
+            f"Valid importers: {self.imp_list}"
         )
 
     def add_arguments(self, parser):
@@ -57,14 +57,14 @@ class Command(BaseCommand):
 
         for imp in self.importer_types:
             parser.add_argument(
-                "--%s" % imp, dest=imp, action="store_true", help="import %s" % imp
+                f"--{imp}", dest=imp, action="store_true", help=f"import {imp}"
             )
 
     def handle(self, *args, **options):
         module = options["module"]
         if module not in self.importers:
             raise CommandError(
-                "Importer %s not found. Valid importers: %s" % (module, self.imp_list)
+                f"Importer {module} not found. Valid importers: {self.imp_list}"
             )
         imp_class = self.importers[module]
 
@@ -94,14 +94,13 @@ class Command(BaseCommand):
         # to make sure translated fields are populated correctly.
         with override(settings.LANGUAGES[0][0]):
             for imp_type in self.importer_types:
-                name = "import_%s" % imp_type
+                name = f"import_{imp_type}"
                 method = getattr(importer, name, None)
                 if options[imp_type]:
                     if not method:
                         raise CommandError(
-                            "Importer {} does not support importing {}".format(
-                                importer.name, imp_type
-                            )
+                            f"Importer {importer.name} does not support "
+                            f"importing {imp_type}"
                         )
                 else:
                     if not options["all"]:

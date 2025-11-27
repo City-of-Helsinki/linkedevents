@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 from zoneinfo import ZoneInfo
 
 from django.utils import translation
@@ -146,7 +145,7 @@ def get_web_store_order(order_id: str) -> dict:
         _raise_web_store_chained_api_exception(request_exc)
 
 
-def get_web_store_order_status(order_id: str) -> Optional[str]:
+def get_web_store_order_status(order_id: str) -> str | None:
     order_json = get_web_store_order(order_id)
     return order_json.get("status")
 
@@ -160,12 +159,12 @@ def get_web_store_payment(order_id: str) -> dict:
         _raise_web_store_chained_api_exception(request_exc)
 
 
-def get_web_store_payment_status(order_id: str) -> Optional[str]:
+def get_web_store_payment_status(order_id: str) -> str | None:
     payment_json = get_web_store_payment(order_id)
     return payment_json.get("status")
 
 
-def get_web_store_refund_payment_status(refund_id: str) -> Optional[str]:
+def get_web_store_refund_payment_status(refund_id: str) -> str | None:
     payments_list = get_web_store_refund_payments(refund_id)
     if payments_list:
         # Even though the API returns a list, it will contain only one payment in our case since  # noqa: E501

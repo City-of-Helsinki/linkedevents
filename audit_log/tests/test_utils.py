@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import Mock
 
 import pytest
@@ -18,7 +18,7 @@ from helevents.tests.factories import UserFactory
 
 
 def _assert_basic_log_entry_data(log_entry):
-    current_time = datetime.now(tz=timezone.utc)
+    current_time = datetime.now(tz=UTC)
     iso_8601_date = f"{current_time.replace(tzinfo=None).isoformat(sep='T', timespec='milliseconds')}Z"
 
     assert log_entry.message["audit_event"]["origin"] == "linkedevents"

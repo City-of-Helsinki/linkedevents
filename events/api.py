@@ -4,7 +4,7 @@ import urllib.parse
 from datetime import time as datetime_time
 from functools import partial, reduce
 from operator import or_
-from typing import Literal, Union
+from typing import Literal
 
 import django_filters
 import regex
@@ -233,7 +233,7 @@ def _text_qset_by_translated_field(field, val):
     return qset
 
 
-class JSONAPIViewMixin(object):
+class JSONAPIViewMixin:
     def initial(self, request, *args, **kwargs):
         ret = super().initial(request, *args, **kwargs)
         # if srid is not specified, this will yield munigeo default 4326
@@ -2619,7 +2619,7 @@ class EventViewSet(
         return super().create(*args, **kwargs)
 
     @staticmethod
-    def _retrieve_ids(key, event, id_data_type: Union[type[str], type[int]] = str):
+    def _retrieve_ids(key, event, id_data_type: type[str] | type[int] = str):
         if key not in event.keys():
             return []
 
@@ -3310,8 +3310,7 @@ class SearchViewSet(
         self.lang_code = request.query_params.get("language", default_language)
         if self.lang_code not in languages:
             raise ParseError(
-                "Invalid language supplied. Supported languages: %s"
-                % ",".join(languages)
+                f"Invalid language supplied. Supported languages: {','.join(languages)}"
             )
 
         params = request.query_params

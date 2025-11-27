@@ -2,8 +2,8 @@ import collections.abc
 import logging
 import re
 import warnings
+from collections.abc import Iterable
 from datetime import datetime, timedelta
-from typing import Iterable, Optional
 from zoneinfo import ZoneInfo
 
 import bleach
@@ -218,7 +218,7 @@ def get_deleted_object_name():
     }
 
 
-def get_or_create_default_organization() -> Optional[Organization]:
+def get_or_create_default_organization() -> Organization | None:
     """Create (if needed) the default organization to which users can be added if they
     don't belong to any organization.
     """
@@ -289,7 +289,7 @@ def get_user_data_source_and_organization_from_request(
 
 def clean_text_fields(
     data,
-    allowed_html_fields: Optional[Iterable[str]] = None,
+    allowed_html_fields: Iterable[str] | None = None,
     strip: bool = False,
 ):
     if allowed_html_fields is None:

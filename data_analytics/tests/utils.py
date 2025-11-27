@@ -1,12 +1,10 @@
-from typing import Callable, Optional, Union
+from collections.abc import Callable
 
 from rest_framework import status
 from rest_framework.test import APIClient
 
 
-def assert_objects_in_response_data(
-    object_pks: list[Union[str, int]], data: list[dict]
-):
+def assert_objects_in_response_data(object_pks: list[str | int], data: list[dict]):
     response_object_ids = {obj["id"] for obj in data}
     expected_object_ids = {obj_pk for obj_pk in object_pks}
 
@@ -14,7 +12,7 @@ def assert_objects_in_response_data(
 
 
 def get_detail_and_assert_object_in_response(
-    api_client: APIClient, get_detail_func: Callable, object_pk: Union[str, int]
+    api_client: APIClient, get_detail_func: Callable, object_pk: str | int
 ):
     response = get_detail_func(api_client, object_pk)
 
@@ -27,8 +25,8 @@ def get_detail_and_assert_object_in_response(
 def get_list_and_assert_objects_in_response(
     api_client: APIClient,
     get_list_func: Callable,
-    object_pks: list[Union[str, int]],
-    query: Optional[str] = None,
+    object_pks: list[str | int],
+    query: str | None = None,
 ):
     if query:
         response = get_list_func(api_client, query=query)

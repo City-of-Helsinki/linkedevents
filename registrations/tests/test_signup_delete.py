@@ -1,7 +1,6 @@
 from copy import deepcopy
 from datetime import timedelta
 from decimal import Decimal
-from typing import Optional
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -72,7 +71,7 @@ def delete_signup(api_client, signup_pk, query_string=None):
         kwargs={"pk": signup_pk},
     )
     if query_string:
-        signup_url = "%s?%s" % (signup_url, query_string)
+        signup_url = f"{signup_url}?{query_string}"
 
     return api_client.delete(signup_url)
 
@@ -82,7 +81,7 @@ def assert_delete_signup(
     signup_pk,
     query_string=None,
     signup_count=1,
-    contact_person_count: Optional[int] = 1,
+    contact_person_count: int | None = 1,
 ):
     assert SignUp.objects.count() == signup_count
 

@@ -38,7 +38,7 @@ def test_update_a_keyword_with_put(api_client, keyword_dict, user2_with_user_typ
     for key in ("name",):
         for lang in ("fi", "en"):
             if lang in data2[key]:
-                data2[key][lang] = "%s updated" % data2[key][lang]
+                data2[key][lang] = f"{data2[key][lang]} updated"
 
     kw_id = data2.pop("@id")
     response2 = update_with_put(api_client, kw_id, data2)

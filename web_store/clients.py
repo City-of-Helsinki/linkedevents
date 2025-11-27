@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union
+from typing import Any
 
 import requests
 from django.conf import settings
@@ -32,9 +32,9 @@ class WebStoreAPIBaseClient:
     def _get_request_kwargs(
         self,
         method: str,
-        params: Optional[dict] = None,
-        headers: Optional[dict] = None,
-    ) -> dict[str, Union[int, dict]]:
+        params: dict | None = None,
+        headers: dict | None = None,
+    ) -> dict[str, int | dict]:
         request_kwargs = {"timeout": self.TIMEOUT}
 
         if not (params or headers):
@@ -53,9 +53,9 @@ class WebStoreAPIBaseClient:
         self,
         url: str,
         method: str,
-        params: Optional[Union[dict, list]] = None,
-        headers: Optional[dict] = None,
-    ) -> Union[dict[str, Any], list[dict[str, Any]]]:
+        params: dict | list | None = None,
+        headers: dict | None = None,
+    ) -> dict[str, Any] | list[dict[str, Any]]:
         request_kwargs = self._get_request_kwargs(method, params, headers)
         response = getattr(requests, method)(url, **request_kwargs)
 

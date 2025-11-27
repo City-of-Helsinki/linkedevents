@@ -29,7 +29,7 @@ def get_list(api_client, query_string=None):
     url = reverse("language-list")
 
     if query_string:
-        url = "%s?%s" % (url, query_string)
+        url = f"{url}?{query_string}"
 
     return get(api_client, url)
 

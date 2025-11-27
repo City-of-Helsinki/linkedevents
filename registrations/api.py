@@ -1,5 +1,4 @@
 import logging
-from typing import Optional, Union
 
 import bleach
 from django.conf import settings
@@ -1125,7 +1124,7 @@ class WebStoreWebhookBaseViewSet(AuditLogApiViewMixin, viewsets.ViewSet):
 @extend_schema(exclude=True)
 class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
     @staticmethod
-    def _get_payment(order_id: str) -> Optional[SignUpPayment]:
+    def _get_payment(order_id: str) -> SignUpPayment | None:
         payment = (
             SignUpPayment.objects.select_for_update()
             .filter(
@@ -1144,21 +1143,21 @@ class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
         return payment
 
     @staticmethod
-    def _get_payment_status_from_web_store_api(order_id: str) -> Optional[str]:
+    def _get_payment_status_from_web_store_api(order_id: str) -> str | None:
         try:
             return get_web_store_payment_status(order_id)
         except WebStoreAPIError:
             raise ConflictException(_("Could not check payment status from Talpa API."))
 
     @staticmethod
-    def _get_order_status_from_web_store_api(order_id: str) -> Optional[str]:
+    def _get_order_status_from_web_store_api(order_id: str) -> str | None:
         try:
             return get_web_store_order_status(order_id)
         except WebStoreAPIError:
             raise ConflictException(_("Could not check order status from Talpa API."))
 
     @staticmethod
-    def _confirm_signup(signup_or_signup_group: Union[SignUp, SignUpGroup]) -> None:
+    def _confirm_signup(signup_or_signup_group: SignUp | SignUpGroup) -> None:
         contact_person = signup_or_signup_group.actual_contact_person
         if not contact_person:
             return
@@ -1171,7 +1170,7 @@ class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
         )
 
     @staticmethod
-    def _cancel_signup(signup_or_signup_group: Union[SignUp, SignUpGroup]) -> None:
+    def _cancel_signup(signup_or_signup_group: SignUp | SignUpGroup) -> None:
         if isinstance(signup_or_signup_group, SignUp):
             signup_or_signup_group._individually_deleted = True
 
@@ -1251,7 +1250,7 @@ class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
 @extend_schema(exclude=True)
 class WebStoreRefundWebhookViewSet(WebStoreWebhookBaseViewSet):
     @staticmethod
-    def _get_refund(order_id: str, refund_id: str) -> Optional[SignUpPaymentRefund]:
+    def _get_refund(order_id: str, refund_id: str) -> SignUpPaymentRefund | None:
         refund = SignUpPaymentRefund.objects.filter(
             payment__external_order_id=order_id,
             external_refund_id=refund_id,
@@ -1268,7 +1267,7 @@ class WebStoreRefundWebhookViewSet(WebStoreWebhookBaseViewSet):
         return refund
 
     @staticmethod
-    def _get_refund_status_from_web_store_api(refund_id: str) -> Optional[str]:
+    def _get_refund_status_from_web_store_api(refund_id: str) -> str | None:
         try:
             return get_web_store_refund_payment_status(refund_id=refund_id)
         except WebStoreAPIError:

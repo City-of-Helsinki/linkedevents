@@ -1,8 +1,8 @@
 import logging
 import re
+from collections.abc import Generator
 from functools import lru_cache
 from operator import itemgetter
-from typing import Generator
 
 import libvoikko
 from django.conf import settings

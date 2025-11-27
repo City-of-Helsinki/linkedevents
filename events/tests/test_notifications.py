@@ -63,12 +63,12 @@ def test_draft_event_deleted(event_deleted_notification_template, user, event):
     event.save()
     event.soft_delete()
     strings = [
-        "event deleted body, event name: %s!" % event.name,
+        f"event deleted body, event name: {event.name}!",
     ]
-    html_body = "event deleted <b>HTML</b> body, event name: %s!" % event.name
+    html_body = f"event deleted <b>HTML</b> body, event name: {event.name}!"
     assert len(mail.outbox) == 1
     check_received_mail_exists(
-        "event deleted subject, event name: %s!" % event.name,
+        f"event deleted subject, event name: {event.name}!",
         user.email,
         strings,
         html_body=html_body,
@@ -91,11 +91,11 @@ def test_event_published(event_published_notification_template, user, draft_even
     draft_event.publication_status = PublicationStatus.PUBLIC
     draft_event.save()
     strings = [
-        "event published body, event name: %s!" % draft_event.name,
+        f"event published body, event name: {draft_event.name}!",
     ]
-    html_body = "event published <b>HTML</b> body, event name: %s!" % draft_event.name
+    html_body = f"event published <b>HTML</b> body, event name: {draft_event.name}!"
     check_received_mail_exists(
-        "event published subject, event name: %s!" % draft_event.name,
+        f"event published subject, event name: {draft_event.name}!",
         user.email,
         strings,
         html_body=html_body,
@@ -107,11 +107,11 @@ def test_draft_posted_as_super_event_sends(
     draft_posted_notification_template, user, draft_event
 ):
     strings = [
-        "draft posted body, event name: %s!" % draft_event.name,
+        f"draft posted body, event name: {draft_event.name}!",
     ]
-    html_body = "draft posted <b>HTML</b> body, event name: %s!" % draft_event.name
+    html_body = f"draft posted <b>HTML</b> body, event name: {draft_event.name}!"
     check_received_mail_exists(
-        "draft posted subject, event name: %s!" % draft_event.name,
+        f"draft posted subject, event name: {draft_event.name}!",
         user.email,
         strings,
         html_body=html_body,

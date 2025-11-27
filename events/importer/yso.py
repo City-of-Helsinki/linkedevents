@@ -133,20 +133,17 @@ def deprecate_and_replace(graph, keyword):
         except ValidationError:
             logger.exception("New keyword has invalid YSO id")
     if new_keyword:
-        logger.info("Keyword %s replaced by %s" % (keyword, new_keyword))
+        logger.info(f"Keyword {keyword} replaced by {new_keyword}")
         new_keyword.events.add(*keyword.events.all())
         new_keyword.audience_events.add(*keyword.audience_events.all())
     else:
-        logger.info("Keyword %s deprecated without replacement!" % keyword)
+        logger.info(f"Keyword {keyword} deprecated without replacement!")
         if keyword.events.all().exists() or keyword.audience_events.all().exists():
             raise Exception(
-                "Deprecating YSO keyword %s that is referenced in events %s. "
+                f"Deprecating YSO keyword {str(keyword)} that is referenced in events "
+                f"{str(keyword.events.all() | keyword.audience_events.all())}. "
                 "No replacement keyword was found in YSO. Please manually map the "
                 "keyword to a new keyword in YSO_DEPRECATED_MAPS."
-                % (
-                    str(keyword),
-                    str(keyword.events.all() | keyword.audience_events.all()),
-                )
             )
     return keyword.deprecate() and keyword.replace(new_keyword)
 
@@ -180,7 +177,7 @@ class YsoImporter(Importer):
         self.save_keywords(graph)
 
     def load_graph_into_memory(self, url):
-        logger.debug("Fetching %s" % url)
+        logger.debug(f"Fetching {url}")
         resp = requests.get(url, timeout=self.default_timeout)
         assert resp.status_code == 200
         resp.encoding = "UTF-8"
@@ -221,8 +218,7 @@ class YsoImporter(Importer):
             except ObjectDoesNotExist:
                 continue
             logger.info(
-                "Manually mapping events with %s to %s"
-                % (str(old_keyword), str(new_keyword))
+                f"Manually mapping events with {str(old_keyword)} to {str(new_keyword)}"
             )
             new_keyword.events.add(*old_keyword.events.all())
             new_keyword.audience_events.add(*old_keyword.audience_events.all())
@@ -302,7 +298,7 @@ class YsoImporter(Importer):
 
     def save_alt_label(self, syncher, graph, label):
         if label.language is None:
-            logger.error("Error: {} has no language".format(label))
+            logger.error(f"Error: {label} has no language")
             return None
         if label.language not in self.supported_languages:
             return None

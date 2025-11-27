@@ -36,7 +36,7 @@ def update_signup(api_client, signup_pk, signup_data, query_string=None):
     )
 
     if query_string:
-        signup_url = "%s?%s" % (signup_url, query_string)
+        signup_url = f"{signup_url}?{query_string}"
 
     response = api_client.put(signup_url, signup_data, format="json")
     return response

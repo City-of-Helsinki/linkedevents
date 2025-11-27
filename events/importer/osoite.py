@@ -50,11 +50,11 @@ class OsoiteImporter(Importer):
         # Finnish as fallback
         address.street.set_current_language(language)
         street = address.street.name
-        s = "%s %s" % (street, address.number)
+        s = f"{street} {address.number}"
         if address.number_end:
-            s += "-%s" % address.number_end
+            s += f"-{address.number_end}"
         if address.letter:
-            s += "%s" % address.letter
+            s += f"{address.letter}"
         return s
 
     def get_whole_address(self, address, language):
@@ -79,12 +79,12 @@ class OsoiteImporter(Importer):
             # sadly, addresses are identified by, well, address alone. Therefore we have no other data that  # noqa: E501
             # could be used to find out if there is a replacement location.
             logger.warning(
-                "Osoiteluettelo deleted address %s (%s) with events. This means that the street in "  # noqa: E501
+                f"Osoiteluettelo deleted address {obj.id} ({str(obj)}) with events. This means that the street in "  # noqa: E501
                 "question has probably changed address numbers, as they do. Please check all "  # noqa: E501
                 "addresses on the street for events and save any new address numbers in the "  # noqa: E501
                 "replaced_by field. If several addresses have changed on the street, you may have to "  # noqa: E501
                 "manually move the events instead. Until then, events will stay mapped to the old "  # noqa: E501
-                "addresses." % (obj.id, str(obj))
+                "addresses."
             )
         return True
 
@@ -161,8 +161,8 @@ class OsoiteImporter(Importer):
             if obj._created:
                 verb = "created"
             else:
-                verb = "changed (fields: %s)" % ", ".join(obj._changed_fields)
-            logger.info("%s %s" % (obj, verb))
+                verb = f"changed (fields: {', '.join(obj._changed_fields)})"
+            logger.info(f"{obj} {verb}")
             obj.save()
 
         syncher.mark(obj)

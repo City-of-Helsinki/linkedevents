@@ -17,7 +17,7 @@ from helevents.tests.factories import UserFactory
 
 
 class DataSourceFactory(factory.django.DjangoModelFactory):
-    id = factory.Sequence(lambda n: "data-source-{0}".format(n))
+    id = factory.Sequence(lambda n: f"data-source-{n}")
 
     class Meta:
         model = DataSource

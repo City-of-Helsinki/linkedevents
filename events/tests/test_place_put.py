@@ -38,7 +38,7 @@ def test_update_a_place_with_put(api_client, place_dict, user2_with_user_type):
     for key in ("name", "description", "street_address", "address_locality"):
         for lang in ("fi", "en"):
             if lang in data2[key]:
-                data2[key][lang] = "%s updated" % data2[key][lang]
+                data2[key][lang] = f"{data2[key][lang]} updated"
 
     place_id = data2.pop("@id")
     response2 = update_with_put(api_client, place_id, data2)

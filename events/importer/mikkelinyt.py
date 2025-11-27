@@ -65,8 +65,9 @@ class MikkeliNytImporter(Importer):
             requests_cache.install_cache("mikkelinyt")
 
     def get_url(self):
-        url = MIKKELINYT_BASE_URL + "?showall=1&apiKey={}&location={}".format(
-            MIKKELINYT_API_KEY, MIKKELINYT_LOCATION
+        url = (
+            f"{MIKKELINYT_BASE_URL}?showall=1&apiKey={MIKKELINYT_API_KEY}"
+            f"&location={MIKKELINYT_LOCATION}"
         )
         return url
 
@@ -127,7 +128,7 @@ class MikkeliNytImporter(Importer):
         categories = item["category"]
         keywords = self.upsert_keywords(categories)
 
-        _id = "mikkelinyt:{}".format(origin_id)
+        _id = f"mikkelinyt:{origin_id}"
 
         external_links = {}
         if registration:
@@ -178,7 +179,7 @@ class MikkeliNytImporter(Importer):
         return keywords
 
     def upsert_keyword(self, origin_id, name):
-        _id = "mikkelinyt:{}".format(origin_id)
+        _id = f"mikkelinyt:{origin_id}"
 
         kwargs = {
             "id": _id,
@@ -190,12 +191,12 @@ class MikkeliNytImporter(Importer):
 
         Keyword.objects.get_or_create(**kwargs)
 
-        keywords = Keyword.objects.filter(id__exact="%s" % _id).order_by("id")
+        keywords = Keyword.objects.filter(id__exact=f"{_id}").order_by("id")
         return keywords.first()
 
     def upsert_place(self, origin_id, address, city, place, zip_code):
         result = recur_dict()
-        _id = "mikkelinyt:{}".format(origin_id)
+        _id = f"mikkelinyt:{origin_id}"
 
         result["id"] = _id
         result["origin_id"] = origin_id

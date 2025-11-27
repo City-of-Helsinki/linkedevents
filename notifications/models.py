@@ -80,7 +80,7 @@ class NotificationTemplate(models.Model):
         )
         env.filters["format_datetime"] = format_datetime
 
-        logger.debug("Rendering template for notification %s" % self.type)
+        logger.debug(f"Rendering template for notification {self.type}")
 
         activate(language_code)
 

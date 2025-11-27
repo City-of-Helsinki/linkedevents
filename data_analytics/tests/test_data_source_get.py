@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -23,7 +21,7 @@ def get_detail(api_client: APIClient, data_source_pk: str):
     return api_client.get(get_detail_url(data_source_pk), format="json")
 
 
-def get_list(api_client: APIClient, query: Optional[str] = None):
+def get_list(api_client: APIClient, query: str | None = None):
     url = _LIST_URL
 
     if query:
