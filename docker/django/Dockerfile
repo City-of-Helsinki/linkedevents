@@ -27,13 +27,11 @@ RUN mkdir -p /etc/voikko \
     && unzip dict-morpho.zip
 
 COPY requirements.txt .
-COPY requirements-prod.txt .
 
 RUN dnf update -y  \
     && dnf install -y nmap-ncat  \
     && pip install --upgrade pip setuptools wheel \
     && pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir -r requirements-prod.txt \
     && uwsgi --build-plugin https://github.com/City-of-Helsinki/uwsgi-sentry \
     && dnf clean all
 
