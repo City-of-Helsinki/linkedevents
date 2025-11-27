@@ -33,7 +33,7 @@ def drama_keyword(yso_datasource):
 
 @pytest.fixture
 def response_with_one_event(request):
-    with open(request.path.parent / "fixtures/lippupiste_response.json", "r") as f:
+    with open(request.path.parent / "fixtures/lippupiste_response.json") as f:
         return json.load(f)
 
 

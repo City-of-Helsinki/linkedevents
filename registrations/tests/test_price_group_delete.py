@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Union
 
 import pytest
 from django.db.models import ProtectedError
@@ -18,7 +17,7 @@ from registrations.tests.utils import create_user_by_role
 # === util methods ===
 
 
-def delete_price_group(api_client: APIClient, price_group_pk: Union[str, int]):
+def delete_price_group(api_client: APIClient, price_group_pk: str | int):
     url = reverse(
         "pricegroup-detail",
         kwargs={"pk": price_group_pk},
@@ -27,7 +26,7 @@ def delete_price_group(api_client: APIClient, price_group_pk: Union[str, int]):
     return api_client.delete(url)
 
 
-def assert_delete_price_group(api_client: APIClient, price_group_pk: Union[str, int]):
+def assert_delete_price_group(api_client: APIClient, price_group_pk: str | int):
     assert PriceGroup.objects.count() == 9
 
     response = delete_price_group(api_client, price_group_pk)
@@ -39,7 +38,7 @@ def assert_delete_price_group(api_client: APIClient, price_group_pk: Union[str, 
 
 
 def assert_delete_price_group_not_allowed(
-    api_client: APIClient, price_group_pk: Union[str, int]
+    api_client: APIClient, price_group_pk: str | int
 ):
     assert PriceGroup.objects.count() == 9
 

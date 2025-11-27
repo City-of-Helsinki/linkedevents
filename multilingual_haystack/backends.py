@@ -14,7 +14,7 @@ class MultilingualSearchBackend(BaseSearchBackend):
         # retrieve unique backend name
         backends = []
         for language, _ in settings.LANGUAGES:
-            using = "%s-%s" % (self.connection_alias, language)
+            using = f"{self.connection_alias}-{language}"
             # Ensure each backend is called only once
             if using in backends:
                 continue
@@ -39,13 +39,8 @@ class MultilingualSearchBackend(BaseSearchBackend):
         self.forward_to_backends("remove", obj_or_string)
 
 
-# class MultilingualSearchQuery(BaseSearchQuery):
-#    def __init__(self, using=DEFAULT_ALIAS):
-
-
 class MultilingualSearchEngine(BaseEngine):
     backend = MultilingualSearchBackend
-    # query = MultilingualSearchQuery
 
     def get_query(self):
         language = translation.get_language()
@@ -53,7 +48,7 @@ class MultilingualSearchEngine(BaseEngine):
             language = settings.LANGUAGES[0][0][:2]
         else:
             language = language[:2]
-        using = "%s-%s" % (self.using, language)
+        using = f"{self.using}-{language}"
         return connections[using].get_query()
 
 

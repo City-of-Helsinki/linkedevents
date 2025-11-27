@@ -125,7 +125,7 @@ class DataSource(models.Model):
         return self.id
 
 
-class SimpleValueMixin(object):
+class SimpleValueMixin:
     """
     Used for models which are simple one-to-many fields
     and can be compared by value when importing as part
@@ -1277,10 +1277,10 @@ class Event(
             if s:
                 name = s
                 break
-        val = [name, "(%s)" % self.id]
+        val = [name, f"({self.id})"]
         dcount = self.get_descendant_count()
         if dcount > 0:
-            val.append(" (%d children)" % dcount)
+            val.append(f" ({dcount:d} children)")
         else:
             val.append(str(self.start_time))
         return " ".join(val)
@@ -1330,7 +1330,7 @@ class Event(
     def _send_notification(self, notification_type, recipient_list, request=None):
         if len(recipient_list) == 0:
             logger.warning(
-                "No recipients for notification type '%s'" % notification_type,
+                f"No recipients for notification type '{notification_type}'",
                 extra={"event": self},
             )
             return

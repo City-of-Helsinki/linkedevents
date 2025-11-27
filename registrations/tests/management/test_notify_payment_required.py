@@ -35,12 +35,7 @@ def test_payment_link_is_sent_to_contact_person(signup):
         expected_subject="Maksu vaaditaan ilmoittautumisen vahvistamiseksi - tapahtuma",
         expected_text="Voit vahvistaa ilmoittautumisesi tapahtumaan "
         "<strong>tapahtuma</strong> oheisen maksulinkin avulla. Maksulinkki vanhenee "
-        "%(exp_date)s."
-        % {
-            "exp_date": timezone.localtime(payment.expires_at).strftime(
-                "%d.%m.%Y %H:%M"
-            )
-        },
+        f"{timezone.localtime(payment.expires_at).strftime('%d.%m.%Y %H:%M')}.",
     )
 
 
@@ -113,10 +108,5 @@ def test_payment_link_is_sent_to_signup_group_contact_person(registration):
         expected_subject="Maksu vaaditaan ilmoittautumisen vahvistamiseksi - tapahtuma",
         expected_text="Voit vahvistaa ilmoittautumisesi tapahtumaan "
         "<strong>tapahtuma</strong> oheisen maksulinkin avulla. Maksulinkki vanhenee "
-        "%(exp_date)s."
-        % {
-            "exp_date": timezone.localtime(payment.expires_at).strftime(
-                "%d.%m.%Y %H:%M"
-            )
-        },
+        f"{timezone.localtime(payment.expires_at).strftime('%d.%m.%Y %H:%M')}.",
     )

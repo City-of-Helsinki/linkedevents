@@ -60,12 +60,12 @@ NEW_SOTE_KEYWORDS_DATA = [
 class Command(BaseCommand):
     help = "Creates SOTE keywords and Helsinki audience keyword set and adds YSO audience keywords to events."  # noqa: E501
 
-    @lru_cache()  # noqa: B019
+    @lru_cache  # noqa: B019
     def get_keyword_obj(self, keyword_id):
         try:
             keyword = Keyword.objects.get(id=keyword_id)
         except Keyword.DoesNotExist:
-            raise CommandError('keyword "%s" does not exist' % keyword_id)
+            raise CommandError(f'keyword "{keyword_id}" does not exist')
         return keyword
 
     @transaction.atomic
@@ -78,13 +78,13 @@ class Command(BaseCommand):
             )
             if created:
                 self.stdout.write(
-                    "created keyword %s (%s)"
-                    % (new_keyword_data["name_fi"], new_keyword_data["id"])
+                    f"created keyword {new_keyword_data['name_fi']} "
+                    f"({new_keyword_data['id']})"
                 )
             else:
                 self.stdout.write(
-                    "keyword %s (%s) already exist"
-                    % (new_keyword_data["name_fi"], new_keyword_data["id"])
+                    f"keyword {new_keyword_data['name_fi']} "
+                    f"({new_keyword_data['id']}) already exist"
                 )
 
     @transaction.atomic
@@ -97,11 +97,11 @@ class Command(BaseCommand):
         )
         if created:
             self.stdout.write(
-                'created keyword set "%s"' % HELSINKI_KEYWORD_SET_DATA["id"]
+                f'created keyword set "{HELSINKI_KEYWORD_SET_DATA["id"]}"'
             )
         else:
             self.stdout.write(
-                'keyword set "%s" already exist' % HELSINKI_KEYWORD_SET_DATA["id"]
+                f'keyword set "{HELSINKI_KEYWORD_SET_DATA["id"]}" already exist'
             )
 
         # flatten YSO keyword IDs
@@ -127,7 +127,7 @@ class Command(BaseCommand):
                 keyword_set.keywords.add(keyword)
                 existing_keywords.add(keyword)
                 self.stdout.write(
-                    "added %s (%s) to the keyword set" % (keyword.name, keyword_id)
+                    f"added {keyword.name} ({keyword_id}) to the keyword set"
                 )
 
     @transaction.atomic
@@ -146,8 +146,7 @@ class Command(BaseCommand):
                     if yso_keyword_obj not in event.audience.all():
                         event.audience.add(yso_keyword_obj)
                         self.stdout.write(
-                            "added %s (%s) to %s"
-                            % (yso_keyword_obj, yso_keyword_id, event)
+                            f"added {yso_keyword_obj} ({yso_keyword_id}) to {event}"
                         )
 
     def handle(self, *args, **options):

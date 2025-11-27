@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
-from typing import Optional, Union
 
 import pytest
 import requests_mock
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core import mail
 from django.utils.timezone import localtime
 from freezegun import freeze_time
@@ -76,7 +76,7 @@ def create_recurring_event_for_registration(registration: Registration) -> None:
 def create_signup_payment(
     external_order_id: str = DEFAULT_ORDER_ID,
     payment_status: str = SignUpPayment.PaymentStatus.CREATED,
-    user: Optional[settings.AUTH_USER_MODEL] = None,
+    user: get_user_model() | None = None,
     create_contact_person: bool = True,
     service_language: str = "en",
 ) -> SignUpPayment:
@@ -109,7 +109,7 @@ def create_signup_payment(
 def create_signup_group_payment(
     external_order_id: str = DEFAULT_ORDER_ID,
     payment_status: str = SignUpPayment.PaymentStatus.CREATED,
-    user: Optional[settings.AUTH_USER_MODEL] = None,
+    user: get_user_model() | None = None,
     create_contact_person: bool = True,
     service_language: str = "en",
 ) -> SignUpPayment:
@@ -141,9 +141,7 @@ def create_signup_group_payment(
     return payment
 
 
-def get_webhook_data(
-    order_id: str, event_type: str, update_data: Optional[dict] = None
-):
+def get_webhook_data(order_id: str, event_type: str, update_data: dict | None = None):
     data = {
         "orderId": order_id,
         "namespace": settings.WEB_STORE_API_NAMESPACE,
@@ -185,8 +183,8 @@ def assert_payment_paid(api_client, data: dict, payment: SignUpPayment):
 
 def assert_confirmation_email_sent_to_contact_person(
     contact_person: SignUpContactPerson,
-    expected_subject: Optional[str] = None,
-    expected_text: Optional[str] = None,
+    expected_subject: str | None = None,
+    expected_text: str | None = None,
 ):
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to[0] == contact_person.email
@@ -200,7 +198,7 @@ def assert_confirmation_email_sent_to_contact_person(
 
 
 def assert_confirmation_sent_to_contact_person(
-    signup_or_signup_group: Union[SignUpGroup, SignUp],
+    signup_or_signup_group: SignUpGroup | SignUp,
 ):
     if not signup_or_signup_group.actual_contact_person:
         assert len(mail.outbox) == 0
@@ -268,7 +266,7 @@ def assert_payment_refund_failed(api_client, data: dict, payment: SignUpPayment)
 
 
 def assert_payment_or_refund_id_audit_logged(
-    obj: Union[SignUpPayment, SignUpPaymentRefund],
+    obj: SignUpPayment | SignUpPaymentRefund,
 ) -> None:
     assert AuditLogEntry.objects.count() == 1
 

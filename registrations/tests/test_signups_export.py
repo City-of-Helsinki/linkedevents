@@ -1,5 +1,4 @@
 from collections import Counter
-from typing import Union
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -27,7 +26,7 @@ from registrations.tests.utils import create_user_by_role
 
 def _get_signups_export(
     api_client: APIClient,
-    registration_id: Union[str, int],
+    registration_id: str | int,
     file_format: str,
     query_string: str = None,
 ):
@@ -37,7 +36,7 @@ def _get_signups_export(
     )
 
     if query_string:
-        url = "%s?%s" % (url, query_string)
+        url = f"{url}?{query_string}"
 
     response = api_client.get(url)
 
@@ -56,7 +55,7 @@ def _assert_correct_content(response):
 
 def _assert_get_signups_export(
     api_client: APIClient,
-    registration_id: Union[str, int],
+    registration_id: str | int,
     file_format: str,
     query_string: str = None,
 ):

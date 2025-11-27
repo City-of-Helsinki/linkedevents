@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Union
 
 import pytest
 from django_orghierarchy.models import Organization
@@ -31,9 +30,7 @@ default_price_group_data = {
 # === util methods ===
 
 
-def update_price_group(
-    api_client: APIClient, price_group_pk: Union[str, int], data: dict
-):
+def update_price_group(api_client: APIClient, price_group_pk: str | int, data: dict):
     url = reverse(
         "pricegroup-detail",
         kwargs={"pk": price_group_pk},
@@ -43,7 +40,7 @@ def update_price_group(
 
 
 def assert_update_price_group(
-    api_client: APIClient, price_group_pk: Union[str, int], data: dict
+    api_client: APIClient, price_group_pk: str | int, data: dict
 ):
     response = update_price_group(api_client, price_group_pk, data)
     assert response.status_code == status.HTTP_200_OK

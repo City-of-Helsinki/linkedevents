@@ -1,5 +1,3 @@
-from typing import Union
-
 import pytest
 from rest_framework import status
 
@@ -18,14 +16,14 @@ from registrations.tests.utils import create_user_by_role
 # === util methods ===
 
 
-def delete_price_group(api_client: APIClient, signup_pk: Union[str, int]):
+def delete_price_group(api_client: APIClient, signup_pk: str | int):
     url = reverse("signup-price-group", kwargs={"pk": signup_pk})
 
     return api_client.delete(url)
 
 
 def assert_delete_price_group(
-    api_client: APIClient, signup_pk: Union[str, int], price_groups_count=1
+    api_client: APIClient, signup_pk: str | int, price_groups_count=1
 ):
     assert SignUpPriceGroup.objects.count() == price_groups_count
 
@@ -37,7 +35,7 @@ def assert_delete_price_group(
 
 def assert_delete_price_group_failed(
     api_client: APIClient,
-    signup_pk: Union[str, int],
+    signup_pk: str | int,
     price_groups_count=1,
     status_code=status.HTTP_403_FORBIDDEN,
 ):

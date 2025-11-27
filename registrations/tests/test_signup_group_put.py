@@ -43,7 +43,7 @@ def update_signup_group(
     )
 
     if query_string:
-        signup_group_url = "%s?%s" % (signup_group_url, query_string)
+        signup_group_url = f"{signup_group_url}?{query_string}"
 
     response = api_client.put(signup_group_url, signup_group_data, format="json")
     return response

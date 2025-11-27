@@ -247,7 +247,7 @@ def test__update_an_event_complex_dict(api_client, complex_event_dict, user):
     for key in ("name",):
         for lang in ("fi", "en", "sv"):
             if lang in data2[key]:
-                data2[key][lang] = "%s updated" % data2[key][lang]
+                data2[key][lang] = f"{data2[key][lang]} updated"
 
     data2["type_id"] = "Volunteering"
     data2["offers"] = [

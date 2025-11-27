@@ -1,5 +1,4 @@
 from datetime import timedelta
-from typing import Optional
 
 import freezegun
 import pytest
@@ -36,7 +35,7 @@ def get_detail(api_client: APIClient, division_pk: int):
     return api_client.get(get_detail_url(division_pk), format="json")
 
 
-def get_list(api_client: APIClient, query: Optional[str] = None):
+def get_list(api_client: APIClient, query: str | None = None):
     url = _LIST_URL
 
     if query:

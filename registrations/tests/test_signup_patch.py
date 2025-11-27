@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Optional
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -29,23 +28,21 @@ new_signup_name = "Edited first name"
 # === util methods ===
 
 
-def patch_signup(
-    api_client, signup_pk, signup_data, query_string: Optional[str] = None
-):
+def patch_signup(api_client, signup_pk, signup_data, query_string: str | None = None):
     signup_url = reverse(
         "signup-detail",
         kwargs={"pk": signup_pk},
     )
 
     if query_string:
-        signup_url = "%s?%s" % (signup_url, query_string)
+        signup_url = f"{signup_url}?{query_string}"
 
     response = api_client.patch(signup_url, signup_data, format="json")
     return response
 
 
 def assert_patch_signup(
-    api_client, signup_pk, signup_data, query_string: Optional[str] = None
+    api_client, signup_pk, signup_data, query_string: str | None = None
 ):
     response = patch_signup(
         api_client, signup_pk, signup_data, query_string=query_string

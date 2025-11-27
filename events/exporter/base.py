@@ -2,7 +2,7 @@ import logging
 import os
 
 
-class Exporter(object):
+class Exporter:
     def __init__(self, options=None):
         self.options = options
         self.logger = logging.getLogger(__name__)
@@ -29,6 +29,6 @@ def get_exporters():
             continue
         if module in ("__init__", "base"):
             continue
-        full_path = "%s.%s" % (__package__, module)
+        full_path = f"{__package__}.{module}"
         ret = __import__(full_path, locals(), globals())
     return exporters

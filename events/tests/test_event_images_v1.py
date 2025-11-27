@@ -24,7 +24,7 @@ def create_in_memory_image_file(
 ):
     image = PILImage.new("RGBA", size=size, color=color)
     file = BytesIO()
-    file.name = "{}.{}".format(name, image_format)
+    file.name = f"{name}.{image_format}"
     image.save(file, format=image_format)
     file.seek(0)
     return file
@@ -608,16 +608,14 @@ def test_set_image_license(
     assert new_image.license_id == "event_only"
 
     # the same image is put without a license, expect event_only license not changed
-    response = api_client.put(
-        "%s%s/" % (list_url, new_image.id), {"name": "this is needed"}
-    )
+    response = api_client.put(f"{list_url}{new_image.id}/", {"name": "this is needed"})
     assert response.status_code == status.HTTP_200_OK
     new_image.refresh_from_db()
     assert new_image.license_id == "event_only"
 
     # the same image is put with cc_by license, expect change
     response = api_client.put(
-        "%s%s/" % (list_url, new_image.id),
+        f"{list_url}{new_image.id}/",
         {"name": "this is needed", "license": "cc_by"},
     )
     assert response.status_code == status.HTTP_200_OK

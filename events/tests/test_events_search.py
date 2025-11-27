@@ -16,7 +16,7 @@ from .common import TestDataMixin
 # Make sure we don't overwrite our main indices
 for _key, val in settings.HAYSTACK_CONNECTIONS.items():
     if "INDEX_NAME" in val:
-        val["INDEX_NAME"] = "test_%s" % val["INDEX_NAME"]
+        val["INDEX_NAME"] = f"test_{val['INDEX_NAME']}"
 
 
 class EventSearchTests(TestCase, TestDataMixin):

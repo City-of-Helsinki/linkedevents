@@ -1,5 +1,4 @@
 import logging
-from typing import Type, Union
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -180,8 +179,8 @@ class Command(BaseCommand):
             kw_set.keywords.add(Keyword.objects.get(id=kw_id))
 
     def _create_kw_object(
-        self, kw_class: Union[Type[Keyword], Type[KeywordSet]], object_data: dict
-    ) -> Union[KeywordSet, Keyword]:
+        self, kw_class: type[Keyword] | type[KeywordSet], object_data: dict
+    ) -> KeywordSet | Keyword:
         object_data = object_data.copy()
         names = {f"name_{lang}": value for lang, value in object_data["name"].items()}
         object_data.pop("name")

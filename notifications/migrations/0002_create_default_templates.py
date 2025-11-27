@@ -103,16 +103,16 @@ You received this message because you are a moderator in the {{ event.publisher.
 
 
 def _append_footer(text, language, separator):
-    var_name = "FOOTER_{}".format(language).upper()
+    var_name = f"FOOTER_{language}".upper()
     footer = globals().get(var_name)
-    assert footer, "{} undefined".format(var_name)
+    assert footer, f"{var_name} undefined"
     return separator.join([text, footer])
 
 
 def _get_text(notification_type, language, field):
-    var_name = "{}_{}_{}".format(notification_type, field, language).upper()
+    var_name = f"{notification_type}_{field}_{language}".upper()
     text = globals().get(var_name)
-    assert text, "{} undefined".format(var_name)
+    assert text, f"{var_name} undefined"
     return text
 
 
@@ -134,8 +134,8 @@ def create_existing_notifications(NotificationTemplate):  # noqa: N803
                 subject = _get_text(notification_type, language, "subject")
                 html_body = _get_text(notification_type, language, "html_body")
                 html_body = _append_footer(html_body, language, HTML_SEPARATOR)
-                setattr(notification, "subject_{}".format(language), subject)
-                setattr(notification, "html_body_{}".format(language), html_body)
+                setattr(notification, f"subject_{language}", subject)
+                setattr(notification, f"html_body_{language}", html_body)
             notification.save()
 
 

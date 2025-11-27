@@ -26,7 +26,7 @@ class Command(BaseCommand):
         print(  # noqa: T201
             "Updated %s keyword event numbers." % ("all" if update_all else "changed")
         )
-        print("A total of %s keywords updated." % (str(keywords.count())))  # noqa: T201
+        print(f"A total of {str(keywords.count())} keywords updated.")  # noqa: T201
 
     def handle_places(self, update_all=False):
         if update_all:
@@ -35,12 +35,12 @@ class Command(BaseCommand):
             places = Place.objects.filter(n_events_changed=True)
         recache_n_events_in_locations((k.id for k in places), all=update_all)
         print("Updated %s place event numbers." % ("all" if update_all else "changed"))  # noqa: T201
-        print("A total of %s places updated." % (str(places.count())))  # noqa: T201
+        print(f"A total of {str(places.count())} places updated.")  # noqa: T201
 
     def handle(self, model=None, update_all=False, **kwargs):
         if model and model not in ("keyword", "place"):
             raise CommandError(
-                "Model %s not found. Valid models are 'keyword' and 'place'." % (model,)
+                f"Model {model} not found. Valid models are 'keyword' and 'place'."
             )
         if not model or model == "keyword":
             self.handle_keywords(update_all=update_all)

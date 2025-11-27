@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
@@ -30,10 +29,10 @@ class EventSearchIndexService:
                 extract_word_bases(row_content, words, lang)
 
         if weight == "B":
-            for keyword in event.keywords.values_list("name_%s" % lang, flat=True):
+            for keyword in event.keywords.values_list(f"name_{lang}", flat=True):
                 extract_word_bases(keyword, words, lang)
 
-            for keyword in event.audience.values_list("name_%s" % lang, flat=True):
+            for keyword in event.audience.values_list(f"name_{lang}", flat=True):
                 extract_word_bases(keyword, words, lang)
 
         return words
@@ -145,7 +144,7 @@ class EventSearchIndexService:
         return num_updated
 
     @classmethod
-    def update_index_search_vectors(cls, event: Optional[Event] = None) -> None:
+    def update_index_search_vectors(cls, event: Event | None = None) -> None:
         """
         Update search vectors for the search index.
 

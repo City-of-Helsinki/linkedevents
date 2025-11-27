@@ -121,16 +121,10 @@ class DateRange:
 
         # Multiple days, e.g. 1.1.-2.1.
         if start.year == end.year:
-            return "%s-%s" % (
-                start.strftime(short_date),
-                end.strftime(short_date),
-            )
+            return f"{start.strftime(short_date)}-{end.strftime(short_date)}"
 
         # Multiple years, e.g. 1.1.2017-31.12.2019
-        return "%s-%s" % (
-            start.strftime(long_date),
-            end.strftime(long_date),
-        )
+        return f"{start.strftime(long_date)}-{end.strftime(long_date)}"
 
     def __lt__(self, other):
         return self.start < other.start
@@ -235,11 +229,9 @@ class DOCXRenderer(renderers.BaseRenderer):
                         document.add_heading(event["name"], 2)
                     else:
                         document.add_heading(
-                            "%s-%s %s"
-                            % (
-                                event["start_time"].strftime("%H:%M"),
-                                event["end_time"].strftime("%H:%M"),
-                                event["name"],
+                            (
+                                f"{event['start_time'].strftime('%H:%M')}-"
+                                f"{event['end_time'].strftime('%H:%M')} {event['name']}"
                             ),
                             2,
                         )
@@ -248,14 +240,14 @@ class DOCXRenderer(renderers.BaseRenderer):
                     if event["price"]:
                         document.add_paragraph(event["price"])
 
-        filename = "%s-%s-%s.docx" % (
-            slugify(first_location.name),
-            query_start_date.strftime("%Y%m%d"),
-            query_end_date.strftime("%Y%m%d"),
+        filename = (
+            f"{slugify(first_location.name)}-"
+            f"{query_start_date.strftime('%Y%m%d')}-"
+            f"{query_end_date.strftime('%Y%m%d')}.docx"
         )
 
         renderer_context["response"]["Content-Disposition"] = (
-            "attachment; filename=%s" % filename
+            f"attachment; filename={filename}"
         )
 
         output = io.BytesIO()

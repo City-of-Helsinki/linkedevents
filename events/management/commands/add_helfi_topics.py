@@ -63,12 +63,12 @@ NEW_HELFI_KEYWORDS_DATA = [
 class Command(BaseCommand):
     help = "Creates www.hel.fi topic keywords and keyword set used by the UI."
 
-    @lru_cache()  # noqa: B019
+    @lru_cache  # noqa: B019
     def get_keyword_obj(self, keyword_id):
         try:
             keyword = Keyword.objects.get(id=keyword_id)
         except Keyword.DoesNotExist:
-            raise CommandError('keyword "%s" does not exist' % keyword_id)
+            raise CommandError(f'keyword "{keyword_id}" does not exist')
         return keyword
 
     @transaction.atomic
@@ -81,13 +81,13 @@ class Command(BaseCommand):
             )
             if created:
                 self.stdout.write(
-                    "created keyword %s (%s)"
-                    % (new_keyword_data["name_fi"], new_keyword_data["id"])
+                    f"created keyword {new_keyword_data['name_fi']} "
+                    f"({new_keyword_data['id']})"
                 )
             else:
                 self.stdout.write(
-                    "keyword %s (%s) already exists"
-                    % (new_keyword_data["name_fi"], new_keyword_data["id"])
+                    f"keyword {new_keyword_data['name_fi']} "
+                    f"({new_keyword_data['id']}) already exists"
                 )
 
     @transaction.atomic
@@ -99,10 +99,10 @@ class Command(BaseCommand):
             id=HELFI_KEYWORD_SET_DATA["id"], defaults=HELFI_KEYWORD_SET_DATA
         )
         if created:
-            self.stdout.write('created keyword set "%s"' % HELFI_KEYWORD_SET_DATA["id"])
+            self.stdout.write(f'created keyword set "{HELFI_KEYWORD_SET_DATA["id"]}"')
         else:
             self.stdout.write(
-                'keyword set "%s" already exist' % HELFI_KEYWORD_SET_DATA["id"]
+                f'keyword set "{HELFI_KEYWORD_SET_DATA["id"]}" already exist'
             )
 
         keyword_ids = [kw["id"] for kw in NEW_HELFI_KEYWORDS_DATA]
@@ -116,7 +116,7 @@ class Command(BaseCommand):
                 keyword_set.keywords.add(keyword)
                 existing_keywords.add(keyword)
                 self.stdout.write(
-                    "added %s (%s) to the keyword set" % (keyword.name, keyword_id)
+                    f"added {keyword.name} ({keyword_id}) to the keyword set"
                 )
 
     def handle(self, *args, **options):

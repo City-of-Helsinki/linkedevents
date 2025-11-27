@@ -1,5 +1,4 @@
 from collections import Counter
-from typing import Union
 
 import pytest
 from django.conf import settings
@@ -18,7 +17,7 @@ from registrations.tests.factories import (
 )
 from registrations.tests.utils import create_user_by_role
 
-default_send_message_data: dict[str, Union[str, list]] = {
+default_send_message_data: dict[str, str | list] = {
     "subject": "Message subject",
     "body": "Message body",
 }

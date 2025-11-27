@@ -65,7 +65,7 @@ def delete_signup_group(api_client, signup_group_pk, query_string=None):
         kwargs={"pk": signup_group_pk},
     )
     if query_string:
-        signup_group_url = "%s?%s" % (signup_group_url, query_string)
+        signup_group_url = f"{signup_group_url}?{query_string}"
 
     return api_client.delete(signup_group_url)
 

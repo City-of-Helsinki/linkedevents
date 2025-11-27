@@ -1,8 +1,7 @@
 import re
-from datetime import datetime, timedelta
-from datetime import timezone as datetime_timezone
+from collections.abc import Iterable
+from datetime import UTC, datetime, timedelta
 from functools import partial
-from typing import Iterable, Optional
 from zoneinfo import ZoneInfo
 
 import django_filters
@@ -52,9 +51,7 @@ def _annotate_queryset_for_filtering_by_enrolment_start_or_end(
     else:
         # Put events with null enrolment times to the end of the list for
         # the descending ordering.
-        events_with_null_times_last = timezone.datetime.min.replace(
-            tzinfo=datetime_timezone.utc
-        )
+        events_with_null_times_last = timezone.datetime.min.replace(tzinfo=UTC)
         order_field_name = order_field_name.removeprefix("-")
 
     return queryset.annotate(
@@ -492,7 +489,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
 
         return queryset.filter(location__in=places)
 
-    def filter_hide_super_event(self, queryset, name, value: Optional[bool]):
+    def filter_hide_super_event(self, queryset, name, value: bool | None):
         if not value:
             return queryset
 
@@ -501,7 +498,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             | Exists(EventAggregate.objects.filter(super_event=OuterRef("pk")))
         )
 
-    def filter_x_full_text(self, qs, name, value: Optional[str]):
+    def filter_x_full_text(self, qs, name, value: str | None):
         if not value:
             return qs
 
@@ -536,14 +533,14 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         else:
             return qs
 
-    def filter_x_ongoing(self, qs, name, ongoing: Optional[bool]):
+    def filter_x_ongoing(self, qs, name, ongoing: bool | None):
         if ongoing is None:
             return qs
 
         if ongoing:
-            return qs.filter(end_time__gt=datetime.now(datetime_timezone.utc))
+            return qs.filter(end_time__gt=datetime.now(UTC))
 
-        return qs.filter(end_time__lte=datetime.now(datetime_timezone.utc))
+        return qs.filter(end_time__lte=datetime.now(UTC))
 
     def filter_registration_admin_user(self, queryset, name, value):
         if not value:
@@ -567,7 +564,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
                 _("Start or end cannot be used with days.")
             )
 
-        today = datetime.now(datetime_timezone.utc).date()
+        today = datetime.now(UTC).date()
 
         start = today.isoformat()
         end = (today + timedelta(days=days)).isoformat()
@@ -602,7 +599,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         return queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
 
     def filter_hide_recurring_children_sub_events(
-        self, queryset, name, value: Optional[bool]
+        self, queryset, name, value: bool | None
     ):
         """
         This is a boolean filter that determines whether to include sub_events
@@ -611,7 +608,7 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         """
         return queryset
 
-    def filter_hide_recurring_children(self, queryset, name, value: Optional[bool]):
+    def filter_hide_recurring_children(self, queryset, name, value: bool | None):
         """
         This filter must be applied last so that it can work with
         the hide_recurring_children_sub_events parameter.
@@ -667,7 +664,7 @@ class OrganizationFilter(django_filters.rest_framework.FilterSet):
         model = Organization
         fields = ("dissolved",)
 
-    def filter_dissolved(self, queryset, name, value: Optional[bool]):
+    def filter_dissolved(self, queryset, name, value: bool | None):
         today = timezone.localdate()
 
         if value:

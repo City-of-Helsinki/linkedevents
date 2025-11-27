@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Optional
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -28,7 +27,7 @@ from registrations.tests.utils import create_user_by_role
 
 
 def patch_signup_group(
-    api_client, signup_group_pk, signup_group_data, query_string: Optional[str] = None
+    api_client, signup_group_pk, signup_group_data, query_string: str | None = None
 ):
     signup_group_url = reverse(
         "signupgroup-detail",
@@ -36,14 +35,14 @@ def patch_signup_group(
     )
 
     if query_string:
-        signup_group_url = "%s?%s" % (signup_group_url, query_string)
+        signup_group_url = f"{signup_group_url}?{query_string}"
 
     response = api_client.patch(signup_group_url, signup_group_data, format="json")
     return response
 
 
 def assert_patch_signup_group(
-    api_client, signup_group_pk, signup_group_data, query_string: Optional[str] = None
+    api_client, signup_group_pk, signup_group_data, query_string: str | None = None
 ):
     response = patch_signup_group(
         api_client, signup_group_pk, signup_group_data, query_string=query_string

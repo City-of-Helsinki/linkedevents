@@ -87,14 +87,14 @@ class TestKulkeImporter(TestCase):
     @pytest.mark.django_db
     def test_html_format(self):
         text = (
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit.{0}"
-            "{0}"
-            "Nam quam urna.{0}"
-            "Etiam maximus ex tellus, elementum fermentum tellus bibendum id.{0}"
-            "Praesent sodales purus libero.{0}"
-            "{0}"
+            f"Lorem ipsum dolor sit amet, consectetur adipiscing elit.{os.linesep}"
+            f"{os.linesep}"
+            f"Nam quam urna.{os.linesep}"
+            f"Etiam maximus ex tellus, elementum fermentum tellus bibendum id.{os.linesep}"
+            f"Praesent sodales purus libero.{os.linesep}"
+            f"{os.linesep}"
             "Vestibulum lacinia interdum nisi eu vehicula."
-        ).format(os.linesep)
+        )
 
         html_text = KulkeImporter._html_format(text)
         expected_text = (
