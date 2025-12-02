@@ -4,7 +4,6 @@ import time
 import urllib
 from copy import deepcopy
 from datetime import timedelta
-from typing import Optional
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -222,7 +221,7 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
         model = Image
         fields = "__all__"
 
-    @extend_schema_field(Optional[str])
+    @extend_schema_field(str | None)
     def get_license_url(self, obj):
         return obj.license.url if obj.license else None
 
