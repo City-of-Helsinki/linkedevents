@@ -1182,6 +1182,11 @@ def test_create_registration_minimum_attendee_capacity(
             Decimal("0.91"),
         ),
         (
+            VatPercentage.VAT_13_5.value,
+            Decimal("8.81"),
+            Decimal("1.19"),
+        ),
+        (
             VatPercentage.VAT_14.value,
             Decimal("8.77"),
             Decimal("1.23"),

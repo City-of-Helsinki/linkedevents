@@ -615,6 +615,11 @@ class RegistrationPriceGroupTestCase(RegistrationAdminTestCaseMixin, TestCase):
                 Decimal("0.91"),
             ),
             (
+                VatPercentage.VAT_13_5.value,
+                Decimal("8.81"),
+                Decimal("1.19"),
+            ),
+            (
                 VatPercentage.VAT_14.value,
                 Decimal("8.77"),
                 Decimal("1.23"),
