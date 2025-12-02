@@ -78,12 +78,14 @@ web_store_price_group_meta_key = "signupPriceGroupId"
 VAT_PERCENTAGES = (
     (VatPercentage.VAT_25_5.value, "25.5 %"),
     (VatPercentage.VAT_14.value, "14 %"),
+    (VatPercentage.VAT_13_5.value, "13.5 %"),
     (VatPercentage.VAT_10.value, "10 %"),
     (VatPercentage.VAT_0.value, "0 %"),
 )
 VAT_CODE_MAPPING = {
     VatPercentage.VAT_25_5.value: "47",
     VatPercentage.VAT_14.value: "45",
+    VatPercentage.VAT_13_5.value: "48",
     VatPercentage.VAT_10.value: "46",
     VatPercentage.VAT_0.value: "4U",
 }
