@@ -239,19 +239,21 @@ SITE_ID = 1
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "context": {
+            "()": "logger_extra.filter.LoggerContextFilter",
+        }
+    },
     "formatters": {
-        "timestamped_named": {
-            "format": "%(asctime)s %(name)s %(levelname)s: %(message)s",
+        "json": {
+            "()": "logger_extra.formatter.JSONFormatter",
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "timestamped_named",
-        },
-        # Just for reference, not used
-        "blackhole": {
-            "class": "logging.NullHandler",
+            "formatter": "json",
+            "filters": ["context"],
         },
     },
     "loggers": {
@@ -262,6 +264,7 @@ LOGGING = {
         # Special configuration for elasticsearch, as INFO level prints
         # out every single call to elasticsearch
         "elasticsearch": {
+            "handlers": ["console"],
             "level": "WARNING",
         },
     },
@@ -300,6 +303,7 @@ INSTALLED_APPS = [
     "encrypted_fields",
     "mailer",
     "drf_spectacular",
+    "logger_extra",
     # Local apps
     "linkedevents",
     "helevents",
@@ -372,6 +376,7 @@ MIDDLEWARE = [
     # WhiteNoiseMiddleware should be placed as high as possible
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "logger_extra.middleware.XRequestIdMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",

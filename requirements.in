@@ -11,6 +11,7 @@ django-helusers
 django-image-cropping
 django-jinja
 django-leaflet
+django-logger-extra
 django-mailer
 django-modeltranslation
 django-mptt
