@@ -304,6 +304,7 @@ django==5.2.8 \
     #   django-jinja
     #   django-js-asset
     #   django-leaflet
+    #   django-logger-extra
     #   django-mailer
     #   django-modeltranslation
     #   django-munigeo
@@ -373,6 +374,10 @@ django-js-asset==3.1.2 \
 django-leaflet==0.32.0 \
     --hash=sha256:013ccb06ee08071caec98a65dffd68ab3694dafce72caff34f3d78f35568ae25 \
     --hash=sha256:a17d8e6cc05dd98e8e543fbf198b81dabbf9f195c222e786d1686aeda91c1aa8
+    # via -r requirements.in
+django-logger-extra==1.1.0 \
+    --hash=sha256:bc9450ead1e87aad1866210657d1a9f8efe9e21bfea9b53618d9fd0c829f1179 \
+    --hash=sha256:f44ab408c812474163a21b13a7acba48407ba52b128260370e8f4ccb2ecab89b
     # via -r requirements.in
 django-mailer==2.3.2 \
     --hash=sha256:6ea0cbec09f57eb91376780a5f20ab7a834b942435a575e92e8e021f7838d78f \
