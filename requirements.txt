@@ -47,6 +47,7 @@ certifi==2025.8.3 \
     --hash=sha256:e564105f78ded564e3ae7c923924435e1daa7463faeab5bb932bc53ffae63407 \
     --hash=sha256:f6c12493cfb1b06ba2ff328595af9350c65d6644968e5d3a2ffd78699af217a5
     # via
+    #   elastic-transport
     #   elasticsearch
     #   requests
     #   sentry-sdk
@@ -312,6 +313,7 @@ django==5.2.9 \
     #   django-parler
     #   django-parler-rest
     #   django-redis
+    #   django-resilient-logger
     #   django-rest-knox
     #   django-reversion
     #   django-searchable-encrypted-fields
@@ -416,6 +418,10 @@ django-redis==6.0.0 \
     --hash=sha256:20bf0063a8abee567eb5f77f375143c32810c8700c0674ced34737f8de4e36c0 \
     --hash=sha256:2d9cb12a20424a4c4dde082c6122f486628bae2d9c2bee4c0126a4de7fda00dd
     # via -r requirements.in
+django-resilient-logger==1.2.0 \
+    --hash=sha256:76eb93d30219139cfe0e3d29013b6199f6a0f50642ba15e481b69ca20f4ee0d6 \
+    --hash=sha256:a7307af5523ffb6deb432c1310f6d97b1a40551ae2ae2cde652eb5b1c265e457
+    # via -r requirements.in
 django-rest-knox==5.0.2 \
     --hash=sha256:694da5d0ad6eb3edbfd7cdc8d69c089fc074e6b0e548e00ff2750bf2fdfadb6f \
     --hash=sha256:f283622bcf5d28a6a0203845c065d06c7432efa54399ae32070c61ac03af2d6f
@@ -468,10 +474,18 @@ ecdsa==0.19.1 \
     --hash=sha256:30638e27cf77b7e15c4c4cc1973720149e1033827cfd00661ca5c8cc0cdb24c3 \
     --hash=sha256:478cba7b62555866fcb3bb3fe985e06decbdb68ef55713c4e5ab98c57d508e61
     # via python-jose
+elastic-transport==8.17.1 \
+    --hash=sha256:192718f498f1d10c5e9aa8b9cf32aed405e469a7f0e9d6a8923431dbb2c59fb8 \
+    --hash=sha256:5edef32ac864dca8e2f0a613ef63491ee8d6b8cfb52881fa7313ba9290cac6d2
+    # via elasticsearch8
 elasticsearch==7.17.12 \
     --hash=sha256:468fd5eef703c0d9238e29bcaf3a6fe4d6b092f917959fbf41f48f8fea3df2f8 \
     --hash=sha256:a1f5733ae8cf1dbf0a78593389f2503c87dd97429976099832bf0626cdfaac8b
     # via -r requirements.in
+elasticsearch8==8.19.2 \
+    --hash=sha256:3ffefa2190cfa858a28e1622f8a84ceefa1bc19f3c87fe32c29485eff78d4294 \
+    --hash=sha256:9437c8e5123c260b59766183bfd915206772542849b697f78a79446ec890a80e
+    # via django-resilient-logger
 executing==2.2.1 \
     --hash=sha256:3632cc370565f6648cc328b32435bd120a1e4ebb20c77e3fdde9a13cd1e533c4 \
     --hash=sha256:760643d3452b4d777d295bb167ccc74c64a81df23fb5e08eff250c425a4b2017
@@ -986,6 +1000,7 @@ python-dateutil==2.9.0.post0 \
     --hash=sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427
     # via
     #   -r requirements.in
+    #   elasticsearch8
     #   icalendar
 python-docx==1.2.0 \
     --hash=sha256:3fd478f3250fbbbfd3b94fe1e985955737c145627498896a8a6bf81f4baf66c7 \
@@ -1438,6 +1453,7 @@ typing-extensions==4.15.0 \
     # via
     #   beautifulsoup4
     #   cattrs
+    #   elasticsearch8
     #   psycopg
     #   python-docx
     #   referencing
@@ -1457,6 +1473,7 @@ urllib3==1.26.20 \
     --hash=sha256:0ed14ccfbf1c30a9072c7ca157e4319b70d65f623e91e7b32fadb2853431016e \
     --hash=sha256:40c2dc0c681e47eb8f90e7e27bf6ff7df2e677421fd46756da1161c39ca70d32
     # via
+    #   elastic-transport
     #   elasticsearch
     #   requests
     #   requests-cache

@@ -5,9 +5,9 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.timezone import localtime
 from freezegun import freeze_time
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from registrations.tests.factories import SeatReservationCodeFactory
 from registrations.tests.utils import create_user_by_role
@@ -288,10 +288,8 @@ def test_seatreservation_id_is_audit_logged_on_put(registration, user_api_client
 
     assert_update_seats_reservation(user_api_client, reservation.id, reservation_data)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        reservation.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [reservation.pk]
 
 
 @pytest.mark.parametrize(

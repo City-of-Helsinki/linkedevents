@@ -2,9 +2,9 @@ from collections import Counter
 
 import pytest
 from django.conf import settings
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.models import Language
 
 from .factories import LanguageFactory
@@ -125,10 +125,8 @@ def test_language_id_is_audit_logged_on_get_detail(api_client, user):
     response = get_detail(api_client, language.pk)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        language.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [language.pk]
 
 
 @pytest.mark.django_db
@@ -139,7 +137,7 @@ def test_language_id_is_audit_logged_on_get_list(api_client, user):
     response = get_list(api_client)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([language.pk, language2.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [language.pk, language2.pk]
+    )

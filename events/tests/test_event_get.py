@@ -12,9 +12,9 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.utils.timezone import localtime
 from freezegun import freeze_time
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.models import Event, Language, License, PublicationStatus
 from events.tests.conftest import APIClient
 from events.tests.factories import EventFactory, OfferFactory
@@ -1857,8 +1857,8 @@ def test_event_id_is_audit_logged_on_get_detail(api_client, event, user):
     response = get_detail(api_client, event.pk)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [event.pk]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [event.pk]
 
 
 @pytest.mark.django_db
@@ -1867,10 +1867,10 @@ def test_event_id_is_audit_logged_on_get_list(api_client, event, event2, user):
     response = get_list(api_client)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([event.pk, event2.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [event.pk, event2.pk]
+    )
 
 
 @pytest.mark.parametrize(

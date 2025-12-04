@@ -2,9 +2,9 @@ from collections import Counter
 from unittest.mock import PropertyMock, patch
 
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.conftest import APIClient
 from events.tests.factories import OrganizationFactory
 from events.tests.utils import versioned_reverse as reverse
@@ -477,14 +477,12 @@ def test_signup_ids_are_audit_logged_on_signups_export(
     user = create_user_by_role("registration_admin", registration.publisher)
     api_client.force_authenticate(user)
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     _get_signups_export(api_client, registration.id, file_format="xlsx")
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter(
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
         SignUp.objects.exclude(registration=other_registration).values_list(
             "pk", flat=True
         )

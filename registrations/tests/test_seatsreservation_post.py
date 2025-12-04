@@ -2,9 +2,9 @@ from datetime import timedelta
 
 import pytest
 from django.utils.timezone import localtime
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from registrations.tests.factories import RegistrationUserAccessFactory
 from registrations.tests.utils import create_user_by_role
@@ -294,7 +294,5 @@ def test_seatreservation_id_is_audit_logged_on_post(registration, user_api_clien
 
     response = assert_reserve_seats(user_api_client, reservation_data)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        response.data["id"]
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [response.data["id"]]

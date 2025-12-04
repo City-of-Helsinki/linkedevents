@@ -11,9 +11,9 @@ from django.test import override_settings
 from django.utils import translation
 from django.utils.timezone import localtime
 from freezegun import freeze_time
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.models import Event, Language
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
@@ -2362,10 +2362,8 @@ def test_signup_id_is_audit_logged_on_post(api_client, registration):
 
     response = assert_create_signups(api_client, signups_data)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        response.data[0]["id"]
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [response.data[0]["id"]]
 
 
 @pytest.mark.parametrize(

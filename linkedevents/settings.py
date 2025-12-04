@@ -202,6 +202,12 @@ env = environ.Env(
     WEB_STORE_WEBHOOK_API_KEY=(str, ""),
     WHITENOISE_STATIC_PREFIX=(str, "/static/"),
     PAYMENT_REQUIRED_NOTIFY_THRESHOLD_MINUTES=(int, 60),
+    # Resilient logger config
+    AUDIT_LOG_ENV=(str, ""),
+    AUDIT_LOG_ES_URL=(str, ""),
+    AUDIT_LOG_ES_INDEX=(str, ""),
+    AUDIT_LOG_ES_USERNAME=(str, ""),
+    AUDIT_LOG_ES_PASSWORD=(str, ""),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -306,6 +312,7 @@ INSTALLED_APPS = [
     "mailer",
     "drf_spectacular",
     "logger_extra",
+    "resilient_logger",
     # Local apps
     "linkedevents",
     "helevents",
@@ -769,8 +776,31 @@ ESPOO_TIMEOUT = env("ESPOO_TIMEOUT")
 ESPOO_WAIT_BETWEEN = env("ESPOO_WAIT_BETWEEN")
 
 # Audit log
-AUDIT_LOG_ORIGIN = "linkedevents"
 AUDIT_LOG_ENABLED = env("AUDIT_LOG_ENABLED")
+
+RESILIENT_LOGGER = {
+    "origin": "linkedevents-api",
+    "environment": env("AUDIT_LOG_ENV"),
+    "sources": [
+        {
+            "class": "resilient_logger.sources.ResilientLogSource",
+        }
+    ],
+    "targets": [
+        {
+            "class": "resilient_logger.targets.ElasticsearchLogTarget",
+            "es_url": env("AUDIT_LOG_ES_URL"),
+            "es_username": env("AUDIT_LOG_ES_USERNAME"),
+            "es_password": env("AUDIT_LOG_ES_PASSWORD"),
+            "es_index": env("AUDIT_LOG_ES_INDEX"),
+            "required": True,
+        }
+    ],
+    "batch_limit": 5000,
+    "chunk_size": 500,
+    "submit_unsent_entries": True,
+    "clear_sent_entries": True,
+}
 
 FULL_TEXT_WEIGHT_OVERRIDES = env("FULL_TEXT_WEIGHT_OVERRIDES")
 FULL_TEXT_WORDS_CACHE_SIZE = env("FULL_TEXT_WORDS_CACHE_SIZE")

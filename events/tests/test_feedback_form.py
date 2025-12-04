@@ -1,9 +1,9 @@
 import pytest
 from django.conf import settings
 from django.core import mail
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.models import Feedback
 from events.tests.utils import versioned_reverse as reverse
 from registrations.utils import get_email_noreply_address
@@ -61,10 +61,8 @@ def test_feedback_id_is_audit_logged_on_signed_user_submit(user_api_client):
     response = user_api_client.post(guest_url, load, format="json")
     assert response.status_code == status.HTTP_201_CREATED
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        response.data["id"]
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [response.data["id"]]
 
 
 @pytest.mark.django_db
@@ -75,7 +73,5 @@ def test_feedback_id_is_audit_logged_on_guest_submit(api_client, user):
     response = api_client.post(guest_url, load, format="json")
     assert response.status_code == status.HTTP_201_CREATED
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        response.data["id"]
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [response.data["id"]]

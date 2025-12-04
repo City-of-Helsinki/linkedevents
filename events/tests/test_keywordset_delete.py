@@ -1,7 +1,6 @@
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
-
-from audit_log.models import AuditLogEntry
 
 from .utils import versioned_reverse as reverse
 
@@ -25,10 +24,8 @@ def test_keyword_set_id_is_audit_logged_on_delete(user_api_client, keyword_set):
     response = user_api_client.delete(delete_url)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        keyword_set.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [keyword_set.pk]
 
 
 @pytest.mark.django_db

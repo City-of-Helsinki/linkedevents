@@ -2,9 +2,9 @@ from collections import Counter
 
 import pytest
 from pytest_django.asserts import assertNumQueries
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.models import Keyword
 
 from .utils import get
@@ -47,10 +47,8 @@ def test_keyword_id_is_audit_logged_on_get_detail(api_client, keyword, user):
     response = api_client.get(url)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        keyword.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [keyword.pk]
 
 
 @pytest.mark.django_db
@@ -61,10 +59,10 @@ def test_keyword_id_is_audit_logged_on_get_list(api_client, keyword, keyword2, u
     )
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([keyword.pk, keyword2.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [keyword.pk, keyword2.pk]
+    )
 
 
 @pytest.mark.django_db

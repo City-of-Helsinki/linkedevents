@@ -7,9 +7,9 @@ from django.contrib.auth import get_user_model
 from django.core import mail
 from django.utils.timezone import localtime
 from freezegun import freeze_time
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.factories import LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
@@ -268,10 +268,10 @@ def assert_payment_refund_failed(api_client, data: dict, payment: SignUpPayment)
 def assert_payment_or_refund_id_audit_logged(
     obj: SignUpPayment | SignUpPaymentRefund,
 ) -> None:
-    assert AuditLogEntry.objects.count() == 1
+    assert ResilientLogEntry.objects.count() == 1
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [obj.pk]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [obj.pk]
 
 
 # === tests ===
@@ -299,7 +299,7 @@ def test_webhook_method_not_allowed(api_client, view_name, http_method):
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.parametrize(
@@ -328,7 +328,7 @@ def test_webhook_unauthorized(api_client, credentials, view_name):
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.parametrize(
@@ -357,7 +357,7 @@ def test_payment_paid_webhook_for_signup_payment(
         {"paymentId": DEFAULT_PAYMENT_ID},
     )
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -399,7 +399,7 @@ def test_payment_paid_webhook_for_signup_group_payment(
         {"paymentId": DEFAULT_PAYMENT_ID},
     )
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -460,7 +460,7 @@ def test_refund_paid_webhook_for_signup_payment(
         {"refundId": DEFAULT_REFUND_ID},
     )
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -525,7 +525,7 @@ def test_refund_paid_webhook_for_signup_group_payment(
         {"refundId": DEFAULT_REFUND_ID},
     )
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -596,7 +596,7 @@ def test_refund_paid_webhook_for_recurring_event_signup_payment(
         {"refundId": DEFAULT_REFUND_ID},
     )
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -667,7 +667,7 @@ def test_refund_paid_webhook_for_recurring_event_signup_group_payment(
         {"refundId": DEFAULT_REFUND_ID},
     )
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -738,7 +738,7 @@ def test_partial_refund_paid_webhook_for_signup_group_payment(
         {"refundId": DEFAULT_REFUND_ID},
     )
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -780,7 +780,7 @@ def test_refund_failed_webhook_for_signup_payment(api_client):
     refund_payment_data = [DEFAULT_GET_REFUND_PAYMENTS_DATA[0].copy()]
     refund_payment_data[0]["status"] = WebStoreOrderRefundStatus.CANCELLED.value
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -817,7 +817,7 @@ def test_refund_failed_webhook_for_signup_group_payment(api_client):
     refund_payment_data = [DEFAULT_GET_REFUND_PAYMENTS_DATA[0].copy()]
     refund_payment_data[0]["status"] = WebStoreOrderRefundStatus.CANCELLED.value
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -856,7 +856,7 @@ def test_partial_refund_failed_webhook_for_signup_group_payment(api_client):
     refund_payment_data = [DEFAULT_GET_REFUND_PAYMENTS_DATA[0].copy()]
     refund_payment_data[0]["status"] = WebStoreOrderRefundStatus.CANCELLED.value
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -888,7 +888,7 @@ def test_order_cancelled_webhook_for_signup_payment(api_client):
     web_store_response_data = DEFAULT_GET_ORDER_DATA.copy()
     web_store_response_data.update({"status": WebStoreOrderStatus.CANCELLED.value})
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -918,7 +918,7 @@ def test_order_cancelled_webhook_for_signup_group_payment(api_client):
     web_store_response_data = DEFAULT_GET_ORDER_DATA.copy()
     web_store_response_data.update({"status": WebStoreOrderStatus.CANCELLED.value})
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -979,7 +979,7 @@ def test_order_cancelled_webhook_for_recurring_event_signup_payment(
     web_store_response_data = DEFAULT_GET_ORDER_DATA.copy()
     web_store_response_data.update({"status": WebStoreOrderStatus.CANCELLED.value})
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -1045,7 +1045,7 @@ def test_order_cancelled_webhook_for_recurring_event_signup_group_payment(
     web_store_response_data = DEFAULT_GET_ORDER_DATA.copy()
     web_store_response_data.update({"status": WebStoreOrderStatus.CANCELLED.value})
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     with requests_mock.Mocker() as req_mock:
         req_mock.get(
@@ -1104,7 +1104,7 @@ def test_invalid_order_id(
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.parametrize(
@@ -1150,7 +1150,7 @@ def test_invalid_namespace(
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.parametrize(
@@ -1174,7 +1174,7 @@ def test_wrong_event_type(api_client, webhook_type, action_endpoint, webhook_dat
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.parametrize(
@@ -1216,7 +1216,7 @@ def test_payment_not_found(
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.parametrize(
@@ -1244,7 +1244,7 @@ def test_refund_not_found(api_client, event_type):
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.parametrize(
@@ -1304,7 +1304,7 @@ def test_payment_and_order_webhook_web_store_api_request_exception(
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.parametrize(
@@ -1357,7 +1357,7 @@ def test_refund_webhook_web_store_api_request_exception(
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -1386,7 +1386,7 @@ def test_webhook_and_web_store_payment_status_mismatch(api_client):
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -1413,7 +1413,7 @@ def test_webhook_and_web_store_order_status_mismatch(api_client):
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
 
 @pytest.mark.parametrize(
@@ -1475,4 +1475,4 @@ def test_webhook_and_web_store_refund_status_mismatch(
 
     assert len(mail.outbox) == 0
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0

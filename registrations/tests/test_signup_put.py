@@ -2,9 +2,9 @@ from decimal import Decimal
 from unittest.mock import PropertyMock, patch
 
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
 from registrations.enums import VatPercentage
@@ -748,8 +748,8 @@ def test_signup_id_is_audit_logged_on_put(api_client, registration, signup):
 
     assert_update_signup(api_client, signup.pk, signup_data)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [signup.pk]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [signup.pk]
 
 
 @pytest.mark.parametrize(

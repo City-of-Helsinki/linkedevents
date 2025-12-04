@@ -1,7 +1,7 @@
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 
 
@@ -57,10 +57,8 @@ def test_organization_class_id_is_audit_logged_get_detail(
     response = get_detail(user_api_client, organization_class.pk)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        organization_class.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [organization_class.pk]
 
 
 @pytest.mark.django_db
@@ -70,10 +68,8 @@ def test_organization_class_id_is_audit_logged_get_list(
     response = get_list(user_api_client)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        organization_class.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [organization_class.pk]
 
 
 @pytest.mark.django_db

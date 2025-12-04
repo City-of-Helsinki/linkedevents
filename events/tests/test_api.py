@@ -8,10 +8,9 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 from django_orghierarchy.models import Organization
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 from rest_framework.test import APITestCase
-
-from audit_log.models import AuditLogEntry
 
 from ..api import EventSerializer, OrganizationListSerializer, _terms_to_regex
 from ..auth import ApiKeyAuth
@@ -219,10 +218,8 @@ class TestOrganizationAPI(APITestCase):
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK
 
-        audit_log_entry = AuditLogEntry.objects.first()
-        assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-            self.org.pk
-        ]
+        audit_log_entry = ResilientLogEntry.objects.first()
+        assert audit_log_entry.context["target"]["object_ids"] == [self.org.pk]
 
     def test_organization_id_is_audit_logged_on_get_list(self):
         url = reverse("organization-list")
@@ -230,11 +227,9 @@ class TestOrganizationAPI(APITestCase):
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK
 
-        audit_log_entry = AuditLogEntry.objects.first()
+        audit_log_entry = ResilientLogEntry.objects.first()
 
-        assert Counter(
-            audit_log_entry.message["audit_event"]["target"]["object_ids"]
-        ) == Counter(
+        assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
             [
                 self.org.pk,
                 self.normal_org.pk,
@@ -398,10 +393,8 @@ class TestImageAPI(APITestCase):
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK
 
-        audit_log_entry = AuditLogEntry.objects.first()
-        assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-            self.image_1.pk
-        ]
+        audit_log_entry = ResilientLogEntry.objects.first()
+        assert audit_log_entry.context["target"]["object_ids"] == [self.image_1.pk]
 
     def test_image_id_is_audit_logged_on_get_list(self):
         url = reverse("image-list")
@@ -410,10 +403,10 @@ class TestImageAPI(APITestCase):
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK
 
-        audit_log_entry = AuditLogEntry.objects.first()
-        assert Counter(
-            audit_log_entry.message["audit_event"]["target"]["object_ids"]
-        ) == Counter([self.image_1.pk, self.image_2.pk, self.image_3.pk])
+        audit_log_entry = ResilientLogEntry.objects.first()
+        assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+            [self.image_1.pk, self.image_2.pk, self.image_3.pk]
+        )
 
 
 @pytest.mark.parametrize(

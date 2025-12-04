@@ -4,9 +4,9 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 from django.conf import settings
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.conftest import APIClient
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
@@ -1006,8 +1006,8 @@ def test_signup_id_is_audit_logged_on_get_detail(api_client, signup):
 
     assert_get_detail(api_client, signup.id)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [signup.pk]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [signup.pk]
 
 
 @pytest.mark.django_db
@@ -1017,10 +1017,10 @@ def test_signup_id_is_audit_logged_on_get_list(api_client, signup, signup2):
 
     get_list_and_assert_signups(api_client, "", [signup, signup2])
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([signup.pk, signup2.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [signup.pk, signup2.pk]
+    )
 
 
 @pytest.mark.parametrize(
