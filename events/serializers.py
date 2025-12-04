@@ -4,7 +4,6 @@ import time
 import urllib
 from copy import deepcopy
 from datetime import timedelta
-from typing import Optional
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -91,7 +90,7 @@ def generate_id(namespace):
     t = time.time() * 1000
     postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b"\x00"))
     postfix = postfix.strip(b"=").lower().decode(encoding="UTF-8")
-    return "{}:{}".format(namespace, postfix)
+    return f"{namespace}:{postfix}"
 
 
 def _get_serializer_for_model(model, version="v1"):
@@ -222,7 +221,7 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
         model = Image
         fields = "__all__"
 
-    @extend_schema_field(Optional[str])
+    @extend_schema_field(str | None)
     def get_license_url(self, obj):
         return obj.license.url if obj.license else None
 
@@ -928,7 +927,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         self.skip_empties = skip_empties
         if self.context:
             for ext in self.context.get("extensions", ()):
-                self.fields["extension_{}".format(ext.identifier)] = (
+                self.fields[f"extension_{ext.identifier}"] = (
                     ext.get_extension_serializer()
                 )
 
@@ -1063,8 +1062,8 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         for field in self.fields_needed_to_publish:
             if field in self.translated_fields:
                 for lang in languages:
-                    name = "name_%s" % lang
-                    field_lang = "%s_%s" % (field, lang)
+                    name = f"name_{lang}"
+                    field_lang = f"{field}_{lang}"
                     if data.get(name) and not data.get(field_lang):
                         errors.setdefault(field, {})[lang] = lang_error_msg
                     if (
@@ -1402,7 +1401,7 @@ class SearchSerializer(serializers.Serializer):
         model = search_result.model
         version = self.context["request"].version
         ser_class = _get_serializer_for_model(model, version=version)
-        assert ser_class is not None, "Serializer for %s not found" % model
+        assert ser_class is not None, f"Serializer for {model} not found"
         data = ser_class(search_result.object, context=self.context).data
         data["resource_type"] = model._meta.model_name
         data["score"] = search_result.score

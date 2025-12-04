@@ -1,6 +1,5 @@
 import math
 from collections import Counter
-from typing import Optional, Union
 
 import pytest
 from django.utils import translation
@@ -17,7 +16,7 @@ from registrations.tests.utils import create_user_by_role
 # === util methods ===
 
 
-def get_detail(api_client: APIClient, price_group_pk: Union[str, int]):
+def get_detail(api_client: APIClient, price_group_pk: str | int):
     url = reverse(
         "pricegroup-detail",
         kwargs={"pk": price_group_pk},
@@ -26,23 +25,23 @@ def get_detail(api_client: APIClient, price_group_pk: Union[str, int]):
     return api_client.get(url)
 
 
-def get_list(api_client: APIClient, query: Optional[str] = None, data=None):
+def get_list(api_client: APIClient, query: str | None = None, data=None):
     url = reverse("pricegroup-list")
 
     if query:
-        url = "%s?%s" % (url, query)
+        url = f"{url}?{query}"
 
     return api_client.get(url, data=data)
 
 
-def assert_get_detail(api_client: APIClient, price_group_pk: Union[str, int]):
+def assert_get_detail(api_client: APIClient, price_group_pk: str | int):
     response = get_detail(api_client, price_group_pk)
     assert response.status_code == status.HTTP_200_OK
 
     return response
 
 
-def assert_get_list(api_client: APIClient, query: Optional[str] = None):
+def assert_get_list(api_client: APIClient, query: str | None = None):
     response = get_list(api_client, query=query)
     assert response.status_code == status.HTTP_200_OK
 

@@ -16,9 +16,8 @@ class Command(BaseCommand):
         self.importers = get_importers()
         self.imp_list = ", ".join(sorted(self.importers.keys()))
         self.missing_args_message = (
-            "Enter the name of the event importer module. Valid importers: {}".format(
-                self.imp_list
-            )
+            f"Enter the name of the event importer module. "
+            f"Valid importers: {self.imp_list}"
         )
 
     def add_arguments(self, parser):
@@ -34,7 +33,7 @@ class Command(BaseCommand):
         module = options["module"]
         if module not in self.importers:
             raise CommandError(
-                "Importer %s not found. Valid importers: %s" % (module, self.imp_list)
+                f"Importer {module} not found. Valid importers: {self.imp_list}"
             )
         imp_class = self.importers[module]
 
@@ -53,9 +52,7 @@ class Command(BaseCommand):
         method_name = "generate_documentation_md"
         if not (doc_gen_method := getattr(importer, method_name, None)):
             raise CommandError(
-                "Importer {} does not support documentation generation".format(
-                    importer.name
-                )
+                f"Importer {importer.name} does not support documentation generation"
             )
 
         # Ensure translated fields are populated correctly.

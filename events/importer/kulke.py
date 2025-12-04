@@ -3,10 +3,10 @@ import itertools
 import logging
 import os
 import re
+from collections.abc import Iterator, Sequence
 from datetime import datetime, time, timedelta
 from posixpath import join as urljoin
 from textwrap import dedent
-from typing import Iterator, Sequence, Union
 from zoneinfo import ZoneInfo
 
 import dateutil
@@ -225,7 +225,7 @@ COURSE_KEYWORDS = ("p9270",)
 
 # retain the above for simplicity, even if kulke importer internally
 # requires full keyword ids
-KEYWORDS_TO_ADD_TO_AUDIENCE = ["yso:{}".format(i) for i in KEYWORDS_TO_ADD_TO_AUDIENCE]
+KEYWORDS_TO_ADD_TO_AUDIENCE = [f"yso:{i}" for i in KEYWORDS_TO_ADD_TO_AUDIENCE]
 
 # category text replacements for keyword determination
 CATEGORY_TEXT_REPLACEMENTS = [("jumppa", "voimistelu"), ("Stoan", "Stoa")]
@@ -234,12 +234,12 @@ LOCAL_TZ = ZoneInfo("Europe/Helsinki")
 
 
 def make_kulke_id(num):
-    return "kulke:{}".format(num)
+    return f"kulke:{num}"
 
 
 def make_event_name(title, subtitle):
     if title and subtitle:
-        return "{} – {}".format(title, subtitle)
+        return f"{title} – {subtitle}"
     elif title:
         return title
     elif subtitle:
@@ -375,7 +375,7 @@ class KulkeImporter(Importer):
             manual = MANUAL_CATEGORIES.get(cid)
             if manual:
                 try:
-                    yso_ids = ["yso:{}".format(i) for i in manual]
+                    yso_ids = [f"yso:{i}" for i in manual]
                     yso_keywords = Keyword.objects.filter(id__in=yso_ids)
                     c["yso_keywords"] = yso_keywords
                 except Keyword.DoesNotExist:
@@ -387,7 +387,7 @@ class KulkeImporter(Importer):
 
         self.categories = categories
 
-        course_keyword_ids = ["yso:{}".format(kw) for kw in COURSE_KEYWORDS]
+        course_keyword_ids = [f"yso:{kw}" for kw in COURSE_KEYWORDS]
         self.course_keywords = set(Keyword.objects.filter(id__in=course_keyword_ids))
 
         try:
@@ -395,7 +395,7 @@ class KulkeImporter(Importer):
         except License.DoesNotExist:
             self.event_only_license = None
 
-    def fetch_kulke_categories(self) -> dict[str, Union[str, int]]:
+    def fetch_kulke_categories(self) -> dict[str, str | int]:
         response = requests.get(CATEGORY_URL, timeout=self.default_timeout)
         response.raise_for_status()
         root = etree.fromstring(response.content)
@@ -411,8 +411,8 @@ class KulkeImporter(Importer):
         location = event["location"]
         if location["name"] is None:
             logger.warning(
-                "Missing place for event %s (%s)"
-                % (get_event_name(event), event["origin_id"])
+                f"Missing place for event {get_event_name(event)} "
+                f"({event['origin_id']})"
             )
             return None
 
@@ -457,8 +457,7 @@ class KulkeImporter(Importer):
             event["location"]["id"] = INTERNET_LOCATION_ID
         else:
             logger.warning(
-                "No match found for place '%s' (event %s)"
-                % (loc_name, get_event_name(event))
+                f"No match found for place '{loc_name}' (event {get_event_name(event)})"
             )
 
     @staticmethod
@@ -476,7 +475,7 @@ class KulkeImporter(Importer):
         formatted_paragraphs = []
         for paragraph in paragraphs:
             lines = paragraph.strip().split(os.linesep)
-            formatted_paragraph = "<p>{0}</p>".format("<br>".join(lines))
+            formatted_paragraph = f"<p>{'<br>'.join(lines)}</p>"
             formatted_paragraphs.append(formatted_paragraph)
         return "".join(formatted_paragraphs)
 
@@ -705,7 +704,7 @@ class KulkeImporter(Importer):
                     kulke_keyword = Keyword.objects.get(pk=kulke_id)
                     event_keywords.add(kulke_keyword)
                 except Keyword.DoesNotExist:
-                    logger.exception("Could not find {}".format(kulke_id))
+                    logger.exception(f"Could not find {kulke_id}")
 
             if is_course:
                 event_keywords.update(self.course_keywords)
@@ -910,7 +909,7 @@ class KulkeImporter(Importer):
                 publisher=self.organization,
                 super_event_type=Event.SuperEventType.RECURRING,
                 data_source=self.data_source,
-                id="linkedevents:agg-{}".format(aggregate.id),
+                id=f"linkedevents:agg-{aggregate.id}",
             )
             self._update_super_event(super_event, events)
             super_event.save()
@@ -1032,8 +1031,7 @@ class KulkeImporter(Importer):
             events = root.xpath("/eventdata/event")
             if not events:
                 break
-            for event in events:
-                yield event
+            yield from events
             offset += 100
 
     def _import_events(self, importing_courses=False):

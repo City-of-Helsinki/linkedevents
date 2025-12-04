@@ -15,8 +15,8 @@ class Command(BaseCommand):
         self.exporters = get_exporters()
         self.exp_list = ", ".join(sorted(self.exporters.keys()))
         self.missing_args_message = (
-            "Enter the name of the event exporter module. Valid exporters: %s"
-            % self.exp_list
+            f"Enter the name of the event exporter module. "
+            f"Valid exporters: {self.exp_list}"
         )
 
     def add_arguments(self, parser):
@@ -35,14 +35,14 @@ class Command(BaseCommand):
         )
         for exp in self.exporter_types:
             parser.add_argument(
-                "--%s" % exp, dest=exp, action="store_true", help="export %s" % exp
+                f"--{exp}", dest=exp, action="store_true", help=f"export {exp}"
             )
 
     def handle(self, *args, **options):
         module = options["module"]
         if module not in self.exporters:
             raise CommandError(
-                "Exporter %s not found. Valid exporters: %s" % (module, self.exp_list)
+                f"Exporter {module} not found. Valid exporters: {self.exp_list}"
             )
         exp_class = self.exporters[module]
 
@@ -54,12 +54,12 @@ class Command(BaseCommand):
         activate(settings.LANGUAGES[0][0])
 
         for exp_type in self.exporter_types:
-            name = "export_%s" % exp_type
+            name = f"export_{exp_type}"
             method = getattr(exporter, name, None)
             if options[exp_type]:
                 if not method:
                     raise CommandError(
-                        "Exporter %s does not support exporter %s" % (name, exp_type)
+                        f"Exporter {name} does not support exporter {exp_type}"
                     )
             else:
                 if not options["new"] and not options["delete"]:

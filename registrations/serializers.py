@@ -1,6 +1,5 @@
 from datetime import timedelta
 from decimal import Decimal
-from typing import Optional
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -982,14 +981,14 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
     def get_current_waiting_list_count(self, obj):
         return obj.current_waiting_list_count
 
-    @extend_schema_field(Optional[int])
+    @extend_schema_field(int | None)
     def get_remaining_attendee_capacity(self, obj):
         # Because there can be slight delay with capacity calculations in case of seat expiration,  # noqa: E501
         # calculate the current value on the fly so that front-end gets the most
         # recent information.
         return obj.calculate_remaining_attendee_capacity()
 
-    @extend_schema_field(Optional[int])
+    @extend_schema_field(int | None)
     def get_remaining_waiting_list_capacity(self, obj):
         # Because there can be slight delay with capacity calculations in case of seat expiration,  # noqa: E501
         # calculate the current value on the fly so that front-end gets the most

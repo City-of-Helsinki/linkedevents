@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -124,7 +124,7 @@ def assert_list_contains_matching_dictionary(l1, dictionary):
 
 def assert_fields_exist(data, fields):
     for field in fields:
-        assert field in data, "{} not found in {}".format(field, data)
+        assert field in data, f"{field} not found in {data}"
     assert len(data) == len(fields)
 
 
@@ -139,18 +139,14 @@ def versioned_reverse(view, version="v1", **kwargs):
 def post_event(api_client, event_data):
     url = reverse("event-list", kwargs={"version": "v1"})
     response = api_client.post(url, event_data, format="json")
-    assert response.status_code == 201, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 201, f"{response.status_code} {response.data}"
     return response
 
 
 def put_event(api_client, event, event_data):
     url = reverse("event-detail", kwargs={"version": "v1", "pk": event.pk})
     response = api_client.put(url, event_data, format="json")
-    assert response.status_code == 200, "{} {}".format(
-        response.status_code, response.data
-    )
+    assert response.status_code == 200, f"{response.status_code} {response.data}"
     return response
 
 
@@ -166,7 +162,7 @@ def create_super_event(events: list[Event], data_source) -> Event:
     super_event = EventFactory(
         super_event_type=Event.SuperEventType.RECURRING,
         data_source=data_source,
-        id="linkedevents:agg-{}".format(aggregate.id),
+        id=f"linkedevents:agg-{aggregate.id}",
     )
     aggregate.super_event = super_event
     aggregate.save()
@@ -183,36 +179,36 @@ def create_super_event(events: list[Event], data_source) -> Event:
 def create_events_for_weekdays() -> None:
     EventFactory(
         name=settings.ISO_WEEKDAYS[0][1].lower(),
-        start_time=datetime(2025, 3, 10, 12, tzinfo=timezone.utc),
-        end_time=datetime(2025, 3, 10, 14, tzinfo=timezone.utc),
+        start_time=datetime(2025, 3, 10, 12, tzinfo=UTC),
+        end_time=datetime(2025, 3, 10, 14, tzinfo=UTC),
     )
     EventFactory(
         name=settings.ISO_WEEKDAYS[1][1].lower(),
-        start_time=datetime(2025, 3, 11, 12, tzinfo=timezone.utc),
-        end_time=datetime(2025, 3, 11, 14, tzinfo=timezone.utc),
+        start_time=datetime(2025, 3, 11, 12, tzinfo=UTC),
+        end_time=datetime(2025, 3, 11, 14, tzinfo=UTC),
     )
     EventFactory(
         name=settings.ISO_WEEKDAYS[2][1].lower(),
-        start_time=datetime(2025, 3, 12, 12, tzinfo=timezone.utc),
-        end_time=datetime(2025, 3, 12, 14, tzinfo=timezone.utc),
+        start_time=datetime(2025, 3, 12, 12, tzinfo=UTC),
+        end_time=datetime(2025, 3, 12, 14, tzinfo=UTC),
     )
     EventFactory(
         name=settings.ISO_WEEKDAYS[3][1].lower(),
-        start_time=datetime(2025, 3, 13, 12, tzinfo=timezone.utc),
-        end_time=datetime(2025, 3, 13, 14, tzinfo=timezone.utc),
+        start_time=datetime(2025, 3, 13, 12, tzinfo=UTC),
+        end_time=datetime(2025, 3, 13, 14, tzinfo=UTC),
     )
     EventFactory(
         name=settings.ISO_WEEKDAYS[4][1].lower(),
-        start_time=datetime(2025, 3, 14, 12, tzinfo=timezone.utc),
-        end_time=datetime(2025, 3, 14, 14, tzinfo=timezone.utc),
+        start_time=datetime(2025, 3, 14, 12, tzinfo=UTC),
+        end_time=datetime(2025, 3, 14, 14, tzinfo=UTC),
     )
     EventFactory(
         name=settings.ISO_WEEKDAYS[5][1].lower(),
-        start_time=datetime(2025, 3, 15, 12, tzinfo=timezone.utc),
-        end_time=datetime(2025, 3, 15, 14, tzinfo=timezone.utc),
+        start_time=datetime(2025, 3, 15, 12, tzinfo=UTC),
+        end_time=datetime(2025, 3, 15, 14, tzinfo=UTC),
     )
     EventFactory(
         name=settings.ISO_WEEKDAYS[6][1].lower(),
-        start_time=datetime(2025, 3, 16, 12, tzinfo=timezone.utc),
-        end_time=datetime(2025, 3, 16, 14, tzinfo=timezone.utc),
+        start_time=datetime(2025, 3, 16, 12, tzinfo=UTC),
+        end_time=datetime(2025, 3, 16, 14, tzinfo=UTC),
     )

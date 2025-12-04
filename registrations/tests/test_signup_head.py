@@ -1,5 +1,3 @@
-from typing import Union
-
 import pytest
 from rest_framework import status
 
@@ -17,7 +15,7 @@ def head_list(api_client: APIClient):
     return api_client.head(url)
 
 
-def head_detail(api_client: APIClient, pk: Union[str, int]):
+def head_detail(api_client: APIClient, pk: str | int):
     url = reverse("signup-detail", kwargs={"pk": pk})
 
     return api_client.head(url)

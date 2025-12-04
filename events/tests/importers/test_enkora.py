@@ -2261,9 +2261,7 @@ class TestEnkoraImporter:
                 deserialized_object.save()
                 save_cnt += 1
                 print(  # noqa: T201
-                    "{}) Saved one data: {}".format(
-                        save_cnt, deserialized_object.object.id
-                    )
+                    f"{save_cnt}) Saved one data: {deserialized_object.object.id}"
                 )
 
         return save_cnt

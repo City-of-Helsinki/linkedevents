@@ -37,7 +37,7 @@ class CamelCaseJSONParser(JSONParser):
                 data = stream.read().decode(encoding)
                 return rename_fields(json.loads(data))
             except ValueError as exc:
-                raise ParseError("JSON parse error - %s" % str(exc))
+                raise ParseError(f"JSON parse error - {str(exc)}")
 
 
 class JSONLDParser(CamelCaseJSONParser):

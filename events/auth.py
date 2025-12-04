@@ -63,7 +63,7 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     )
 
     def get_display_name(self) -> str:
-        return "API key from data source %s" % self.data_source
+        return f"API key from data source {self.data_source}"
 
     def __str__(self):
         return self.get_display_name()
@@ -147,7 +147,7 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
         return False
 
 
-class ApiKeyAuth(object):
+class ApiKeyAuth:
     def __init__(self, data_source):
         self.data_source = data_source
 

@@ -8,7 +8,7 @@ from rest_framework.exceptions import ParseError
 from events.models import KeywordLabel
 
 
-class KeywordMatcher(object):
+class KeywordMatcher:
     def __init__(self):
         pass
 

@@ -1,5 +1,3 @@
-from typing import Union
-
 from rest_framework import permissions
 from rest_framework.request import Request
 from rest_framework.views import APIView
@@ -11,9 +9,7 @@ from registrations.models import PriceGroup, Registration, SignUp, SignUpGroup
 
 class SignUpPermissionMixin:
     @staticmethod
-    def _has_signup_admin_permissions(
-        request: Request, obj: Union[SignUp, SignUpGroup]
-    ):
+    def _has_signup_admin_permissions(request: Request, obj: SignUp | SignUpGroup):
         return (
             request.user.is_superuser
             or request.user.is_registration_admin_of(obj.publisher)
@@ -28,7 +24,7 @@ class SignUpPermissionMixin:
         )
 
     @staticmethod
-    def _can_use_access_code(request: Request, obj: Union[SignUp, SignUpGroup]):
+    def _can_use_access_code(request: Request, obj: SignUp | SignUpGroup):
         return (
             request.method == "GET"
             and request.user.is_strongly_identified

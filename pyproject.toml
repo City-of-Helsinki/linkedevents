@@ -18,6 +18,8 @@ select = [
     "PIE",
     # flake8-print
     "T20",
+    # pyupgrade
+    "UP",
 ]
 extend-per-file-ignores = { "*/migrations/*" = ["E501"], "*/tests/*" = ["E501"] }
 

@@ -433,7 +433,7 @@ def make_keyword():
 
         labels = [
             KeywordLabel.objects.get_or_create(
-                name="%s%s" % (kw_name, lang.id), language=lang
+                name=f"{kw_name}{lang.id}", language=lang
             )[0]
             for lang in lang_objs
         ]

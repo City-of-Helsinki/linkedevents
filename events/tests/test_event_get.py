@@ -34,14 +34,14 @@ api_client = APIClient()
 def get_list(api_client, version="v1", data=None, query_string=None):
     url = reverse("event-list", version=version)
     if query_string:
-        url = "%s?%s" % (url, query_string)
+        url = f"{url}?{query_string}"
     return get(api_client, url, data=data)
 
 
 def get_list_no_code_assert(api_client, version="v1", data=None, query_string=None):
     url = reverse("event-list", version=version)
     if query_string:
-        url = "%s?%s" % (url, query_string)
+        url = f"{url}?{query_string}"
     return api_client.get(url, data=data, format="json")
 
 
@@ -166,7 +166,7 @@ class EventsListTestCaseMixin:
 
     def _get_list_and_assert_events(self, query_string=None, events=None):
         if query_string:
-            url = "%s?%s" % (self.list_url, query_string)
+            url = f"{self.list_url}?{query_string}"
         else:
             url = self.list_url
 
@@ -346,7 +346,7 @@ def test_get_event_list_returns_400_when_invalid_srid(event):
     origin = Point(24, 24)
 
     query_string = f"srid=777&dwithin_origin={origin.x},{origin.y}"
-    url = reverse("event-list") + "?%s" % query_string
+    url = f"{reverse('event-list')}?{query_string}"
 
     response = api_client.get(url, format="json")
 
@@ -781,10 +781,7 @@ def test_registration_admin_user_filter(
 def test_cannot_use_registration_admin_user_and_admin_user_filters_simultaneously(
     user_api_client,
 ):
-    url = "%s?%s" % (
-        reverse("event-list"),
-        "admin_user=true&registration_admin_user=true",
-    )
+    url = f"{reverse('event-list')}?admin_user=true&registration_admin_user=true"
     response = api_client.get(url, format="json")
     assert (
         response.data["detail"]
@@ -868,7 +865,7 @@ def test_event_list_show_deleted_param(api_client, event, event2, user):
     assert event2.id in {e["id"] for e in response.data["data"]}
 
     expected_keys = ["id", "name", "last_modified_time", "deleted", "replaced_by"]
-    event_data = next((e for e in response.data["data"] if e["id"] == event.id))
+    event_data = next(e for e in response.data["data"] if e["id"] == event.id)
     assert len(event_data) == len(expected_keys)
     for key in event_data:
         assert key in expected_keys
@@ -890,7 +887,7 @@ def test_event_list_deleted_param(api_client, event, event2, user):
     assert event2.id not in {e["id"] for e in response.data["data"]}
 
     expected_keys = ["id", "name", "last_modified_time", "deleted", "replaced_by"]
-    event_data = next((e for e in response.data["data"] if e["id"] == event.id))
+    event_data = next(e for e in response.data["data"] if e["id"] == event.id)
     assert len(event_data) == len(expected_keys)
     for key in event_data:
         assert key in expected_keys
