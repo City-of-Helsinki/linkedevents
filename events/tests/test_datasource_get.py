@@ -1,9 +1,9 @@
 from collections import Counter
 
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 
 
@@ -90,10 +90,8 @@ def test_anonymous_user_can_retrieve_data_source(api_client, data_source):
 def test_data_source_id_is_audit_logged_on_get_detail(user_api_client, data_source):
     assert_get_data_source(user_api_client, data_source.id)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        data_source.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [data_source.pk]
 
 
 @pytest.mark.django_db
@@ -103,7 +101,7 @@ def test_data_source_id_is_audit_logged_on_get_list(
     response = get_list(user_api_client)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([data_source.pk, other_data_source.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [data_source.pk, other_data_source.pk]
+    )

@@ -1,7 +1,7 @@
 import pytest
 from django.conf import settings
+from resilient_logger.models import ResilientLogEntry
 
-from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
 from events.tests.utils import assert_place_data_is_equal
 
@@ -46,10 +46,8 @@ def test_create_place_with_post(api_client, place_dict, user2_with_user_type):
 def test_place_id_is_audit_logged_on_post(user_api_client, place_dict):
     response = create_with_post(user_api_client, place_dict)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        response.data["id"]
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [response.data["id"]]
 
 
 @pytest.mark.django_db

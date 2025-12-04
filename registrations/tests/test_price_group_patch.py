@@ -2,10 +2,10 @@ from decimal import Decimal
 
 import pytest
 from django_orghierarchy.models import Organization
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from audit_log.models import AuditLogEntry
 from events.tests.factories import ApiKeyUserFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.models import User
@@ -340,10 +340,8 @@ def test_price_group_id_is_audit_logged_on_patch(api_client, organization):
 
     assert_patch_price_group(api_client, price_group.pk, default_price_group_data)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        price_group.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [price_group.pk]
 
 
 @pytest.mark.parametrize(

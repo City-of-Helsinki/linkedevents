@@ -1,9 +1,9 @@
 from decimal import Decimal
 
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import PriceGroup, Registration, RegistrationPriceGroup
 from registrations.tests.factories import PriceGroupFactory
@@ -130,10 +130,8 @@ def test_registration_id_is_audit_logged_on_delete(user_api_client, registration
     response = delete_registration(user_api_client, registration.id)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        registration.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [registration.pk]
 
 
 @pytest.mark.django_db

@@ -1,8 +1,8 @@
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
-from audit_log.models import AuditLogEntry
 from events.tests.utils import assert_keyword_set_data_is_equal
 from events.tests.utils import versioned_reverse as reverse
 
@@ -50,10 +50,8 @@ def test_create_keywordset_with_post(
 def test_keyword_set_id_is_audit_logged_on_post(user_api_client, keyword_set_dict):
     response = assert_create_keyword_set(user_api_client, keyword_set_dict)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        response.data["id"]
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [response.data["id"]]
 
 
 @pytest.mark.django_db

@@ -1,9 +1,9 @@
 import os
 
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.models import Image
 
 from .test_event_images_v1 import create_uploaded_image
@@ -61,8 +61,8 @@ def test__delete_an_image(api_client, data_source, user, organization):
 def test_image_id_is_audit_logged_on_delete(user_api_client, image):
     assert_delete_image(user_api_client, image)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [image.pk]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [image.pk]
 
 
 @pytest.mark.django_db

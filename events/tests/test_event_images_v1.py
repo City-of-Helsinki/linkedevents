@@ -5,9 +5,9 @@ from io import BytesIO
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image as PILImage
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
 from events.models import Image
 from events.tests.test_event_put import update_with_put
@@ -121,8 +121,8 @@ def test_image_id_is_audit_logged_on_get_detail(user_api_client, image):
     response = get_detail(user_api_client, image.pk)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [image.pk]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [image.pk]
 
 
 @pytest.mark.django_db
@@ -130,10 +130,10 @@ def test_image_id_is_audit_logged_on_get_list(user_api_client, image, image2):
     response = get_list(user_api_client)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([image.pk, image2.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [image.pk, image2.pk]
+    )
 
 
 @pytest.mark.django_db

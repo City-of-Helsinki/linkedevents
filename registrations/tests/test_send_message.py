@@ -4,9 +4,9 @@ import pytest
 from django.conf import settings
 from django.core import mail
 from django.utils import translation
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.factories import ApiKeyUserFactory, LanguageFactory
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import SignUp
@@ -478,10 +478,10 @@ def test_signup_ids_are_audit_logged_on_send_message(
         [signup.contact_person, signup2.contact_person],
     )
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([signup.contact_person.pk, signup2.contact_person.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [signup.contact_person.pk, signup2.contact_person.pk]
+    )
 
 
 @pytest.mark.django_db

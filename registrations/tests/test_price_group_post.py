@@ -1,9 +1,9 @@
 import pytest
 from django_orghierarchy.models import Organization
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from audit_log.models import AuditLogEntry
 from events.tests.factories import ApiKeyUserFactory
 from events.tests.utils import versioned_reverse as reverse
 from helevents.models import User
@@ -251,10 +251,8 @@ def test_price_group_id_is_audit_logged_on_post(api_client, organization):
     }
     response = assert_create_price_group(api_client, data)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        response.data["id"]
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [response.data["id"]]
 
 
 @pytest.mark.parametrize(

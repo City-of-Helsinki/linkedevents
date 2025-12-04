@@ -1,3 +1,4 @@
+import logging
 from collections import Counter
 from datetime import UTC, datetime
 from unittest.mock import Mock
@@ -5,10 +6,11 @@ from unittest.mock import Mock
 import pytest
 from django.contrib.auth.models import AnonymousUser
 from freezegun import freeze_time
+from resilient_logger.models import ResilientLogEntry
+from resilient_logger.sources import ResilientLogSource
 
 from audit_log.enums import Operation, Role, Status
 from audit_log.mixins import AuditLogApiViewMixin
-from audit_log.models import AuditLogEntry
 from audit_log.utils import _get_remote_address, _get_target, commit_to_audit_log
 from events.tests.factories import ApiKeyUserFactory, OrganizationFactory
 from helevents.models import User
@@ -20,12 +22,11 @@ from helevents.tests.factories import UserFactory
 def _assert_basic_log_entry_data(log_entry):
     current_time = datetime.now(tz=UTC)
     iso_8601_date = f"{current_time.replace(tzinfo=None).isoformat(sep='T', timespec='milliseconds')}Z"
+    document = ResilientLogSource(log_entry).get_document()
 
-    assert log_entry.message["audit_event"]["origin"] == "linkedevents"
-    assert log_entry.message["audit_event"]["date_time_epoch"] == int(
-        current_time.timestamp() * 1000
-    )
-    assert log_entry.message["audit_event"]["date_time"] == iso_8601_date
+    assert document["audit_event"]["origin"] == "linkedevents-api"
+    assert document["audit_event"]["date_time"] == iso_8601_date
+    assert document["audit_event"]["level"] == logging.NOTSET
 
 
 def _create_default_request_mock(user):
@@ -68,13 +69,14 @@ def test_commit_to_audit_log_response_status(status_code, audit_status):
 
     res_mock = Mock(status_code=status_code)
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     commit_to_audit_log(req_mock, res_mock)
 
-    assert AuditLogEntry.objects.count() == 1
-    log_entry = AuditLogEntry.objects.first()
-    assert log_entry.message["audit_event"]["status"] == audit_status
+    assert ResilientLogEntry.objects.count() == 1
+    log_entry = ResilientLogEntry.objects.first()
+    assert log_entry.context["status"] == audit_status
+    assert log_entry.message == audit_status
     _assert_basic_log_entry_data(log_entry)
 
 
@@ -105,14 +107,14 @@ def test_commit_to_audit_log_crud_operations(http_method, audit_operation):
 
     res_mock = Mock(status_code=200)
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     commit_to_audit_log(req_mock, res_mock)
 
-    assert AuditLogEntry.objects.count() == 1
-    log_entry = AuditLogEntry.objects.first()
-    assert log_entry.message["audit_event"]["operation"] == audit_operation
-    assert log_entry.message["audit_event"]["target"]["path"] == "/v1/endpoint"
+    assert ResilientLogEntry.objects.count() == 1
+    log_entry = ResilientLogEntry.objects.first()
+    assert log_entry.context["operation"] == audit_operation
+    assert log_entry.context["target"]["path"] == "/v1/endpoint"
     _assert_basic_log_entry_data(log_entry)
 
 
@@ -158,16 +160,16 @@ def test_commit_to_audit_log_actor_data(user_role, audit_role):
 
     res_mock = Mock(status_code=200)
 
-    assert AuditLogEntry.objects.count() == 0
+    assert ResilientLogEntry.objects.count() == 0
 
     commit_to_audit_log(req_mock, res_mock)
 
-    assert AuditLogEntry.objects.count() == 1
-    log_entry = AuditLogEntry.objects.first()
-    assert log_entry.message["audit_event"]["actor"]["role"] == audit_role
-    assert log_entry.message["audit_event"]["actor"]["ip_address"] == "1.2.3.4"
+    assert ResilientLogEntry.objects.count() == 1
+    log_entry = ResilientLogEntry.objects.first()
+    assert log_entry.context["actor"]["role"] == audit_role
+    assert log_entry.context["actor"]["ip_address"] == "1.2.3.4"
     if hasattr(user, "uuid"):
-        assert log_entry.message["audit_event"]["actor"]["uuid"] == str(user.uuid)
+        assert log_entry.context["actor"]["uuid"] == str(user.uuid)
     _assert_basic_log_entry_data(log_entry)
 
 

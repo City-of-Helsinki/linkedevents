@@ -1,7 +1,7 @@
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
 from events.tests.test_keyword_post import create_with_post
 from events.tests.utils import assert_keyword_data_is_equal
@@ -53,10 +53,8 @@ def test_keyword_id_is_audit_logged_on_put(user_api_client, keyword, keyword_dic
     response = update_with_put(user_api_client, detail_url, keyword_dict)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        keyword.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [keyword.pk]
 
 
 @pytest.mark.django_db

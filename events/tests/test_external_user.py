@@ -1,9 +1,8 @@
 from collections import Counter
 
 import pytest
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
-
-from audit_log.models import AuditLogEntry
 
 from ..models import PublicationStatus
 from .factories import (
@@ -132,10 +131,10 @@ class TestEventBulkCreate:
     ):
         response = bulk_create(authed_api_client, [minimal_event, minimal_event])
 
-        audit_log_entry = AuditLogEntry.objects.first()
-        assert Counter(
-            audit_log_entry.message["audit_event"]["target"]["object_ids"]
-        ) == Counter([response.data[0]["id"], response.data[1]["id"]])
+        audit_log_entry = ResilientLogEntry.objects.first()
+        assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+            [response.data[0]["id"], response.data[1]["id"]]
+        )
 
 
 class TestEventUpdate:
@@ -280,10 +279,10 @@ class TestEventBulkUpdate:
         response = bulk_update(authed_api_client, event_data)
         assert response.status_code == status.HTTP_200_OK
 
-        audit_log_entry = AuditLogEntry.objects.first()
-        assert Counter(
-            audit_log_entry.message["audit_event"]["target"]["object_ids"]
-        ) == Counter([event1.pk, event2.pk])
+        audit_log_entry = ResilientLogEntry.objects.first()
+        assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+            [event1.pk, event2.pk]
+        )
 
 
 class TestEventDelete:
@@ -343,7 +342,5 @@ class TestEventDelete:
         response = delete(authed_api_client, event.pk)
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
-        audit_log_entry = AuditLogEntry.objects.first()
-        assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-            event.pk
-        ]
+        audit_log_entry = ResilientLogEntry.objects.first()
+        assert audit_log_entry.context["target"]["object_ids"] == [event.pk]

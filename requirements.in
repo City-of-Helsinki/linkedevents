@@ -18,6 +18,7 @@ django-mptt
 django-munigeo
 django-orghierarchy
 django-redis
+django-resilient-logger
 django-rest-knox
 django-reversion
 django-searchable-encrypted-fields

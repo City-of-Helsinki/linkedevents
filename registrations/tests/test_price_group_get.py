@@ -3,10 +3,10 @@ from collections import Counter
 
 import pytest
 from django.utils import translation
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from audit_log.models import AuditLogEntry
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import PriceGroup
@@ -290,10 +290,8 @@ def test_price_group_id_is_audit_logged_on_get_detail(api_client):
 
     assert_get_detail(api_client, price_group.pk)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        price_group.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [price_group.pk]
 
 
 @pytest.mark.django_db
@@ -303,7 +301,7 @@ def test_price_group_ids_are_audit_logged_on_get_list(api_client):
 
     assert_get_list(api_client)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter(PriceGroup.objects.filter(publisher=None).values_list("pk", flat=True))
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        PriceGroup.objects.filter(publisher=None).values_list("pk", flat=True)
+    )

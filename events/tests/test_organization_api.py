@@ -4,9 +4,9 @@ from django.conf import settings as django_settings
 from django.test import override_settings
 from django.utils import translation
 from django_orghierarchy.models import Organization
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.api import OrganizationDetailSerializer
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
@@ -260,10 +260,8 @@ def test_organization_id_is_audit_logged_on_post(
 
     response = assert_create_organization(user_api_client, payload)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        response.data["id"]
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [response.data["id"]]
 
 
 @pytest.mark.django_db
@@ -648,10 +646,8 @@ def test_organization_id_is_audit_logged_on_put(organization, user_api_client):
 
     assert_update_organization(user_api_client, organization.pk, payload)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        organization.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [organization.pk]
 
 
 @pytest.mark.django_db
@@ -716,10 +712,8 @@ def test_admin_user_can_delete_organization(organization, user_api_client):
 def test_organization_id_is_audit_logged_on_delete(organization, user_api_client):
     assert_delete_organization(user_api_client, organization.pk)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        organization.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [organization.pk]
 
 
 @pytest.mark.django_db

@@ -9,9 +9,9 @@ from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone, translation
 from django.utils.encoding import force_str
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.api import KeywordSerializer
 from events.auth import ApiKeyUser
 from events.models import Event, Keyword, Place
@@ -876,10 +876,8 @@ def test__deprecated_audience(api_client, minimal_event_dict, user):
 def test_event_id_is_audit_logged_on_post(user_api_client, minimal_event_dict):
     response = create_with_post(user_api_client, minimal_event_dict)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        response.data["id"]
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [response.data["id"]]
 
 
 @pytest.mark.django_db

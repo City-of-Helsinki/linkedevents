@@ -1,8 +1,8 @@
 import pytest
 from django.utils import translation
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.models import Event, Language
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import RegistrationUserAccess
@@ -176,7 +176,7 @@ def test_registration_user_access_id_is_audit_logged_on_invitation(
 
     assert_send_invitation(user_api_client, registration_user_access.pk)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [
         registration_user_access.pk
     ]

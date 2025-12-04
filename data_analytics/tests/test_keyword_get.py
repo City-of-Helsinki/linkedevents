@@ -9,10 +9,10 @@ from django.utils.timezone import localtime
 from helusers.settings import api_token_auth_settings
 from knox import crypto
 from knox.settings import CONSTANTS, knox_settings
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from audit_log.models import AuditLogEntry
 from data_analytics.tests.factories import DataAnalyticsApiTokenFactory
 from data_analytics.tests.utils import (
     get_detail_and_assert_object_in_response,
@@ -175,10 +175,8 @@ def test_keyword_id_is_audit_logged_on_get(user_api_client, keyword, url_type):
     else:
         get_detail(user_api_client, keyword.pk)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        keyword.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [keyword.pk]
 
 
 @freezegun.freeze_time("2024-05-17 12:00:00+03:00")

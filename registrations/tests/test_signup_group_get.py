@@ -4,9 +4,9 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 from django.conf import settings
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from helevents.tests.factories import UserFactory
@@ -935,10 +935,8 @@ def test_signup_group_id_is_audit_logged_on_get_detail(api_client, registration)
 
     assert_get_detail(api_client, signup_group.id)
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        signup_group.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [signup_group.pk]
 
 
 @pytest.mark.django_db
@@ -951,10 +949,10 @@ def test_signup_group_id_is_audit_logged_on_get_list(api_client, registration):
 
     get_list_and_assert_signup_groups(api_client, "", [signup_group, signup_group2])
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([signup_group.pk, signup_group2.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [signup_group.pk, signup_group2.pk]
+    )
 
 
 @pytest.mark.parametrize(

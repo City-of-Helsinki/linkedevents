@@ -3,10 +3,10 @@ from collections import Counter
 import pytest
 from django.core.management import call_command
 from pytest_django.asserts import assertNumQueries
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
-from audit_log.models import AuditLogEntry
 from events.models import Place
 
 from .test_event_get import get_detail as get_event_detail
@@ -35,8 +35,8 @@ def test_place_id_is_audit_logged_on_get_detail(user_api_client, place):
     response = get_detail(user_api_client, place.pk)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [place.pk]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [place.pk]
 
 
 @pytest.mark.django_db
@@ -44,10 +44,10 @@ def test_place_id_is_audit_logged_on_get_list(user_api_client, place, place2):
     response = get_list(user_api_client, data={"show_all_places": True})
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([place.pk, place2.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [place.pk, place2.pk]
+    )
 
 
 @pytest.mark.django_db

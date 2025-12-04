@@ -8,9 +8,9 @@ import pytest
 from django.conf import settings
 from django.test import TestCase
 from django.utils.timezone import make_aware
+from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
-from audit_log.models import AuditLogEntry
 from events.models import Event
 from events.tests.conftest import APIClient
 from events.tests.factories import EventFactory
@@ -665,10 +665,8 @@ def test_registration_id_is_audit_logged_on_get_detail(user_api_client, registra
     response = get_detail(user_api_client, registration.id)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert audit_log_entry.message["audit_event"]["target"]["object_ids"] == [
-        registration.pk
-    ]
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert audit_log_entry.context["target"]["object_ids"] == [registration.pk]
 
 
 @pytest.mark.django_db
@@ -714,10 +712,10 @@ def test_registration_id_is_audit_logged_on_get_list(
     response = get_list(user_api_client)
     assert response.status_code == status.HTTP_200_OK
 
-    audit_log_entry = AuditLogEntry.objects.first()
-    assert Counter(
-        audit_log_entry.message["audit_event"]["target"]["object_ids"]
-    ) == Counter([registration.pk, registration2.pk])
+    audit_log_entry = ResilientLogEntry.objects.first()
+    assert Counter(audit_log_entry.context["target"]["object_ids"]) == Counter(
+        [registration.pk, registration2.pk]
+    )
 
 
 class RegistrationCapacityTestCase(TestCase):

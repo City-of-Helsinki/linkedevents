@@ -1,8 +1,8 @@
-from django.conf import settings
-from django.utils import timezone
+import logging
+
+from resilient_logger.sources import ResilientLogSource
 
 from audit_log.enums import Operation, Role, Status
-from audit_log.models import AuditLogEntry
 from events.auth import ApiKeyUser
 from registrations.auth import WebStoreWebhookUser
 
@@ -29,20 +29,21 @@ def _get_operation_name(request):
 
 
 def _get_remote_address(request):
-    if not (x_forwarded_for := request.headers.get("x-forwarded-for")):
-        return request.META.get("REMOTE_ADDR")
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    client_ip = forwarded_for.split(",")[0] or None
 
-    remote_addr = x_forwarded_for.split(",")[0]
+    if not client_ip:
+        client_ip = request.META.get("REMOTE_ADDR")
 
-    # Remove port number from remote_addr
-    if "." in remote_addr and ":" in remote_addr:
-        # IPv4 with port (`x.x.x.x:x`)
-        remote_addr = remote_addr.split(":")[0]
-    elif "[" in remote_addr:
-        # IPv6 with port (`[:::]:x`)
-        remote_addr = remote_addr[1:].split("]")[0]
-
-    return remote_addr
+    if client_ip:
+        # Strip port from ip address if present
+        if "[" in client_ip:
+            # Bracketed IPv6 like [2001:db8::1]:1234
+            client_ip = client_ip.lstrip("[").split("]")[0]
+        elif "." in client_ip and client_ip.count(":") == 1:
+            # IPv4 with port
+            client_ip = client_ip.split(":")[0]
+    return client_ip
 
 
 def _get_user_role(user):
@@ -93,19 +94,13 @@ def _get_target(request):
 
 
 def commit_to_audit_log(request, response):
-    current_time = timezone.now()
-    iso_8601_datetime = f"{current_time.replace(tzinfo=None).isoformat(sep='T', timespec='milliseconds')}Z"  # noqa: E501
+    status = _get_response_status(response)
 
-    message = {
-        "audit_event": {
-            "origin": settings.AUDIT_LOG_ORIGIN,
-            "status": _get_response_status(response),
-            "date_time_epoch": int(current_time.timestamp() * 1000),
-            "date_time": iso_8601_datetime,
-            "actor": _get_actor_data(request),
-            "operation": _get_operation_name(request),
-            "target": _get_target(request),
-        }
-    }
-
-    AuditLogEntry.objects.create(message=message)
+    ResilientLogSource.create_structured(
+        level=logging.NOTSET,
+        message=status,
+        actor=_get_actor_data(request),
+        operation=_get_operation_name(request),
+        target=_get_target(request),
+        extra={"status": status},
+    )
