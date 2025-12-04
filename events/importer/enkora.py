@@ -1234,11 +1234,7 @@ class EnkoraImporter(Importer):
         Generate MarkDown document out of Enkora importing rules.
         :return: documentation string
         """
-        import git  # gitpython
         from snakemd import Inline, MDList, Paragraph, new_doc
-
-        repo = git.Repo(search_parent_directories=True)
-        commit_sha = repo.head.object.hexsha
 
         yso_base_url = r"https://finto.fi/yso/fi/page/{}"
         tprek_base_url = r"https://palvelukartta.hel.fi/fi/unit/{}"
@@ -1250,7 +1246,7 @@ class EnkoraImporter(Importer):
         now = timezone.now()
         now_str = now.strftime("%Y-%m-%d %H:%M UTC")
         doc.add_paragraph(f"Document generated at: {now_str}")
-        doc.add_paragraph(f"Git commit: {commit_sha}")
+        doc.add_paragraph(f"Git commit: {settings.COMMIT_HASH}")
 
         def _keyword_helper(mapping: set) -> list:
             kws = []
