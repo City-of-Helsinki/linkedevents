@@ -1387,3 +1387,15 @@ def test_update_event_duplicate_external_links_are_not_allowed(
 
     event.refresh_from_db()
     assert event.external_links.count() == 0
+
+
+@pytest.mark.django_db
+def test_put_list_instead_of_dict_should_be_bad_request(api_client, event, user):
+    api_client.force_authenticate(user=user)
+
+    event_url = reverse("event-detail", kwargs={"pk": event.pk})
+
+    invalid_data = [{"id": event.pk}]
+    response = api_client.put(event_url, invalid_data, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
