@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.19.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.18.1...linkedevents-v3.19.0) (2025-12-06)
+
+
+### Features
+
+* Add 13,5% vat percentage ([f64efa0](https://github.com/City-of-Helsinki/linkedevents/commit/f64efa0453b1da0f0362248657a0c7f662da7e88))
+* Change logging format to json ([e01dc8b](https://github.com/City-of-Helsinki/linkedevents/commit/e01dc8b143546f15fa074455210d3651a400c2aa))
+
+
+### Dependencies
+
+* Bump django from 5.2.8 to 5.2.9 ([1a6ded3](https://github.com/City-of-Helsinki/linkedevents/commit/1a6ded3878498963241103240d49a401a7697bb7))
+* Bump pip from 25.2 to 25.3 ([bbe6dfd](https://github.com/City-of-Helsinki/linkedevents/commit/bbe6dfd7587e63d577ee9b32209b640f0ea50e4c))
+* Bump werkzeug from 3.1.3 to 3.1.4 ([6736588](https://github.com/City-of-Helsinki/linkedevents/commit/6736588db693f8723eb52f98be909685fc7f8e7a))
+
 ## [3.18.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.18.0...linkedevents-v3.18.1) (2025-11-10)
 
 
