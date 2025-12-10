@@ -701,6 +701,13 @@ class RegistrationWebStoreAccountSerializer(WebStoreAccountBaseSerializer):
 
         if not self.partial or "account" in validated_data:
             validated_data["name"] = validated_data["account"].name
+            validated_data["company_code"] = validated_data["account"].company_code
+            validated_data["main_ledger_account"] = validated_data[
+                "account"
+            ].main_ledger_account
+            validated_data["balance_profit_center"] = validated_data[
+                "account"
+            ].balance_profit_center
 
         return data
 
@@ -710,6 +717,9 @@ class RegistrationWebStoreAccountSerializer(WebStoreAccountBaseSerializer):
         fields += WebStoreAccountBaseSerializer.Meta.fields
         extra_kwargs = {
             "name": {"read_only": True},
+            "company_code": {"read_only": True},
+            "main_ledger_account": {"read_only": True},
+            "balance_profit_center": {"read_only": True},
         }
 
 
