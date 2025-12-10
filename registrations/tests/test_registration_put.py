@@ -284,6 +284,90 @@ def test_admin_cannot_update_registrations_event(
     assert registration.event_id == event.pk
 
 
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "superuser",
+        "admin",
+        "registration_admin",
+    ],
+)
+@pytest.mark.django_db
+def test_cannot_update_registration_web_store_account_read_only_fields(
+    api_client, event, user_role
+):
+    registration = RegistrationFactory(event=event)
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+    )
+
+    api_client.force_authenticate(user)
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        merchant = WebStoreMerchantFactory(organization=event.publisher)
+    account = WebStoreAccountFactory(
+        organization=event.publisher,
+        name="Name",
+        company_code="123",
+        main_ledger_account="12345",
+        balance_profit_center="1234567890",
+    )
+
+    default_price_group = PriceGroup.objects.filter(publisher=None).first()
+
+    assert RegistrationPriceGroup.objects.count() == 0
+    assert RegistrationWebStoreProductMapping.objects.count() == 0
+    assert RegistrationWebStoreMerchant.objects.count() == 0
+    assert RegistrationWebStoreAccount.objects.count() == 0
+
+    merchant_and_account_data = get_registration_merchant_and_account_data(
+        merchant, account
+    )
+    merchant_and_account_data["registration_account"]["name"] = "foobar"
+    merchant_and_account_data["registration_account"]["company_code"] = "666"
+    merchant_and_account_data["registration_account"]["main_ledger_account"] = "666"
+    merchant_and_account_data["registration_account"]["balance_profit_center"] = "666"
+
+    registration_data = {
+        **get_minimal_required_registration_data(registration.event_id),
+        "registration_price_groups": [
+            {
+                "price_group": default_price_group.pk,
+                "price": Decimal("10"),
+                "vat_percentage": VatPercentage.VAT_25_5.value,
+            },
+        ],
+        **merchant_and_account_data,
+    }
+
+    with requests_mock.Mocker() as req_mock:
+        base_url = f"{django_settings.WEB_STORE_API_BASE_URL}product/"
+        req_mock.post(base_url, json=DEFAULT_GET_PRODUCT_MAPPING_DATA)
+        req_mock.post(
+            f"{base_url}{DEFAULT_PRODUCT_ID}/accounting",
+            json=DEFAULT_GET_PRODUCT_MAPPING_DATA,
+        )
+
+        response = assert_update_registration(
+            api_client, registration.pk, registration_data
+        )
+
+        assert req_mock.call_count == 2
+
+    assert response.status_code == 200
+
+    assert RegistrationWebStoreAccount.objects.count() == 1
+
+    registration.refresh_from_db()
+    registration_account = registration.registration_account
+
+    assert registration_account.name == "Name"
+    assert registration_account.company_code == "123"
+    assert registration_account.main_ledger_account == "12345"
+    assert registration_account.balance_profit_center == "1234567890"
+
+
 @pytest.mark.parametrize("is_substitute_user", [False, True])
 @pytest.mark.django_db
 def test_send_email_to_new_registration_user_access(

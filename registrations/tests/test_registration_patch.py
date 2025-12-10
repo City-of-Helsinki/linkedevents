@@ -32,6 +32,7 @@ from registrations.tests.test_registration_post import email
 from registrations.tests.test_registration_put import edited_email, edited_hel_email
 from registrations.tests.utils import (
     create_user_by_role,
+    get_registration_account_data,
     get_registration_merchant_and_account_data,
 )
 from web_store.tests.product.test_web_store_product_api_client import (
@@ -495,3 +496,53 @@ def test_patch_registration_minimum_attendee_capacity(
 
     registration.refresh_from_db()
     assert registration.minimum_attendee_capacity == expected_minimum_attendee_capacity
+
+
+@pytest.mark.parametrize(
+    "user_role",
+    [
+        "superuser",
+        "admin",
+        "registration_admin",
+    ],
+)
+@pytest.mark.django_db
+def test_cannot_patch_registration_web_store_account_read_only_fields(
+    api_client, registration, event, user_role
+):
+    user = create_user_by_role(
+        user_role,
+        registration.publisher,
+    )
+
+    api_client.force_authenticate(user)
+
+    account = WebStoreAccountFactory(
+        organization=event.publisher,
+        name="Name",
+        company_code="123",
+        main_ledger_account="12345",
+        balance_profit_center="1234567890",
+    )
+
+    account_data = get_registration_account_data(account)
+    account_data["registration_account"]["name"] = "foobar"
+    account_data["registration_account"]["company_code"] = "666"
+    account_data["registration_account"]["main_ledger_account"] = "666"
+    account_data["registration_account"]["balance_profit_center"] = "666"
+
+    payload = {
+        **account_data,
+    }
+
+    response = assert_patch_registration(api_client, registration.pk, payload)
+
+    assert response.status_code == 200
+
+    registration.refresh_from_db()
+    registration_account = registration.registration_account
+
+    assert registration_account.name == "Name"
+    assert registration_account.company_code == "123"
+    assert registration_account.main_ledger_account == "12345"
+    assert registration_account.balance_profit_center == "1234567890"
