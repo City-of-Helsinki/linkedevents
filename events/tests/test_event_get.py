@@ -1959,3 +1959,17 @@ def test_event_list_shows_image_and_its_license(event, image):
     response = get_list(api_client)
     license_url = response.data["data"][0]["images"][0]["license_url"]
     assert license_url == "http://urltothe.license"
+
+
+@pytest.mark.django_db
+def test_event_list_use_image_proxy(event, image):
+    event.images.add(image)
+    response = get(api_client, reverse("event-list") + "?use_image_proxy=true")
+    data = response.data["data"]
+    assert len(data) == 1
+    images = data[0]["images"]
+    assert len(images) == 1
+    assert images[0]["id"] == image.pk
+    assert images[0]["url"] == reverse(
+        "image-file", kwargs={"pk": image.pk, "version": "v1"}
+    )
