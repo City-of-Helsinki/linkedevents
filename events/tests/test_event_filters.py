@@ -422,7 +422,7 @@ def test_get_event_search_full_text_with_sorting_api(api_client):
 
     resp = get_list(
         api_client,
-        data={"x_full_text": "Testword", "x_full_text_language": "fi", "sort": "name"},
+        data={"full_text": "Testword", "full_text_language": "fi", "sort": "name"},
     )
     data = resp.data["data"]
 
@@ -464,7 +464,7 @@ def test_get_event_search_full_text_with_start_time_sorting_api(api_client):
 
     resp = get_list(
         api_client,
-        query_string="x_full_text=Testisana&x_full_text_language=fi&sort=start_time",
+        query_string="full_text=Testisana&full_text_language=fi&sort=start_time",
     )
     data = resp.data["data"]
 
@@ -507,7 +507,7 @@ def test_get_event_search_full_text_with_end_time_sorting_api(api_client):
 
     resp = get_list(
         api_client,
-        query_string="x_full_text=Testisana&x_full_text_language=fi&sort=end_time",
+        query_string="full_text=Testisana&full_text_language=fi&sort=end_time",
     )
     data = resp.data["data"]
 
@@ -562,7 +562,7 @@ def test_get_event_search_full_text_with_enrolment_start_time_sorting_api(api_cl
 
     resp = get_list(
         api_client,
-        query_string="x_full_text=Testisana&x_full_text_language=fi&sort=registration__enrolment_start_time",
+        query_string="full_text=Testisana&full_text_language=fi&sort=registration__enrolment_start_time",
     )
     data = resp.data["data"]
 
@@ -614,7 +614,7 @@ def test_get_event_search_full_text_with_enrolment_end_time_sorting_api(api_clie
     call_command("rebuild_event_search_index")
     resp = get_list(
         api_client,
-        query_string="x_full_text=Testisana&x_full_text_language=fi&sort=registration__enrolment_end_time",
+        query_string="full_text=Testisana&full_text_language=fi&sort=registration__enrolment_end_time",
     )
     data = resp.data["data"]
     assert len(data) == 3
