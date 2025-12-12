@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.20.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.19.0...linkedevents-v3.20.0) (2025-12-12)
+
+
+### Features
+
+* Allow dynamic sentry trace ignore paths ([9460829](https://github.com/City-of-Helsinki/linkedevents/commit/9460829dd0445cba1a9197eee9ef378ffdc902f2))
+* Allow Sentry uWSGI-plugin to be optional ([51875a1](https://github.com/City-of-Helsinki/linkedevents/commit/51875a162bc19c93be885ea2e785469cb7c8922d))
+
+
+### Bug Fixes
+
+* Prevent editing web store account fields via registration view ([6dc7a5b](https://github.com/City-of-Helsinki/linkedevents/commit/6dc7a5bcbcf533f9701035c67c99c278515048bb))
+
 ## [3.19.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.18.1...linkedevents-v3.19.0) (2025-12-09)
 
 
