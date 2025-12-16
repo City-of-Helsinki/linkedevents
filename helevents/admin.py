@@ -12,7 +12,23 @@ from .forms import LocalOrganizationAdminForm
 from .models import User
 
 
-class WebStoreMerchantInline(admin.StackedInline):
+class FinancialAdminPermissionMixin:
+    def has_add_permission(self, request, obj=None):
+        if super().has_add_permission(request, obj):
+            return True
+        if obj and request.user.is_financial_admin_of(obj):
+            return True
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        if super().has_change_permission(request, obj):
+            return True
+        if obj and request.user.is_financial_admin_of(obj):
+            return True
+        return False
+
+
+class WebStoreMerchantInline(FinancialAdminPermissionMixin, admin.StackedInline):
     model = WebStoreMerchant
     extra = 0
     min_num = 0
@@ -28,7 +44,7 @@ class WebStoreMerchantInline(admin.StackedInline):
         return ["created_by", "last_modified_by", "merchant_id"]
 
 
-class WebStoreAccountInline(admin.StackedInline):
+class WebStoreAccountInline(FinancialAdminPermissionMixin, admin.StackedInline):
     model = WebStoreAccount
     extra = 0
     min_num = 0
