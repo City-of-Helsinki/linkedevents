@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.21.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.20.0...linkedevents-v3.21.0) (2025-12-17)
+
+
+### Features
+
+* Add settings.SKIP_PROXY_URLS ([560210b](https://github.com/City-of-Helsinki/linkedevents/commit/560210b52df930c4e2cb01961cac314e325f21a5))
+* Proxy image url ([0dcc96d](https://github.com/City-of-Helsinki/linkedevents/commit/0dcc96d86014ccec63ade8fb99f1dca24fd7109a))
+
+
+### Bug Fixes
+
+* Allow financial admins to create and edit merchants and accounts ([7ec8488](https://github.com/City-of-Helsinki/linkedevents/commit/7ec8488f6d5cd18ca5cc3e69608e2adebb8010d6))
+* Put event list instead of dict is bad request ([2da2b17](https://github.com/City-of-Helsinki/linkedevents/commit/2da2b17449959fa16453374d92571cca1d35185e))
+
 ## [3.20.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.19.0...linkedevents-v3.20.0) (2025-12-12)
 
 
