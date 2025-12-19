@@ -38,7 +38,7 @@ resources:
 
 extends:
   # Filename in Azure DevOps Repository
-  template: azure-pipelines-linkedevents-api-dev.yml@linkedevents-pipelines
+  template: components/linkedevents-api/pipelines/linkedevents-api-dev.yml@linkedevents-pipelines
   # parameters:
     # Application build arguments and config map values as key value pairs.
     # Does not contain all buildArguments or configMap values, the rest located in linkedevents-pipelines
