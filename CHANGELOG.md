@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.22.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.21.0...linkedevents-v3.22.0) (2025-12-28)
+
+
+### Features
+
+* Use django-resilient-logger for audit logging ([03872ff](https://github.com/City-of-Helsinki/linkedevents/commit/03872ffa1f9c6be0017d9b6e51de33c411f8afe8))
+
 ## [3.21.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.20.0...linkedevents-v3.21.0) (2025-12-17)
 
 
