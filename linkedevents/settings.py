@@ -857,9 +857,11 @@ SPECTACULAR_SETTINGS = {
         "as property. In this specification each multilingual field has (fi,sv,en) property triplet as "  # noqa: E501
         "example."
     ),
-    "VERSION": None,
+    "VERSION": __version__,
+    "SERVE_INCLUDE_SCHEMA": False,
     "SCHEMA_PATH_PREFIX": r"/v1/",
     "SCHEMA_PATH_PREFIX_TRIM": True,
+    "COMPONENT_SPLIT_PATCH": True,
     "PREPROCESSING_HOOKS": ["linkedevents.schema_utils.swagger_endpoint_filter"],
     "POSTPROCESSING_HOOKS": ["linkedevents.schema_utils.swagger_postprocessing_hook"],
     "GET_LIB_DOC_EXCLUDES": "linkedevents.schema_utils.swagger_get_lib_doc_excludes",
