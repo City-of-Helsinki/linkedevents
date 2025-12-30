@@ -340,9 +340,9 @@ To implement an extension:
 
 For an example extension implementation, see [course extension](extension_course).
 
-## Swagger documentation
+## API documentation
 
-Swagger documentation is available at the endpoint `/docs/swagger-ui/`. The schema is generated using [drf-spectacular](https://github.com/tfranzel/drf-spectacular).
+API documentation is available at the endpoint `/api-docs/swagger-ui/`. The documentation is generated using [drf-spectacular](https://github.com/tfranzel/drf-spectacular).
 
 Development/local servers use a dynamic schema that is generated on-the-fly, and production servers use a pregenerated static YAML file.
 
