@@ -19,22 +19,6 @@ urlpatterns = [
     path("helauth/", include("helusers.urls")),
     path("gdpr-api/", include("helsinki_gdpr.urls")),
     path("data-analytics/", include("data_analytics.urls", namespace="data_analytics")),
-    # Versioned API documentation paths (must come before the API router)
-    path(
-        "v1/schema/",
-        SpectacularAPIView.as_view(api_version="v1"),
-        name="schema-v1",
-    ),
-    path(
-        "v1/swagger-ui/",
-        CustomSpectacularSwaggerView.as_view(url_name="schema-v1"),
-        name="swagger-ui-v1",
-    ),
-    path(
-        "v1/",
-        SpectacularRedocView.as_view(url_name="schema-v1"),
-        name="redoc-v1",
-    ),
     # Alternative non-versioned paths (also point to current docs)
     path(
         "api-docs/schema/",
@@ -63,7 +47,7 @@ urlpatterns = [
         name="legacy-swagger-ui",
     ),
     # Redirect root to versioned API documentation
-    path("", RedirectView.as_view(url="/v1/", permanent=False)),
+    path("", RedirectView.as_view(url="/api-docs/", permanent=False)),
     # API router must come after specific doc paths to avoid conflicts
     re_path(r"^(?P<version>(v0.1|v1))/", include(api_router.urls)),
 ]

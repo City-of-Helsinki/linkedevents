@@ -51,49 +51,21 @@ def test_redoc(client):
     assert response.status_code == 200
 
 
-def test_root_redirects_to_v1(client):
-    """Test that root path redirects to /v1/"""
+def test_root_redirects_to_api_docs(client):
+    """Test that root path redirects to /api-docs/"""
     response = client.get("/", follow=False)
 
     assert response.status_code == 302
-    assert response["Location"] == "/v1/"
+    assert response["Location"] == "/api-docs/"
 
 
-def test_root_redirect_follows_to_v1_redoc(client):
-    """Test that following root redirect leads to v1 ReDoc"""
+def test_root_redirect_follows_to_api_docs_redoc(client):
+    """Test that following root redirect leads to api-docs ReDoc"""
     response = client.get("/", follow=True)
 
     assert response.status_code == 200
     # Check that we ended up at the ReDoc page
     assert "redoc" in str(response.content).lower()
-
-
-def test_v1_redoc(client):
-    """Test that /v1/ serves ReDoc documentation"""
-    response = client.get("/v1/")
-
-    assert response.status_code == 200
-    assert "redoc" in str(response.content).lower()
-
-
-def test_v1_schema(client):
-    """Test that /v1/schema/ serves OpenAPI schema"""
-    response = client.get("/v1/schema/")
-
-    assert response.status_code == 200
-    assert response.content.startswith(b"openapi: 3.0.3\n")
-    assert response.accepted_media_type == "application/vnd.oai.openapi"
-
-    schema = yaml.load(response.content, Loader=yaml.SafeLoader)
-    validate_schema(schema)
-
-
-def test_v1_swagger_ui(client):
-    """Test that /v1/swagger-ui/ serves Swagger UI"""
-    response = client.get("/v1/swagger-ui/")
-
-    assert response.status_code == 200
-    assert "Linked Events information API" in str(response.content)
 
 
 def test_legacy_docs_schema_redirect(client):
