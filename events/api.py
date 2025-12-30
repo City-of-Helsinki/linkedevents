@@ -30,6 +30,7 @@ from drf_spectacular.utils import (
     OpenApiResponse,
     OpenApiTypes,
     extend_schema,
+    extend_schema_view,
     inline_serializer,
 )
 from haystack.query import AutoQuery
@@ -2301,6 +2302,105 @@ class EventDeletedException(APIException):
     default_code = "gone"
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="Return a list of events",
+        description=render_to_string("swagger/event_list_description.html"),
+        auth=[],
+        parameters=[
+            IncludeOpenApiParameter(
+                description=(
+                    "Embed given reference-type fields directly into the response. "
+                    "Supported values: <code>keywords</code>, <code>location</code>, "
+                    "<code>sub_events</code>. Multiple values separated by comma."
+                )
+            ),
+        ],
+    ),
+    retrieve=extend_schema(
+        summary="Return information for a single event",
+        auth=[],
+        parameters=[
+            IncludeOpenApiParameter(
+                description=(
+                    "Embed given reference-type fields directly into the response. "
+                    "Supported values: <code>keywords</code>, <code>location</code>, "
+                    "<code>sub_events</code>. Multiple values separated by comma."
+                )
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                EventSerializer,
+                description="Event details",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Event was not found.",
+            ),
+            410: OpenApiResponse(
+                description="Event has been deleted.",
+            ),
+        },
+    ),
+    create=extend_schema(
+        summary="Create a new event",
+        request=EventSerializer,
+        responses={
+            201: OpenApiResponse(
+                EventSerializer,
+                description="Event has been successfully created.",
+            ),
+            **get_common_api_error_responses(),
+        },
+    ),
+    update=extend_schema(
+        summary="Update an event",
+        description=(
+            "Event can be updated if the user has appropriate access permissions. The original "  # noqa: E501
+            "implementation behaves like PATCH, ie. if some field is left out from the PUT call, "  # noqa: E501
+            "its value is retained in database. In order to ensure consistent behaviour, users "  # noqa: E501
+            "should always supply every field in PUT call."
+        ),
+        request=EventSerializer,
+        responses={
+            200: OpenApiResponse(
+                EventSerializer,
+                description="Event has been successfully updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Event was not found.",
+            ),
+        },
+    ),
+    partial_update=extend_schema(
+        summary="Partially update an event",
+        request=EventSerializer,
+        responses={
+            200: OpenApiResponse(
+                EventSerializer,
+                description="Event has been successfully partially updated.",
+            ),
+            **get_common_api_error_responses(),
+            404: OpenApiResponse(
+                description="Event was not found.",
+            ),
+        },
+    ),
+    destroy=extend_schema(
+        summary="Delete an event",
+        responses={
+            204: OpenApiResponse(
+                description="Event has been successfully deleted.",
+            ),
+            **get_common_api_error_responses(excluded_codes=[400]),
+            404: OpenApiResponse(
+                description="Event was not found.",
+            ),
+        },
+    ),
+)
 class EventViewSet(
     UserDataSourceAndOrganizationMixin,
     JSONAPIViewMixin,
@@ -3281,7 +3381,10 @@ class EventViewSet(
         response = super().finalize_response(request, response, *args, **kwargs)
         # Prevent rendering errors as DOCX files
         accepted_renderer = getattr(request, "accepted_renderer", None)
-        if response.status_code != 200 and getattr(accepted_renderer, "format", None) == "docx":
+        if (
+            response.status_code != 200
+            and getattr(accepted_renderer, "format", None) == "docx"
+        ):
             first_renderer = self.renderer_classes[0]()
             response.accepted_renderer = first_renderer
             response.accepted_media_type = first_renderer.media_type
