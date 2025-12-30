@@ -10,7 +10,12 @@ from registrations.models import Registration, SignUp
 class DataAnalyticsLastModifiedTimeBaseFilter(django_filters.rest_framework.FilterSet):
     _LAST_MODIFIED_FIELD = "last_modified_time"
 
-    last_modified_gte = django_filters.CharFilter(method="filter_last_modified_gte")
+    last_modified_gte = django_filters.CharFilter(
+        method="filter_last_modified_gte",
+        help_text=(
+            "Filter by items modified on or after this date/time (ISO 8601 format)"
+        ),
+    )
 
     def filter_last_modified_gte(self, queryset, name, value: str):
         dt = parse_time(value)[0]
