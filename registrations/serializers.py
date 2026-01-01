@@ -1189,6 +1189,14 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
             if price_groups and merchant and account:
                 registration.create_or_update_web_store_product_mapping_and_accounting()
 
+        if (
+            settings.PAID_REGISTRATION_NOTIFICATION_ENABLED
+            and registration.registration_price_groups.filter(
+                price_group__is_free=False
+            ).exists()
+        ):
+            registration.send_paid_registration_notification()
+
         return registration
 
     @transaction.atomic
@@ -1201,6 +1209,11 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
         )
         registration_merchant = validated_data.pop("registration_merchant", None)
         registration_account = validated_data.pop("registration_account", None)
+
+        # used for determining the need to send a notification for financial admins
+        was_free_before_update = not instance.registration_price_groups.filter(
+            price_group__is_free=False
+        ).exists()
 
         # update validated fields
         super().update(instance, validated_data)
@@ -1254,6 +1267,16 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
                 )
             ):
                 instance.create_or_update_web_store_product_mapping_and_accounting()
+
+        # (free -> paid) --> send notification
+        if (
+            settings.PAID_REGISTRATION_NOTIFICATION_ENABLED
+            and was_free_before_update
+            and instance.registration_price_groups.filter(
+                price_group__is_free=False
+            ).exists()
+        ):
+            instance.send_paid_registration_notification()
 
         return instance
 

@@ -2769,3 +2769,21 @@ msgstr "Ett fel uppstod i betalnings-API (kod: %(status_code)s)"
 #, python-format
 msgid "Refund is not allowed. The event starts in less than %(days)s days."
 msgstr "Återbetalning är inte tillåten. Evenemanget börjar om mindre än %(days)s dagar."
+
+#: registrations/models.py:694
+#, python-format
+msgid "New paid registration - %(event_name)s"
+msgstr "Ny betalanmälan - %(event_name)s"
+
+#: registrations/templates/paid_registration_notification.html:4
+msgid "New paid registration"
+msgstr "Ny betalanmälan"
+
+#: registrations/templates/paid_registration_notification.html:12
+#, python-format
+msgid "A new paid registration has been created for the event <strong>%(event_name)s</strong>."
+msgstr "En ny betalanmälan har skapats för evenemanget <strong>%(event_name)s</strong>."
+
+#: registrations/templates/paid_registration_notification.html:18
+msgid "View registration"
+msgstr "Visa anmälan"

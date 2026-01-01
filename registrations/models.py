@@ -31,6 +31,7 @@ from helsinki_gdpr.models import SerializableMixin
 from rest_framework import status
 
 from events.models import Event, Language, Offer, PublicationStatus
+from notifications.utils import DEFAULT_LANG
 from registrations.enums import VatPercentage
 from registrations.exceptions import (
     PriceGroupValidationError,
@@ -667,6 +668,44 @@ class Registration(CreatedModifiedBaseModel):
             events = [self.event]
 
         return events
+
+    def send_paid_registration_notification(self):
+        recipient_list = []
+        for admin in self.publisher.financial_admin_users.all():
+            if admin.email:
+                recipient_list.append(admin.email)
+
+        if not recipient_list:
+            logger.warning(
+                f"No financial admins with email for registration {self.id}",
+                extra={"registration": self},
+            )
+            return
+
+        with translation.override(DEFAULT_LANG):
+            event_name = self.event.name
+            subject = translation.gettext("New paid registration - %(event_name)s") % {
+                "event_name": event_name
+            }
+
+        context = {
+            "event_name": event_name,
+            "registration_url": (
+                f"{settings.LINKED_EVENTS_UI_URL}/{DEFAULT_LANG}/registrations/{self.id}/"
+            ),
+            "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
+        }
+
+        with translation.override(DEFAULT_LANG):
+            html_body = render_to_string("paid_registration_notification.html", context)
+
+        send_mail(
+            subject,
+            "",
+            get_email_noreply_address(),
+            recipient_list,
+            html_message=html_body,
+        )
 
     def can_be_edited_by(self, user):
         """Check if current registration can be edited by the given user"""
