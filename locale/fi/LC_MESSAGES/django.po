@@ -2773,3 +2773,21 @@ msgstr "Maksurajapinnassa tapahtui virhe (koodi: %(status_code)s)"
 #, python-format
 msgid "Refund is not allowed. The event starts in less than %(days)s days."
 msgstr "Hyvitys ei ole sallittu. Tapahtuma alkaa alle %(days)s päivän kuluttua."
+
+#: registrations/models.py:694
+#, python-format
+msgid "New paid registration - %(event_name)s"
+msgstr "Uusi maksullinen ilmoittautuminen - %(event_name)s"
+
+#: registrations/templates/paid_registration_notification.html:4
+msgid "New paid registration"
+msgstr "Uusi maksullinen ilmoittautuminen"
+
+#: registrations/templates/paid_registration_notification.html:12
+#, python-format
+msgid "A new paid registration has been created for the event <strong>%(event_name)s</strong>."
+msgstr "Tapahtumaan <strong>%(event_name)s</strong> on luotu uusi maksullinen ilmoittautuminen."
+
+#: registrations/templates/paid_registration_notification.html:18
+msgid "View registration"
+msgstr "Katso ilmoittautuminen"
