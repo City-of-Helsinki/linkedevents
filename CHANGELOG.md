@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.22.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.21.0...linkedevents-v3.22.0) (2026-01-04)
+
+
+### Features
+
+* Use django-resilient-logger for audit logging ([03872ff](https://github.com/City-of-Helsinki/linkedevents/commit/03872ffa1f9c6be0017d9b6e51de33c411f8afe8))
+
+
+### Reverts
+
+* Allow financial admins to create and edit merchants and accounts ([49c082e](https://github.com/City-of-Helsinki/linkedevents/commit/49c082e1c4cc40f0ed0e3072a3c1321b1dd01280))
+
 ## [3.21.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.20.0...linkedevents-v3.21.0) (2025-12-17)
 
 
