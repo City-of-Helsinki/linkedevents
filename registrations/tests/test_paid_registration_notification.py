@@ -425,7 +425,7 @@ def test_paid_registration_notification_includes_registration_url(
     email = mail.outbox[0]
 
     html_message = str(email.alternatives[0])
-    expected_url = f"https://test.com/fi/registrations/{registration.id}/"
+    expected_url = f"https://test.com/fi/registrations/edit/{registration.id}"
     assert expected_url in html_message
 
 

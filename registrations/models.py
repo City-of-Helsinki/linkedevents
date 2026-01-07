@@ -691,7 +691,7 @@ class Registration(CreatedModifiedBaseModel):
         context = {
             "event_name": event_name,
             "registration_url": (
-                f"{settings.LINKED_EVENTS_UI_URL}/{DEFAULT_LANG}/registrations/{self.id}/"
+                f"{settings.LINKED_EVENTS_UI_URL}/{DEFAULT_LANG}/registrations/edit/{self.id}"
             ),
             "linked_events_ui_url": settings.LINKED_EVENTS_UI_URL,
         }
