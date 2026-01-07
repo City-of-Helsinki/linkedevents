@@ -38,12 +38,12 @@ resources:
     # Azure DevOps repository
     - repository: linkedevents-pipelines
       type: git
-      # Azure DevOps project/repository
+      #  Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
 
 extends:
   # Filename in Azure DevOps Repository
-  template: azure-pipelines-linkedevents-api-review.yml@linkedevents-pipelines
+  template: components/linkedevents-api/pipelines/linkedevents-api-review.yml@linkedevents-pipelines
   # parameters:
     # Application build arguments and config map values as key value pairs.
     # Does not contain all buildArguments or configMap values, the rest located in linkedevents-pipelines
