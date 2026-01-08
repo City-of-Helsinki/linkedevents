@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.22.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.21.0...linkedevents-v3.22.0) (2026-01-08)
+
+
+### Features
+
+* Notify financial admin on paid registration creation ([9b736b0](https://github.com/City-of-Helsinki/linkedevents/commit/9b736b08e90805e0e46069798b6cf8560ce73f4f))
+* Use django-resilient-logger for audit logging ([03872ff](https://github.com/City-of-Helsinki/linkedevents/commit/03872ffa1f9c6be0017d9b6e51de33c411f8afe8))
+
+
+### Bug Fixes
+
+* Notification url link ([45901a3](https://github.com/City-of-Helsinki/linkedevents/commit/45901a31d540465bc06523358962e162470a324c))
+* Refactor pipelines ([#1139](https://github.com/City-of-Helsinki/linkedevents/issues/1139)) ([e915431](https://github.com/City-of-Helsinki/linkedevents/commit/e91543194cf5534de6821a480247039f9c39dd54))
+
+
+### Reverts
+
+* Allow financial admins to create and edit merchants and accounts ([49c082e](https://github.com/City-of-Helsinki/linkedevents/commit/49c082e1c4cc40f0ed0e3072a3c1321b1dd01280))
+
 ## [3.21.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.20.0...linkedevents-v3.21.0) (2025-12-17)
 
 
