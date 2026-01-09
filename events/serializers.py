@@ -1359,7 +1359,10 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 if field in ret:
                     del ret[field]
 
-        if self.context["request"].accepted_renderer.format == "docx":
+        accepted_renderer = getattr(
+            self.context.get("request"), "accepted_renderer", None
+        )
+        if getattr(accepted_renderer, "format", None) == "docx":
             ret["end_time_obj"] = obj.end_time
             ret["start_time_obj"] = obj.start_time
             ret["location"] = obj.location
