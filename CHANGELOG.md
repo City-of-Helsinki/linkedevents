@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.22.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.22.0...linkedevents-v3.22.1) (2026-01-12)
+
+
+### Dependencies
+
+* Bump werkzeug from 3.1.4 to 3.1.5 ([da99d23](https://github.com/City-of-Helsinki/linkedevents/commit/da99d2309f81e6a795dd1c071255a1cb1b3064dc))
+
 ## [3.22.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.21.0...linkedevents-v3.22.0) (2026-01-08)
 
 
