@@ -1,11 +1,9 @@
 import pytest
 
-from events.tests.utils import versioned_reverse as reverse
-
 
 def get_api_root(api_client):
-    url = reverse("api-root")
-
+    # The API root is now at /v1/ and serves the browsable API
+    url = "/v1/"
     return api_client.get(url)
 
 
@@ -40,5 +38,17 @@ def test_return_correct_routes(api_client):
 
 @pytest.mark.django_db
 def test_has_correct_name(api_client):
-    response = api_client.get(reverse("api-root"), headers={"accept": "text/html"})
-    assert "<h1>Linked Events</h1>" in str(response.content)
+    # Test that /v1/ now serves the browsable API
+    response = api_client.get("/v1/", headers={"accept": "text/html"})
+    assert response.status_code == 200
+    # Browsable API page should contain the title
+    assert "Linked Events" in str(response.content)
+    assert "Django REST framework" in str(response.content)
+
+
+@pytest.mark.django_db
+def test_root_redirects_to_api_docs(api_client):
+    """Test that root path redirects to /api-docs/"""
+    response = api_client.get("/", follow=False)
+    assert response.status_code == 302
+    assert response["Location"] == "/api-docs/"
