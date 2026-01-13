@@ -240,8 +240,10 @@ class DOCXRenderer(renderers.BaseRenderer):
                     if event["price"]:
                         document.add_paragraph(event["price"])
 
+        # Handle case where event has no location
+        location_name = first_location.name if first_location else "no-location"
         filename = (
-            f"{slugify(first_location.name)}-"
+            f"{slugify(location_name)}-"
             f"{query_start_date.strftime('%Y%m%d')}-"
             f"{query_end_date.strftime('%Y%m%d')}.docx"
         )
