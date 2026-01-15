@@ -3,6 +3,7 @@ from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID, uuid4
 
+import sentry_sdk
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.postgres.fields import ArrayField
@@ -671,14 +672,39 @@ class Registration(CreatedModifiedBaseModel):
 
     def send_paid_registration_notification(self):
         recipient_list = []
-        for admin in self.publisher.financial_admin_users.all():
+
+        try:
+            financial_organization = self.publisher.get_ancestors(
+                include_self=True
+            ).get(
+                Q(
+                    parent__id__in=settings.PAID_REGISTRATION_NOTIFICATION_PARENT_ORGANIZATIONS
+                )
+                | Q(id__in=settings.PAID_REGISTRATION_NOTIFICATION_ORGANIZATIONS)
+            )
+        except Organization.DoesNotExist:
+            logger.debug("No notifiable organization found: not sending email")
+            return
+        except Organization.MultipleObjectsReturned as e:
+            sentry_sdk.capture_exception(e)
+            logger.error(
+                f"Multiple financial organizations found for registration {self.id}: "
+                "not sending email"
+            )
+            return
+
+        for admin in financial_organization.financial_admin_users.all():
             if admin.email:
                 recipient_list.append(admin.email)
 
         if not recipient_list:
             logger.warning(
-                f"No financial admins with email for registration {self.id}",
-                extra={"registration": self},
+                f"No financial admins with email for registration {self.id} from "
+                f"organization {financial_organization.id}",
+                extra={
+                    "registration": self,
+                    "financial_organization": financial_organization,
+                },
             )
             return
 
