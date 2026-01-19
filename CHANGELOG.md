@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.23.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.22.1...linkedevents-v3.23.0) (2026-01-19)
+
+
+### Features
+
+* Add support for notifying event division financial admins ([94265d7](https://github.com/City-of-Helsinki/linkedevents/commit/94265d784f1be9e29a824b89ea61c8126dc14a4c))
+
+
+### Bug Fixes
+
+* Handle missing location name in docx filename ([2bedbf5](https://github.com/City-of-Helsinki/linkedevents/commit/2bedbf5216b475b2be99c875eb6e428257cfd55d))
+
 ## [3.22.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.22.0...linkedevents-v3.22.1) (2026-01-13)
 
 
