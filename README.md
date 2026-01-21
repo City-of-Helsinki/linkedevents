@@ -4,38 +4,29 @@
 
 ![High-level diagram of Linked Events](./assets/Linked_Events.jpg?raw=true)
 
-
-#### TL;DR => Linked Events is a REST API which allows you to set up an _**event**_* publication hub.
-
-\*_**event**_  here means a happening where people get together and do something.
-
+**TL;DR** => Linked Events is a REST API which allows you to set up an _**event**_ publication hub.
+(_**event**_  here means a happening where people get together and do something.)
 
 Linked Events is event information:
 
-  * *Aggregator* => using Python importers which have the logic to import events information from different data sources
-  * *Creator* => by offering PUT/POST `/event` API endpoint with granular user permissions and a hierarchical organization structure supporting different publishing rights for different organizations
-  * *Publisher* => by offering API endpoints from which interested parties can retrieve information about events
-
-Linked Events was originally developed for City of Helsinki organization and
-you can see the Linked Events API in action for [Helsinki capital region here](https://api.hel.fi/linkedevents/v1/).
-It contains data from all Helsinki City Departments as well as data from Helsinki Marketing and the Helmet metropolitan area public libraries. Viewing the API should give a reasonable view for the kind of information Linked Events is targeted for.
+* _Aggregator_ => using Python importers which have the logic to import events information from different data sources
+* _Creator_ => by offering PUT/POST `/event` API endpoint with granular user permissions and a hierarchical organization structure supporting different publishing rights for different organizations
+* _Publisher_ => by offering API endpoints from which interested parties can retrieve information about events
 
 Target audience of this README.md are developers who may or may not have a lot of Python
 experience and would like to get things running as quickly as possible.
 Therefore, instructions written in this README.md should be written accordingly.
 
-
 ## Contributing
 
 The best way to contribute is to open a new PR for discussion. We strive to be able to support various cities with various use cases, so suggestions and new features (as long as they fit in with existing functionality) are welcome.
-
 
 ## How to setup your local development environment
 If all you want is a barebone application to work with for your own city:
 
 * Copy `./docker/django/.env.example` to `./docker/django/.env` and change the variable values to your liking.
 * Start django application and database server:
-  ```
+  ```bash
   docker-compose up
   ```
 
@@ -51,7 +42,6 @@ If you wish to use locations, addresses and events data from the Helsinki capita
 
 * UI app is specific to Helsinki at the moment and requires general Finnish ontology as well as additional Helsinki specific audiences
 and keywords to be present. However, UI code should be easily adaptable to your own city if you have an OAuth2 authentication server present
-
 
 ## Development installation on physical or virtual machine
 
@@ -138,7 +128,6 @@ For further erudition, take a look at the DRF documentation on [customizing the 
 
 After this, everything but search endpoint (/search) is working. See [search](#search)
 
-
 ## Development in macOS (linux/arm64)
 * Note: Processor architecture on Apple-silicon machines is ARM64, not AMD64.
   If you have one of these extra tinkering is needed.
@@ -191,10 +180,9 @@ After this, everything but search endpoint (/search) is working. See [search](#s
 
 ## Production notes
 
-Development installation above will give you quite a serviceable production installation for lightish usage. You can serve out the application using your favorite WSGI-capable application server. The WSGI-entrypoint for Linked Events is ```linkedevents.wsgi``` or in file ```linkedevents/wsgi.py```. Former is used by gunicorn, latter by uwsgi. The callable is ```application```.
+Development installation above will give you quite a serviceable production installation for lightish usage. You can serve out the application using your favorite WSGI-capable application server. The WSGI-entrypoint for Linked Events is `linkedevents.wsgi` or in file `linkedevents/wsgi.py`. Former is used by gunicorn, latter by uwsgi. The callable is `application`.
 
-You will also need to serve out ```static``` and ```media``` folders at ```/static``` and ```/media``` in your URL space.
-
+You will also need to serve out `static` and `media` folders at `/static` and `/media` in your URL space.
 
 ## Running tests
 
@@ -225,7 +213,6 @@ py.test events
 
 Note that search tests will fail unless you configure [search](#search)
 
-
 ## Sending email
 The project uses [django-mailer](https://github.com/pinax/django-mailer) for queuing and sending email. When a normal Django email function like `send_mail` is called, the email will be stored into a queue that exists in the database for later sending.
 
@@ -235,7 +222,6 @@ To send messages locally, you can run the `send_mail` command:
 `./manage.py send_mail`
 
 For more information about `django-mailer` and the management commands, you can refer to the [usage documentation](https://github.com/pinax/django-mailer/blob/master/docs/usage.rst).
-
 
 ## Requirements
 
@@ -263,7 +249,6 @@ To remove a dependency, remove it from `requirements.in`,
 run `pip-compile` and then `pip-sync`. If everything works
 as expected, commit the changes.
 
-
 ## Code format
 
 This project uses [Ruff](https://docs.astral.sh/ruff/) for code formatting and quality checking.
@@ -279,7 +264,6 @@ Basic `ruff` commands:
 run all the formatting tools as git hooks automatically before a
 commit.
 
-
 ## Git blame ignore refs
 
 Project includes a `.git-blame-ignore-revs` file for ignoring certain commits from `git blame`.
@@ -291,7 +275,6 @@ following command:
 git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
 
-
 ## Commit message format
 
 New commit messages must adhere to the [Conventional Commits](https://www.conventionalcommits.org/)
@@ -299,7 +282,6 @@ specification, and line length is limited to 72 characters.
 
 When [`pre-commit`](https://pre-commit.com/) is in use, [`commitlint`](https://github.com/conventional-changelog/commitlint)
 checks new commit messages for the correct format.
-
 
 ## Search
 
@@ -321,23 +303,22 @@ Linkedevents uses Elasticsearch for generating results on the /search-endpoint. 
 
     Installing the dictionaries (v5 dictionaries are needed for libvoikko version included in Ubuntu 16.04):
 
-    ```
+    ```bash
     wget -P $INSTALL_BASE http://www.puimula.org/htp/testing/voikko-snapshot-v5/dict-morpho.zip
     unzip $INSTALL_BASE/dict-morpho.zip -d /etc/voikko
     ```
 
-3. Configure the thing
+1. Configure the thing
 
     Set the `ELASTICSEARCH_URL` environment variable (or variable in `config_dev.env`, if you are running in development mode) to your elasticsearch instance. The default value is `http://localhost:9200/`.
 
     Haystack configuration for all Linkedevents languages happens automatically if `ELASTICSEARCH_URL` is set, but you may customize it manually using `local_settings.py` if you know Haystack and wish to do so.
 
-4. Rebuild the search indexes
+2. Rebuild the search indexes
 
    `python manage.py rebuild_index`
 
    You should now have a working /search endpoint, give or take a few.
-
 
 ## Event extensions
 
@@ -359,16 +340,15 @@ To implement an extension:
 
 For an example extension implementation, see [course extension](extension_course).
 
+## API documentation
 
-## Swagger documentation
-
-Swagger documentation is available at the endpoint `/docs/swagger-ui/`. The schema is generated using [drf-spectacular](https://github.com/tfranzel/drf-spectacular).
+API documentation is available at the endpoint `/api-docs/swagger-ui/`. The documentation is generated using [drf-spectacular](https://github.com/tfranzel/drf-spectacular).
 
 Development/local servers use a dynamic schema that is generated on-the-fly, and production servers use a pregenerated static YAML file.
 
 To create or update a static YAML file for testing purposes, etc., you may run the following management command:
 
-```shell
+```bash
 ./manage.py spectacular --file <file_name> --lang en --validate --fail-on-warn --api-version v1
 ```
 To make your local Linked Events instance use the static file, the environment variable `SWAGGER_USE_STATIC_SCHEMA` should be set to `true`.

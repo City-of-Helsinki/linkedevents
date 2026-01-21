@@ -52,19 +52,10 @@ class MassEmailSerializerExtension(OpenApiSerializerExtension):
 
         result["description"] = "Payload of the send message request."
 
-        result["properties"]["subject"]["description"] = "Subject of the email."
-
-        result["properties"]["body"]["description"] = "Body of the email."
         result["properties"]["body"]["example"] = "<p>Email message body</p>"
 
-        result["properties"]["signup_groups"]["description"] = (
-            "Ids of attendees whose contact persons will receive the email message."
-        )
         result["properties"]["signup_groups"]["example"] = [1]
 
-        result["properties"]["signups"]["description"] = (
-            "Ids of signup groups whose contact persons will receive the email message."
-        )
         result["properties"]["signups"]["example"] = [1]
 
         return result
@@ -177,78 +168,16 @@ class RegistrationSerializerExtension(OpenApiSerializerExtension):
         result["properties"]["id"]["description"] = (
             "Unique identifier for this registration."
         )
-        result["properties"]["current_attendee_count"]["description"] = (
-            "The number of attendees registered for the event."
-        )
-        result["properties"]["current_waiting_list_count"]["description"] = (
-            "The number of attendees on the waiting list for the event."
-        )
 
-        result["properties"]["remaining_attendee_capacity"]["description"] = (
-            "The number of seats remaining in the event. Returns <code>null</code> if attendee "  # noqa: E501
-            "capacity is not limited."
-        )
         result["required"].remove("remaining_attendee_capacity")
-
-        result["properties"]["remaining_waiting_list_capacity"]["description"] = (
-            "The number of seats remaining in the waiting list. Returns <code>null</code> if "  # noqa: E501
-            "waiting list capacity is not limited."
-        )
         result["required"].remove("remaining_waiting_list_capacity")
-
-        result["properties"]["signups"]["description"] = (
-            "The list of attendees in the registration. Only admin users of the publisher "  # noqa: E501
-            "organization are allowed to see this information."
-        )
         result["required"].remove("signups")
 
-        result["properties"]["data_source"]["description"] = (
-            "Identifies the source for data, this is specific to API provider. This value is "  # noqa: E501
-            "inherited from the event of the registration."
-        )
-        result["properties"]["publisher"]["description"] = (
-            "Id for the organization that published this registration. This value is inherited "  # noqa: E501
-            "from the event of the registration."
-        )
-        result["properties"]["created_time"]["description"] = (
-            "Time when this registration was created."
-        )
-        result["properties"]["last_modified_time"]["description"] = (
-            "Time when this registration was last modified."
-        )
         result["properties"]["created_by"]["description"] = (
             "URL reference to the user that created this registration (user endpoint)."
         )
         result["properties"]["last_modified_by"]["description"] = (
             "URL reference to the user that last modified this registration (user endpoint)."  # noqa: E501
-        )
-        result["properties"]["audience_min_age"]["description"] = (
-            "Minimum age of attendees."
-        )
-        result["properties"]["audience_max_age"]["description"] = (
-            "Maximum age of attendees."
-        )
-        result["properties"]["enrolment_start_time"]["description"] = (
-            "Time when enrolment for the event starts."
-        )
-        result["properties"]["enrolment_end_time"]["description"] = (
-            "Time when enrolment for the event ends."
-        )
-        result["properties"]["maximum_attendee_capacity"]["description"] = (
-            "Maximum number of attendees allowed for the event. Can also be an estimate of the "  # noqa: E501
-            "maximum number of attendees."
-        )
-        result["properties"]["minimum_attendee_capacity"]["description"] = (
-            "Minimum number of attendees required for the event to take place."
-        )
-        result["properties"]["waiting_list_capacity"]["description"] = (
-            "Maximum number of people allowed to register to the waiting list."
-        )
-        result["properties"]["maximum_group_size"]["description"] = (
-            "Maximum number of attendees allowed in a single group."
-        )
-        result["properties"]["mandatory_fields"]["description"] = (
-            "Mandatory fields in the enrolment form."
         )
         result["properties"]["registration_user_accesses"]["description"] = (
             "Registration user accesses are used to define registration specific permissions."  # noqa: E501
@@ -382,26 +311,15 @@ class SeatReservationCodeSerializerExtension(OpenApiSerializerExtension):
         result["properties"]["registration"]["description"] = (
             "Id of the registration for which the seats are reserved for."
         )
-        result["properties"]["seats"]["description"] = "The number of reserved seats."
 
         result["properties"]["code"]["description"] = (
             "Reservation code which is used when signing to the registration."
         )
         result["properties"]["code"]["example"] = "d380965a-52ad-4e75-be6f-6588454697b7"
 
-        result["properties"]["timestamp"]["description"] = (
-            "Time when the reservation was created."
-        )
         result["properties"]["timestamp"]["example"] = "2024-06-13T07:29:25.880792Z"
 
-        result["properties"]["expiration"]["description"] = (
-            "Time when the reservation expires."
-        )
         result["properties"]["expiration"]["example"] = "2024-06-13T07:29:25.880792Z"
-
-        result["properties"]["in_waitlist"]["description"] = (
-            "Tells if the seats are reserved to the waitlist."
-        )
 
         return result
 
@@ -430,14 +348,8 @@ class SignUpSerializerExtension(OpenApiSerializerExtension):
             "contact person information if they are not part of a group."
         )
 
-        result["properties"]["id"]["description"] = (
-            "Unique identifier for this attendee."
-        )
         result["properties"]["first_name"]["description"] = "Attendee's first name"
         result["properties"]["last_name"]["description"] = "Attendee's last name."
-        result["properties"]["date_of_birth"]["description"] = (
-            "Attendee's date of birth."
-        )
         result["properties"]["street_address"]["description"] = (
             "Attendee's street address."
         )
@@ -454,12 +366,6 @@ class SignUpSerializerExtension(OpenApiSerializerExtension):
         )
         result["properties"]["registration"]["description"] = (
             "Id of the registration to which this signup is related."
-        )
-        result["properties"]["created_time"]["description"] = (
-            "Time when this signup was created."
-        )
-        result["properties"]["last_modified_time"]["description"] = (
-            "Time when this signup was last modified."
         )
         result["properties"]["created_by"]["description"] = (
             "URL reference to the user that created this signup (user endpoint)."
@@ -514,9 +420,6 @@ class SignUpContactPersonSerializerExtension(OpenApiSerializerExtension):
         )
         result["properties"]["native_language"]["example"] = "fi"
 
-        result["properties"]["service_language"]["description"] = (
-            "Contact person's service language."
-        )
         result["properties"]["service_language"]["example"] = "fi"
 
         result["properties"]["membership_number"]["description"] = (
@@ -590,10 +493,6 @@ class SignUpPriceGroupSerializerExtension(OpenApiSerializerExtension):
 
         result["description"] = (
             "Customer group selection for an attendee. Determines the price of the signup."  # noqa: E501
-        )
-
-        result["properties"]["registration_price_group"]["description"] = (
-            "ID of one of the registration's available customer group selections."
         )
 
         return result

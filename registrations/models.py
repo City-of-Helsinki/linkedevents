@@ -196,12 +196,14 @@ class CreatedModifiedBaseModel(models.Model):
         null=False,
         blank=True,
         auto_now_add=True,
+        help_text="Time when created.",
     )
     last_modified_time = models.DateTimeField(
         verbose_name=_("Modified at"),
         null=False,
         blank=True,
         auto_now=True,
+        help_text="Time when last modified.",
     )
 
     created_by = models.ForeignKey(
@@ -210,6 +212,7 @@ class CreatedModifiedBaseModel(models.Model):
         null=True,
         blank=True,
         related_name="%(class)s_created_by",
+        help_text="User that created this entity.",
     )
     last_modified_by = models.ForeignKey(
         User,
@@ -217,6 +220,7 @@ class CreatedModifiedBaseModel(models.Model):
         null=True,
         blank=True,
         related_name="%(class)s_last_modified_by",
+        help_text="User that last modified this entity.",
     )
 
     class Meta:
@@ -434,19 +438,37 @@ class Registration(CreatedModifiedBaseModel):
         null=False,
         blank=True,
     )
-    attendee_registration = models.BooleanField(default=False, null=False)
+    attendee_registration = models.BooleanField(
+        default=False,
+        null=False,
+        help_text="Whether attendee registration is enabled.",
+    )
     audience_min_age = models.PositiveSmallIntegerField(
-        verbose_name=_("Minimum recommended age"), blank=True, null=True, db_index=True
+        verbose_name=_("Minimum recommended age"),
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Minimum age of attendees.",
     )
     audience_max_age = models.PositiveSmallIntegerField(
-        verbose_name=_("Maximum recommended age"), blank=True, null=True, db_index=True
+        verbose_name=_("Maximum recommended age"),
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Maximum age of attendees.",
     )
 
     enrolment_start_time = models.DateTimeField(
-        verbose_name=_("Enrollment start time"), blank=True, null=True
+        verbose_name=_("Enrollment start time"),
+        blank=True,
+        null=True,
+        help_text="Time when enrolment for the event starts.",
     )
     enrolment_end_time = models.DateTimeField(
-        verbose_name=_("Enrollment end time"), blank=True, null=True
+        verbose_name=_("Enrollment end time"),
+        blank=True,
+        null=True,
+        help_text="Time when enrolment for the event ends.",
     )
 
     confirmation_message = models.TextField(
@@ -457,19 +479,29 @@ class Registration(CreatedModifiedBaseModel):
     )
 
     maximum_attendee_capacity = models.PositiveIntegerField(
-        verbose_name=_("Maximum attendee capacity"), null=True, blank=True
+        verbose_name=_("Maximum attendee capacity"),
+        null=True,
+        blank=True,
+        help_text="Maximum number of attendees allowed for the event.",
     )
     minimum_attendee_capacity = models.PositiveIntegerField(
-        verbose_name=_("Minimum attendee capacity"), null=True, blank=True
+        verbose_name=_("Minimum attendee capacity"),
+        null=True,
+        blank=True,
+        help_text="Minimum number of attendees required for the event to take place.",
     )
     waiting_list_capacity = models.PositiveIntegerField(
-        verbose_name=_("Waiting list capacity"), null=True, blank=True
+        verbose_name=_("Waiting list capacity"),
+        null=True,
+        blank=True,
+        help_text="Maximum number of people allowed to register to the waiting list.",
     )
     maximum_group_size = models.PositiveSmallIntegerField(
         verbose_name=_("Maximum group size"),
         null=True,
         blank=True,
         validators=[MinValueValidator(1)],
+        help_text="Maximum number of attendees allowed in a single group.",
     )
 
     mandatory_fields = ChoiceArrayField(
@@ -481,6 +513,7 @@ class Registration(CreatedModifiedBaseModel):
         default=list,
         blank=True,
         verbose_name=_("Mandatory fields"),
+        help_text="Mandatory fields in the enrolment form.",
     )
 
     price_groups = models.ManyToManyField(

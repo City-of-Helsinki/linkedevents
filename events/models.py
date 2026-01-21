@@ -352,12 +352,17 @@ class ImageMixin(models.Model):
 class BaseModel(models.Model):
     objects = BaseQuerySet.as_manager()
 
-    id = models.CharField(max_length=100, primary_key=True)
+    id = models.CharField(
+        max_length=100,
+        primary_key=True,
+        help_text="Consists of source prefix and source specific identifier.",
+    )
     data_source = models.ForeignKey(
         DataSource,
         on_delete=models.CASCADE,
         related_name="provided_%(class)s_data",
         db_index=True,
+        help_text="Source of the data.",
     )
 
     # Properties from schema.org/Thing
@@ -369,11 +374,21 @@ class BaseModel(models.Model):
         db_index=True,
         null=True,
         blank=True,
+        help_text="Identifier in the original data source.",
     )
 
-    created_time = models.DateTimeField(null=True, blank=True, auto_now_add=True)
+    created_time = models.DateTimeField(
+        null=True,
+        blank=True,
+        auto_now_add=True,
+        help_text="Time when created.",
+    )
     last_modified_time = models.DateTimeField(
-        null=True, blank=True, auto_now=True, db_index=True
+        null=True,
+        blank=True,
+        auto_now=True,
+        db_index=True,
+        help_text="Time when last modified.",
     )
 
     created_by = models.ForeignKey(
@@ -382,6 +397,7 @@ class BaseModel(models.Model):
         null=True,
         blank=True,
         related_name="%(app_label)s_%(class)s_created_by",
+        help_text="User that created this entity.",
     )
     last_modified_by = models.ForeignKey(
         User,
@@ -389,6 +405,7 @@ class BaseModel(models.Model):
         null=True,
         blank=True,
         related_name="%(app_label)s_%(class)s_modified_by",
+        help_text="User that last modified this entity.",
     )
 
     @staticmethod

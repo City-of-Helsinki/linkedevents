@@ -208,20 +208,46 @@ class FeedbackSerializer(serializers.ModelSerializer):
 class ImageSerializer(EditableLinkedEventsObjectSerializer):
     view_name = "image-detail"
     license = serializers.PrimaryKeyRelatedField(
-        queryset=License.objects.all(), required=False
+        queryset=License.objects.all(),
+        required=False,
+        help_text=(
+            'License data for the image. May be "cc_by" (default) or "event_only". '
+            "The latter license restricts use of the image and is specified on the API "
+            "front page."
+        ),
     )
     license_url = serializers.SerializerMethodField()
     created_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the image was created.",
     )
     last_modified_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the image was last modified.",
     )
-    created_by = serializers.StringRelatedField(required=False, allow_null=True)
-    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
+    created_by = serializers.StringRelatedField(
+        required=False,
+        allow_null=True,
+        help_text="URL reference to the user that created this image (user endpoint).",
+    )
+    last_modified_by = serializers.StringRelatedField(
+        required=False,
+        allow_null=True,
+        help_text=(
+            "URL reference to the user that last modified this image (user endpoint)."
+        ),
+    )
 
     url = ProxyURLField(
-        "image-file", {"version": "v1"}, required=False, allow_null=True
+        "image-file",
+        {"version": "v1"},
+        required=False,
+        allow_null=True,
+        help_text="The image file URL.",
     )
 
     class Meta:
@@ -252,16 +278,32 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
 
 
 class KeywordSerializer(EditableLinkedEventsObjectSerializer):
-    id = serializers.CharField(required=False)
+    id = serializers.CharField(
+        required=False,
+        help_text=(
+            "Consists of source prefix and source specific identifier. These should be "
+            "URIs uniquely identifying the keyword, and preferably also well formed "
+            "http-URLs pointing to more information about the keyword."
+        ),
+    )
     view_name = "keyword-detail"
     alt_labels = serializers.SlugRelatedField(
-        slug_field="name", read_only=True, many=True
+        slug_field="name",
+        read_only=True,
+        many=True,
+        help_text="Alternative labels for this keyword, no language specified.",
     )
     created_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the keyword was created.",
     )
     last_modified_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the keyword was last modified.",
     )
 
     def validate_id(self, value):
@@ -308,16 +350,31 @@ class KeywordSetSerializer(LinkedEventsSerializer):
         allow_empty=True,
         view_name="keyword-detail",
         queryset=Keyword.objects.none(),
+        help_text="Keywords belonging to this keyword set.",
     )
-    usage = EnumChoiceField(KeywordSet.USAGES)
+    usage = EnumChoiceField(
+        KeywordSet.USAGES,
+        help_text=(
+            "Usage type for this keyword set. These allow UIs to show the set in "
+            "appropriate place."
+        ),
+    )
     created_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the keyword set was created.",
     )
     last_modified_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the keyword set was last modified.",
     )
     has_user_editable_resources = serializers.BooleanField(
-        source="is_user_editable_resources", read_only=True
+        source="is_user_editable_resources",
+        read_only=True,
+        help_text="Boolean to define if resources may be edited by users.",
     )
 
     def to_internal_value(self, data):
@@ -387,7 +444,12 @@ class KeywordSetSerializer(LinkedEventsSerializer):
 
 class LanguageSerializer(LinkedEventsSerializer):
     view_name = "language-detail"
-    translation_available = serializers.SerializerMethodField()
+    translation_available = serializers.SerializerMethodField(
+        help_text=(
+            "Event data may have translations in the languages which have "
+            "translation_available set to true."
+        ),
+    )
 
     class Meta:
         model = Language
@@ -443,23 +505,53 @@ class OrganizationListSerializer(OrganizationBaseSerializer):
         source="parent",
         view_name="organization-detail",
         required=False,
+        help_text="The parent organization of this organization.",
     )
     sub_organizations = serializers.HyperlinkedRelatedField(
-        view_name="organization-detail", many=True, required=False, read_only=True
+        view_name="organization-detail",
+        many=True,
+        required=False,
+        read_only=True,
+        help_text="The organizations that belong to this organization.",
     )
     affiliated_organizations = serializers.HyperlinkedRelatedField(
-        view_name="organization-detail", many=True, required=False, read_only=True
+        view_name="organization-detail",
+        many=True,
+        required=False,
+        read_only=True,
+        help_text=(
+            "The organizations that are affiliated partners to this organization, "
+            "but not proper suborganizations."
+        ),
     )
     replaced_by = serializers.HyperlinkedRelatedField(
-        view_name="organization-detail", required=False, read_only=True
+        view_name="organization-detail",
+        required=False,
+        read_only=True,
+        help_text="The organization that replaced this organization.",
     )
-    is_affiliated = serializers.SerializerMethodField()
-    has_regular_users = serializers.SerializerMethodField()
+    is_affiliated = serializers.SerializerMethodField(
+        help_text=(
+            "Whether the organization is an affiliated organization of the parent, "
+            "instead of a proper suborganization."
+        ),
+    )
+    has_regular_users = serializers.SerializerMethodField(
+        help_text=(
+            "Whether the organization has non-admin users in addition to admin users."
+        ),
+    )
     created_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the organization was created.",
     )
     last_modified_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the organization was last modified.",
     )
 
     class Meta:
@@ -496,22 +588,55 @@ class OrganizationListSerializer(OrganizationBaseSerializer):
 
 
 class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
-    id = serializers.CharField(required=False)
-    origin_id = serializers.CharField(required=False)
+    id = serializers.CharField(
+        required=False,
+        help_text=(
+            "Consists of source prefix and source specific identifier. These should be "
+            "URIs uniquely identifying the place, and preferably also well formed "
+            "http-URLs pointing to more information about the place."
+        ),
+    )
+    origin_id = serializers.CharField(
+        required=False,
+        help_text=(
+            "Place identifier in the originating system. Same as id but without the "
+            "data source prefix."
+        ),
+    )
     data_source = serializers.PrimaryKeyRelatedField(
-        queryset=DataSource.objects.all(), required=False, allow_null=True
+        queryset=DataSource.objects.all(),
+        required=False,
+        allow_null=True,
+        help_text=(
+            "Identifies the source for data, this is specific to API provider. This is "
+            "useful for API users, as any data quality issues are likely to be "
+            "specific to data source and workarounds can be applied as such."
+        ),
     )
     publisher = serializers.PrimaryKeyRelatedField(
-        queryset=Organization.objects.all(), required=False, allow_null=True
+        queryset=Organization.objects.all(),
+        required=False,
+        allow_null=True,
+        help_text="Organization that provided the location data.",
     )
 
     view_name = "place-detail"
-    divisions = DivisionSerializer(many=True, read_only=True)
+    divisions = DivisionSerializer(
+        many=True,
+        read_only=True,
+        help_text="Administrative divisions this place belongs to.",
+    )
     created_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the place was created.",
     )
     last_modified_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the place was last modified.",
     )
 
     def _handle_position(self):
@@ -825,12 +950,20 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         "user_consent",
     )
 
-    id = serializers.CharField(required=False)
+    id = serializers.CharField(
+        required=False,
+        help_text=(
+            "Consists of source prefix and source specific identifier. These should be "
+            "URIs uniquely identifying the event, and preferably also well formed "
+            "http-URLs pointing to more information about the event."
+        ),
+    )
     location = LocationJSONLDRelatedField(
         serializer=PlaceSerializer,
         required=False,
         allow_null=True,
         view_name="place-detail",
+        help_text="The location where the event takes place.",
     )
     keywords = KeywordsJSONLDRelatedField(
         serializer=KeywordSerializer,
@@ -838,6 +971,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         allow_empty=True,
         required=False,
         view_name="keyword-detail",
+        help_text="The keywords that describe the topic and type of this event.",
     )
     registration = RegistrationJSONLDRelatedField(
         serializer="registrations.serializers.RegistrationSerializer",
@@ -846,6 +980,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         required=False,
         view_name="registration-detail",
         allow_null=True,
+        help_text="Registration linked to this event.",
     )
     super_event = EventJSONLDRelatedField(
         serializer=EVENT_SERIALIZER_REF,
@@ -856,19 +991,54 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             Q(super_event_type=Event.SuperEventType.RECURRING)
             | Q(super_event_type=Event.SuperEventType.UMBRELLA)
         ),
+        help_text="References the aggregate event containing this event.",
     )
-    event_status = EnumChoiceField(Event.STATUSES, required=False)
-    type_id = EnumChoiceField(Event.TYPE_IDS, required=False)
-    publication_status = EnumChoiceField(PUBLICATION_STATUSES, required=False)
-    external_links = EventLinkSerializer(many=True, required=False)
-    offers = OfferSerializer(many=True, required=False)
+    event_status = EnumChoiceField(
+        Event.STATUSES,
+        required=False,
+        help_text=(
+            "As defined in schema.org/Event. Postponed events do not have a date set, "
+            "rescheduled events have been moved to different date."
+        ),
+    )
+    type_id = EnumChoiceField(
+        Event.TYPE_IDS,
+        required=False,
+        help_text=(
+            "Event type. Current options are General (Event), Course and Volunteering."
+        ),
+    )
+    publication_status = EnumChoiceField(
+        PUBLICATION_STATUSES,
+        required=False,
+        help_text=(
+            "Specifies whether the event should be published in the API (public) or "
+            "not (draft)."
+        ),
+    )
+    external_links = EventLinkSerializer(
+        many=True,
+        required=False,
+        help_text="Links to external related entities.",
+    )
+    offers = OfferSerializer(
+        many=True,
+        required=False,
+        help_text="Price information records for the event.",
+    )
     data_source = serializers.PrimaryKeyRelatedField(
-        queryset=DataSource.objects.all(), required=False
+        queryset=DataSource.objects.all(),
+        required=False,
+        help_text=(
+            "Unique identifier (URI) for the system from which this event came from, "
+            "preferably URL with more information about the system and its policies."
+        ),
     )
     publisher = serializers.PrimaryKeyRelatedField(
         queryset=Organization.objects.all(),
         required=False,
         allow_null=True,
+        help_text="Id of the organization that published this event in Linked events.",
     )
     sub_events = EventsJSONLDRelatedField(
         serializer=EVENT_SERIALIZER_REF,
@@ -876,6 +1046,10 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         view_name="event-detail",
         many=True,
         queryset=Event.objects.filter(deleted=False),
+        help_text=(
+            "For aggregate events this contains references to all sub events. Usually "
+            "this means that the sub events are part of series."
+        ),
     )
     images = ImagesJSONLDRelatedField(
         serializer=ImageSerializer,
@@ -884,39 +1058,73 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
         many=True,
         view_name="image-detail",
         expanded=True,
+        help_text="Images for the event.",
     )
-    videos = VideoSerializer(many=True, required=False)
+    videos = VideoSerializer(
+        many=True,
+        required=False,
+        help_text="Videos related to this event.",
+    )
     in_language = LanguagesJSONLDRelatedField(
         serializer=LanguageSerializer,
         required=False,
         view_name="language-detail",
         many=True,
         queryset=Language.objects.all(),
+        help_text="The languages spoken or supported at the event.",
     )
     audience = KeywordsJSONLDRelatedField(
         serializer=KeywordSerializer,
         view_name="keyword-detail",
         many=True,
         required=False,
+        help_text=(
+            "The audience groups (picked from keywords) this event is intended for."
+        ),
     )
 
     created_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the event was created.",
     )
     last_modified_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time when the event was last modified.",
     )
     date_published = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Date this event is free to be published.",
     )
     start_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time the event will start.",
     )
     end_time = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, allow_null=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        allow_null=True,
+        help_text="Time the event will end.",
     )
-    created_by = serializers.StringRelatedField(required=False, allow_null=True)
-    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
+    created_by = serializers.StringRelatedField(
+        required=False,
+        allow_null=True,
+        help_text="URL reference to the user that created this event (user endpoint).",
+    )
+    last_modified_by = serializers.StringRelatedField(
+        required=False,
+        allow_null=True,
+        help_text=(
+            "URL reference to the user that last modified this event (user endpoint)."
+        ),
+    )
 
     class Meta:
         model = Event
@@ -1359,7 +1567,10 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
                 if field in ret:
                     del ret[field]
 
-        if self.context["request"].accepted_renderer.format == "docx":
+        accepted_renderer = getattr(
+            self.context.get("request"), "accepted_renderer", None
+        )
+        if getattr(accepted_renderer, "format", None) == "docx":
             ret["end_time_obj"] = obj.end_time
             ret["start_time_obj"] = obj.start_time
             ret["location"] = obj.location

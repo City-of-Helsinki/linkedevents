@@ -159,6 +159,7 @@ class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
         read_only=True,
+        help_text="Time when this object was created.",
     )
 
     last_modified_time = DateTimeField(
@@ -166,12 +167,25 @@ class CreatedModifiedBaseSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
         read_only=True,
+        help_text="Time when this object was last modified.",
     )
 
-    created_by = serializers.StringRelatedField(required=False, allow_null=True)
-    last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
+    created_by = serializers.StringRelatedField(
+        required=False,
+        allow_null=True,
+        help_text="URL reference to the user that created this object (user endpoint).",
+    )
+    last_modified_by = serializers.StringRelatedField(
+        required=False,
+        allow_null=True,
+        help_text=(
+            "URL reference to the user that last modified this object (user endpoint)."
+        ),
+    )
 
-    is_created_by_current_user = serializers.SerializerMethodField()
+    is_created_by_current_user = serializers.SerializerMethodField(
+        help_text="Indicates whether the current user created this object.",
+    )
 
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_created_by_current_user(self, obj):
@@ -206,6 +220,7 @@ class SignUpContactPersonSerializer(serializers.ModelSerializer):
         queryset=Language.objects.filter(service_language=True),
         many=False,
         required=False,
+        help_text="Contact person's service language.",
     )
 
     def validate(self, data):
@@ -251,24 +266,44 @@ class SignUpBaseSerializer(CreatedModifiedBaseSerializer):
 
 
 class SignUpPriceGroupSerializer(TranslatedModelSerializer):
-    id = serializers.IntegerField(required=False, read_only=True)
+    id = serializers.IntegerField(
+        required=False,
+        read_only=True,
+        help_text="Unique identifier for this signup customer group.",
+    )
     registration_price_group = serializers.PrimaryKeyRelatedField(
-        queryset=RegistrationPriceGroup.objects.all()
+        queryset=RegistrationPriceGroup.objects.all(),
+        help_text=(
+            "ID of one of the registration's available customer group selections."
+        ),
     )
     price = serializers.DecimalField(
-        required=False, read_only=True, max_digits=19, decimal_places=2
+        required=False,
+        read_only=True,
+        max_digits=19,
+        decimal_places=2,
+        help_text="Price of this customer group including VAT.",
     )
     price_without_vat = serializers.DecimalField(
-        required=False, read_only=True, max_digits=19, decimal_places=2
+        required=False,
+        read_only=True,
+        max_digits=19,
+        decimal_places=2,
+        help_text="Price of this customer group excluding VAT.",
     )
     vat = serializers.DecimalField(
-        required=False, read_only=True, max_digits=19, decimal_places=2
+        required=False,
+        read_only=True,
+        max_digits=19,
+        decimal_places=2,
+        help_text="Amount of VAT.",
     )
     vat_percentage = serializers.DecimalField(
         required=False,
         read_only=True,
         max_digits=4,
         decimal_places=2,
+        help_text="VAT percentage of this customer group.",
     )
 
     def validate(self, data):
@@ -375,8 +410,15 @@ class SignUpSerializer(
     RefundOrCancellationRelationBaseSerializer,
 ):
     view_name = "signup"
-    id = serializers.IntegerField(required=False)
-    date_of_birth = serializers.DateField(required=False, allow_null=True)
+    id = serializers.IntegerField(
+        required=False,
+        help_text="Unique identifier for this attendee.",
+    )
+    date_of_birth = serializers.DateField(
+        required=False,
+        allow_null=True,
+        help_text="Attendee's date of birth.",
+    )
 
     def get_fields(self):
         fields = super().get_fields()
@@ -806,16 +848,38 @@ class PriceGroupRelatedField(serializers.PrimaryKeyRelatedField):
 
 
 class RegistrationPriceGroupBaseSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(required=False)
-    price_group = PriceGroupRelatedField(queryset=PriceGroup.objects.all())
+    id = serializers.IntegerField(
+        required=False,
+        help_text="Unique identifier for this registration customer group.",
+    )
+    price_group = PriceGroupRelatedField(
+        queryset=PriceGroup.objects.all(),
+        help_text=(
+            "The organization-level customer group whose instance this registration "
+            "customer group is. Gives the name / label for the registration customer "
+            "group and determines if the customer group is free."
+        ),
+    )
     price = serializers.DecimalField(
-        required=False, max_digits=19, decimal_places=2, min_value=Decimal("0.00")
+        required=False,
+        max_digits=19,
+        decimal_places=2,
+        min_value=Decimal("0.00"),
+        help_text="Price of this customer group including VAT.",
     )
     price_without_vat = serializers.DecimalField(
-        required=False, read_only=True, max_digits=19, decimal_places=2
+        required=False,
+        read_only=True,
+        max_digits=19,
+        decimal_places=2,
+        help_text="Price of this customer group excluding VAT.",
     )
     vat = serializers.DecimalField(
-        required=False, read_only=True, max_digits=19, decimal_places=2
+        required=False,
+        read_only=True,
+        max_digits=19,
+        decimal_places=2,
+        help_text="Amount of VAT.",
     )
     vat_percentage = serializers.DecimalField(
         required=False,
@@ -823,6 +887,7 @@ class RegistrationPriceGroupBaseSerializer(serializers.ModelSerializer):
         decimal_places=2,
         min_value=Decimal("0.00"),
         max_value=Decimal("99.99"),
+        help_text="VAT percentage of this customer group.",
     )
 
     def validate(self, data):
@@ -881,27 +946,63 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
         many=False,
         view_name="event-detail",
         queryset=Event.objects.all(),
+        help_text="The event to which this registration belongs.",
     )
 
-    signups = serializers.SerializerMethodField()
+    signups = serializers.SerializerMethodField(
+        help_text=(
+            "The list of attendees in the registration. Only admin users of the "
+            "publisher organization are allowed to see this information."
+        ),
+    )
 
-    current_attendee_count = serializers.SerializerMethodField()
+    current_attendee_count = serializers.SerializerMethodField(
+        help_text="The number of attendees registered for the event.",
+    )
 
-    current_waiting_list_count = serializers.SerializerMethodField()
+    current_waiting_list_count = serializers.SerializerMethodField(
+        help_text="The number of attendees on the waiting list for the event.",
+    )
 
-    remaining_attendee_capacity = serializers.SerializerMethodField()
+    remaining_attendee_capacity = serializers.SerializerMethodField(
+        help_text=(
+            "The number of seats remaining in the event. Returns null if attendee "
+            "capacity is not limited."
+        ),
+    )
 
-    remaining_waiting_list_capacity = serializers.SerializerMethodField()
+    remaining_waiting_list_capacity = serializers.SerializerMethodField(
+        help_text=(
+            "The number of seats remaining in the waiting list. Returns null if "
+            "waiting list capacity is not limited."
+        ),
+    )
 
-    data_source = serializers.SerializerMethodField()
+    data_source = serializers.SerializerMethodField(
+        help_text=(
+            "Identifies the source for data, this is specific to API provider. This "
+            "value is inherited from the event of the registration."
+        ),
+    )
 
-    publisher = serializers.SerializerMethodField()
+    publisher = serializers.SerializerMethodField(
+        help_text=(
+            "Id for the organization that published this registration. This value is "
+            "inherited from the event of the registration."
+        ),
+    )
 
-    has_registration_user_access = serializers.SerializerMethodField()
+    has_registration_user_access = serializers.SerializerMethodField(
+        help_text="Indicates whether the current user has registration user access.",
+    )
 
-    has_substitute_user_access = serializers.SerializerMethodField()
+    has_substitute_user_access = serializers.SerializerMethodField(
+        help_text="Indicates whether the current user has substitute user access.",
+    )
 
-    signup_url = serializers.SerializerMethodField()
+    signup_url = serializers.SerializerMethodField(
+        help_text="URL for signing up to this registration.",
+    )
 
     def __init__(
         self,
@@ -1833,17 +1934,28 @@ class SignUpGroupSerializer(
 
 
 class SeatReservationCodeSerializer(serializers.ModelSerializer):
-    seats = serializers.IntegerField(required=True)
+    seats = serializers.IntegerField(
+        required=True,
+        help_text="The number of reserved seats.",
+    )
 
     timestamp = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, read_only=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        read_only=True,
+        help_text="Time when the reservation was created.",
     )
 
     expiration = DateTimeField(
-        default_timezone=ZoneInfo("UTC"), required=False, read_only=True
+        default_timezone=ZoneInfo("UTC"),
+        required=False,
+        read_only=True,
+        help_text="Time when the reservation expires.",
     )
 
-    in_waitlist = serializers.SerializerMethodField()
+    in_waitlist = serializers.SerializerMethodField(
+        help_text="Tells if the seats are reserved to the waitlist.",
+    )
 
     def get_fields(self):
         fields = super().get_fields()
@@ -2015,15 +2127,25 @@ class MassEmailSignupsField(serializers.PrimaryKeyRelatedField):
 
 
 class MassEmailSerializer(serializers.Serializer):
-    subject = serializers.CharField()
-    body = serializers.CharField()
+    subject = serializers.CharField(
+        help_text="Subject of the email.",
+    )
+    body = serializers.CharField(
+        help_text="Body of the email.",
+    )
     signup_groups = MassEmailSignupGroupsField(
         many=True,
         required=False,
+        help_text=(
+            "Ids of signup groups whose contact persons will receive the email message."
+        ),
     )
     signups = MassEmailSignupsField(
         many=True,
         required=False,
+        help_text=(
+            "Ids of attendees whose contact persons will receive the email message."
+        ),
     )
 
     class Meta:
