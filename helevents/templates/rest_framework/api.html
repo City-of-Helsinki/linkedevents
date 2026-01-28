@@ -2,13 +2,13 @@
 {% load static %}
 
 {% block bootstrap_theme %}
-<link rel="stylesheet" type="text/css" href="{% static " rest_framework/kanslia_bootstrap.css" %}" />
-<link rel="stylesheet" type="text/css" href="{% static " rest_framework/bootstrap-tweaks.css" %}" />
+<link rel="stylesheet" type="text/css" href="{% static "rest_framework/kanslia_bootstrap.css"%}" />
+<link rel="stylesheet" type="text/css" href="{% static "rest_framework/bootstrap-tweaks.css"%}" />
 {% endblock %}
 
 {% block branding %}
 <div class='navbar-brand'>
-    <img src="{% static " rest_framework/images/hel-dev-logo.svg" %}">
+    <img src="{% static "rest_framework/images/hel-dev-logo.svg"%}">
     Helsinki Linked Events API <span class="version">{{ request.version|slice:"1:" }}</span>
 </div>
 {% endblock %}
