@@ -3280,9 +3280,9 @@ class EventViewSet(
         # Switch to normal renderer for docx errors.
         response = super().finalize_response(request, response, *args, **kwargs)
         # Prevent rendering errors as DOCX files
-        accepted_renderer = getattr(request, "accepted_renderer", None)
         if (
             response.status_code != 200
+            and (accepted_renderer := getattr(request, "accepted_renderer", None))
             and getattr(accepted_renderer, "format", None) == "docx"
         ):
             first_renderer = self.renderer_classes[0]()
