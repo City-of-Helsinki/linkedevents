@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.23.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.0...linkedevents-v3.23.1) (2026-01-28)
+
+
+### Dependencies
+
+* Bump wheel from 0.45.1 to 0.46.2 ([7f0272d](https://github.com/City-of-Helsinki/linkedevents/commit/7f0272d4153660639397533a01075b704cafc07b))
+
 ## [3.23.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.22.1...linkedevents-v3.23.0) (2026-01-19)
 
 
