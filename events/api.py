@@ -2408,6 +2408,16 @@ class EventViewSet(
                 "keywords__data_source",
                 "keywords__publisher",
             )
+
+        if "images" in includes:
+            queryset = queryset.prefetch_related(
+                "images__created_by",
+                "images__data_source",
+                "images__last_modified_by",
+                "images__license",
+                "images__publisher",
+            )
+
         return queryset
 
     def get_queryset(self):
