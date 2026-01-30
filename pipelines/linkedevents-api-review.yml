@@ -31,7 +31,7 @@ pr:
     - 'docker-compose*'
 
 # By default, use self-hosted agents
-pool: Default
+pool: dev-we.platta.hel.fi_next
 
 resources:
   repositories:
