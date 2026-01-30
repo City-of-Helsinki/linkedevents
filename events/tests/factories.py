@@ -9,6 +9,7 @@ from events.models import (
     Keyword,
     KeywordLabel,
     Language,
+    License,
     Offer,
     Place,
     Video,
@@ -116,3 +117,8 @@ class OfferFactory(factory.django.DjangoModelFactory):
 class VideoFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Video
+
+
+class LicenseFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = License

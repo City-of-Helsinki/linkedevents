@@ -246,7 +246,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             return
 
         if hasattr(obj, "jsonld_context") and isinstance(
-            obj.jsonld_context, (dict, list)
+            obj.jsonld_context, dict | list
         ):
             ret["@context"] = obj.jsonld_context
         else:

@@ -11,15 +11,15 @@ def rename_fields(dataz):
         new_data = dict()
         for key, value in dataz.items():
             newkey = utils.convert_from_camelcase(key)
-            if isinstance(value, (dict, list)):
+            if isinstance(value, dict | list):
                 new_data[newkey] = rename_fields(value)
             else:
                 new_data[newkey] = value
         return new_data
-    elif isinstance(dataz, (list, tuple)):
+    elif isinstance(dataz, list | tuple):
         new_data = []
         for value in dataz:
-            if isinstance(value, (dict, list, tuple)):
+            if isinstance(value, dict | list | tuple):
                 new_data.append(rename_fields(value))
             else:
                 new_data.append(value)

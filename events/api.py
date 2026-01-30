@@ -2316,12 +2316,6 @@ class EventViewSet(
             "audience",
             "external_links",
             "keywords",
-            "images",
-            "images__created_by",
-            "images__data_source",
-            "images__last_modified_by",
-            "images__license",
-            "images__publisher",
             "in_language",
             "offers",
             "registration",
@@ -2408,6 +2402,20 @@ class EventViewSet(
                 "keywords__data_source",
                 "keywords__publisher",
             )
+
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                "images",
+                queryset=Image.objects.select_related(
+                    "created_by",
+                    "data_source",
+                    "last_modified_by",
+                    "license",
+                    "publisher",
+                ),
+            )
+        )
+
         return queryset
 
     def get_queryset(self):
