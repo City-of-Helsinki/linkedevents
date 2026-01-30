@@ -38,6 +38,7 @@ resources:
     # Azure DevOps repository
     - repository: linkedevents-pipelines
       type: git
+      ref: api_rolling_PLATTA-7140
       #  Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
 
