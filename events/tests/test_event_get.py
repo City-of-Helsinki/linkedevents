@@ -12,12 +12,18 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.utils.timezone import localtime
 from freezegun import freeze_time
+from pytest_django.asserts import assertNumQueries
 from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
 from events.models import Event, Language, License, PublicationStatus
 from events.tests.conftest import APIClient
-from events.tests.factories import EventFactory, OfferFactory
+from events.tests.factories import (
+    EventFactory,
+    ImageFactory,
+    LicenseFactory,
+    OfferFactory,
+)
 from events.tests.utils import (
     assert_fields_exist,
     create_super_event,
@@ -1873,6 +1879,18 @@ def test_event_id_is_audit_logged_on_get_list(api_client, event, event2, user):
     )
 
 
+def get_and_check_response(query_string=""):
+    response = get_list(api_client, query_string=query_string)
+    assert response.status_code == status.HTTP_200_OK
+    return response
+
+
+def count_queries_and_get_response(query_string=""):
+    with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as queries:
+        response = get_and_check_response(query_string=query_string)
+    return len(queries), response
+
+
 @pytest.mark.parametrize(
     "qs,sub_event_query_count,sub_sub_event_query_count",
     [["", 0, 0], ["include=sub_events", 9, 8]],
@@ -1892,41 +1910,178 @@ def test_sub_events_increase_query_count_sanely(
     discover sub-sub events. Sub-sub events should also require 8 queries.
     """
 
-    def get_num_queries():
-        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as queries:
-            response = get_list(api_client, query_string=qs)
-            assert response.status_code == status.HTTP_200_OK
-
-        return len(queries)
-
     event_1 = EventFactory()
     event_2 = EventFactory()
 
-    # Do one warmup list, there's some savepoint/insert happening
-    # on first call related to test setup that would give higher
-    # than expected number of queries.
-    get_num_queries()
+    # Warmup: first call may include extra initialization queries (e.g. content
+    # type caching) that would inflate base_count.
+    count_queries_and_get_response(query_string=qs)
 
-    base_count = get_num_queries()
+    base_count, _ = count_queries_and_get_response(query_string=qs)
 
     sub_event_1 = EventFactory(super_event=event_1)
-    one_sub_event_count = get_num_queries()
-
-    assert one_sub_event_count == base_count + sub_event_query_count
+    with assertNumQueries(base_count + sub_event_query_count):
+        get_and_check_response(query_string=qs)
 
     # More than one sub event should NOT increase number of queries
     sub_event_2 = EventFactory(super_event=event_2)
-    assert get_num_queries() == one_sub_event_count
+    one_sub_event_count = base_count + sub_event_query_count
+    with assertNumQueries(one_sub_event_count):
+        get_and_check_response(query_string=qs)
 
     EventFactory(super_event=sub_event_1)
-    one_sub_sub_event_count = get_num_queries()
-    assert one_sub_sub_event_count == one_sub_event_count + sub_sub_event_query_count
+    one_sub_sub_event_count = one_sub_event_count + sub_sub_event_query_count
+    with assertNumQueries(one_sub_sub_event_count):
+        get_and_check_response(query_string=qs)
 
     # More than one sub-sub event should NOT increase number of queries
     EventFactory(super_event=sub_event_2)
     EventFactory(super_event=sub_event_2)
 
-    assert get_num_queries() == one_sub_sub_event_count
+    with assertNumQueries(one_sub_sub_event_count):
+        get_and_check_response(query_string=qs)
+
+
+@pytest.mark.django_db
+def test_images_with_include_uses_prefetch_optimization(
+    api_client, data_source, organization, user
+):
+    """
+    Test that include=images uses prefetch_related optimization for image
+    related fields (created_by, data_source, last_modified_by, license, publisher).
+
+    The prefetch_related optimization in the EventViewSet._optimize_include method
+    should efficiently fetch all related fields for images, preventing N+1 query
+    problems when multiple events with images are listed.
+
+    This test verifies that adding more events with images does NOT increase the
+    query count proportionally, which would happen without prefetch_related.
+    """
+
+    _license = LicenseFactory(
+        id="test_license",
+        name="Test License",
+        url="https://test.license",
+    )
+
+    # Create first batch of events with images
+    for i in range(3):
+        event = EventFactory(data_source=data_source, publisher=organization)
+        image = ImageFactory(
+            data_source=data_source,
+            publisher=organization,
+            created_by=user,
+            last_modified_by=user,
+            license=_license,
+            url=f"https://test.image/{i}.jpg",
+        )
+        event.images.add(image)
+
+    # Measure baseline with 3 events
+    baseline_queries, response = count_queries_and_get_response(
+        query_string="include=images"
+    )
+
+    # Verify the response includes image data and related fields
+    assert response.data["meta"]["count"] == 3
+    for event_data in response.data["data"]:
+        assert "images" in event_data
+        assert len(event_data["images"]) > 0
+        # license_url requires accessing obj.license.url - this would cause N+1 without prefetch
+        image_data = event_data["images"][0]
+        assert "license" in image_data
+        assert "license_url" in image_data
+        assert image_data["license_url"] == "https://test.license"
+
+    # Create second batch of events with images (double the count)
+    for i in range(3, 9):
+        event = EventFactory(data_source=data_source, publisher=organization)
+        image = ImageFactory(
+            data_source=data_source,
+            publisher=organization,
+            created_by=user,
+            last_modified_by=user,
+            license=_license,
+            url=f"https://test.image/{i}.jpg",
+        )
+        event.images.add(image)
+
+    # Measure queries with 9 events (3x the original)
+    new_queries, response = count_queries_and_get_response(
+        query_string="include=images"
+    )
+
+    # With prefetch_related, the query count should NOT increase significantly
+    # when we triple the number of events. Without prefetch, we'd see +6 queries
+    # (6 new events * 1 query per event to access license.url in get_license_url()).
+    # With proper prefetching, the increase should be minimal (0-2 queries max).
+    query_increase = new_queries - baseline_queries
+
+    assert query_increase <= 2, (
+        f"Query count increased by {query_increase} when tripling events from 3 to 9. "
+        f"This suggests prefetch_related is not working. "
+        f"Without prefetch, we'd expect ~6 additional queries (one per new image for license access). "
+        f"Baseline: {baseline_queries} queries, New: {new_queries} queries"
+    )
+
+
+@pytest.mark.django_db
+def test_event_list_image_license_prefetch_without_include(
+    api_client, data_source, organization, user
+):
+    """
+    Ensure that when fetching events with images WITHOUT using `include=images`,
+    the query count does not grow linearly with the number of events.
+    This validates that the event list endpoint unconditionally prefetches
+    image-related fields (including license), so that images expanded by default
+    do not cause an N+1 query pattern.
+    """
+
+    _license = LicenseFactory(
+        id="test_license",
+        name="Test License",
+        url="https://test.license",
+    )
+
+    # Create baseline: 3 events with one image each, all with a license.
+    for i in range(3):
+        event = EventFactory(data_source=data_source, publisher=organization)
+        image = ImageFactory(
+            data_source=data_source,
+            publisher=organization,
+            created_by=user,
+            last_modified_by=user,
+            license=_license,
+            url=f"https://test.image/{i}.jpg",
+        )
+        event.images.add(image)
+
+    baseline_queries, _ = count_queries_and_get_response(query_string="event-list")
+    # Add 6 more events (total 9, i.e., triple the original count).
+    for i in range(3, 9):
+        event = EventFactory(data_source=data_source, publisher=organization)
+        image = ImageFactory(
+            data_source=data_source,
+            publisher=organization,
+            created_by=user,
+            last_modified_by=user,
+            license=_license,
+            url=f"https://test.image/{i}.jpg",
+        )
+        event.images.add(image)
+
+    new_queries, _ = count_queries_and_get_response(query_string="event-list")
+    query_increase = new_queries - baseline_queries
+
+    # With proper prefetching, the increase in queries when tripling the number of
+    # events with images (and image licenses) should be minimal. Without prefetch,
+    # we'd expect approximately one additional query per image for license access.
+    assert query_increase <= 2, (
+        f"Query count increased by {query_increase} when tripling events from 3 to 9 "
+        f"WITHOUT using include=images. This suggests prefetch_related is not "
+        f"working correctly in the default branch. Baseline: {baseline_queries} "
+        f"queries, New: {new_queries} queries"
+    )
 
 
 @pytest.mark.django_db
