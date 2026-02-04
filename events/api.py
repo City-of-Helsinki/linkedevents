@@ -409,8 +409,8 @@ class KeywordListViewSet(
         DataSourceResourceEditPermission & OrganizationUserEditPermission
     ]
 
-    @extend_schema(summary="Create a new keyword")
     def create(self, request, *args, **kwargs):
+        """Create a new keyword"""
         return super().create(request, *args, **kwargs)
 
     @extend_schema(
@@ -3261,7 +3261,8 @@ class EventViewSet(
     )
     def list(self, request, *args, **kwargs):
         # docx renderer has additional requirements for listing events
-        if request.accepted_renderer.format == "docx":
+        accepted_renderer = getattr(request, "accepted_renderer", None)
+        if getattr(accepted_renderer, "format", None) == "docx":
             if not request.query_params.get("location"):
                 raise ParseError(
                     {"detail": _("Must specify a location when fetching DOCX file.")}
@@ -3279,7 +3280,11 @@ class EventViewSet(
         # Switch to normal renderer for docx errors.
         response = super().finalize_response(request, response, *args, **kwargs)
         # Prevent rendering errors as DOCX files
-        if response.status_code != 200 and request.accepted_renderer.format == "docx":
+        if (
+            response.status_code != 200
+            and (accepted_renderer := getattr(request, "accepted_renderer", None))
+            and getattr(accepted_renderer, "format", None) == "docx"
+        ):
             first_renderer = self.renderer_classes[0]()
             response.accepted_renderer = first_renderer
             response.accepted_media_type = first_renderer.media_type
