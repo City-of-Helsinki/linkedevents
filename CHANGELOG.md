@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.23.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.1...linkedevents-v3.23.2) (2026-02-05)
+
+
+### Dependencies
+
+* Bump django from 5.2.9 to 5.2.11 ([b54c2b3](https://github.com/City-of-Helsinki/linkedevents/commit/b54c2b36593914a956e1ca74409ddc087b9cf357))
+* Bump pip from 25.3 to 26.0 ([d9eafe5](https://github.com/City-of-Helsinki/linkedevents/commit/d9eafe5675a0cd6c20c98b461734f87f8e6c9159))
+
 ## [3.23.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.0...linkedevents-v3.23.1) (2026-01-28)
 
 
