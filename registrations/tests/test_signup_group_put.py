@@ -982,3 +982,26 @@ def test_cannot_update_signup_group_with_another_signups_price_group(
         signup_price_group2.registration_price_group_id
         != new_registration_price_group.pk
     )
+
+
+@pytest.mark.django_db
+def test_cannot_update_signup_group_with_soft_deleted_signup(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    signup_group = SignUpGroupFactory(registration=registration)
+    signup = SignUpFactory(signup_group=signup_group, registration=registration)
+    signup.soft_delete()
+
+    signup_group_data = {
+        "registration": registration.id,
+        "signups": [
+            {
+                "id": signup.id,
+                "first_name": "Updated Name",
+            }
+        ],
+    }
+
+    response = update_signup_group(api_client, signup_group.pk, signup_group_data)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
