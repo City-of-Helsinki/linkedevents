@@ -17,7 +17,7 @@ from rest_framework import status
 
 from events.models import Event, Language, License, PublicationStatus
 from events.tests.conftest import APIClient
-from events.tests.factories import EventFactory, OfferFactory
+from events.tests.factories import EventFactory, ImageFactory, OfferFactory
 from events.tests.utils import (
     assert_fields_exist,
     create_super_event,
@@ -1927,6 +1927,66 @@ def test_sub_events_increase_query_count_sanely(
     EventFactory(super_event=sub_event_2)
 
     assert get_num_queries() == one_sub_sub_event_count
+
+
+@pytest.mark.django_db
+def test_images_with_include_uses_prefetch_optimization(
+    api_client, data_source, organization, user
+):
+    """
+    Test that include=images uses prefetch_related optimization for image
+    related fields (created_by, data_source, last_modified_by, license, publisher).
+
+    The prefetch_related optimization in the EventViewSet._optimize_include method
+    should efficiently fetch all related fields for images, preventing N+1 query
+    problems when multiple events with images are listed.
+    """
+
+    def get_num_queries(query_string=""):
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as queries:
+            response = get_list(api_client, query_string=query_string)
+            assert response.status_code == status.HTTP_200_OK
+        return len(queries)
+
+    license = License.objects.create(name="Test License", url="http://test.license")
+
+    # Create multiple events with images
+    for i in range(3):
+        event = EventFactory(data_source=data_source, publisher=organization)
+        image = ImageFactory(
+            data_source=data_source,
+            publisher=organization,
+            created_by=user,
+            last_modified_by=user,
+            license=license,
+            url=f"http://test.image/{i}.jpg",
+        )
+        event.images.add(image)
+
+    # Get baseline with include=images
+    baseline_queries = get_num_queries(query_string="include=images")
+
+    # Add more events with images - query count should remain same
+    for i in range(3, 6):
+        event = EventFactory(data_source=data_source, publisher=organization)
+        image = ImageFactory(
+            data_source=data_source,
+            publisher=organization,
+            created_by=user,
+            last_modified_by=user,
+            license=license,
+            url=f"http://test.image/{i}.jpg",
+        )
+        event.images.add(image)
+
+    new_queries = get_num_queries(query_string="include=images")
+
+    # With prefetch_related, doubling the events should not double the queries
+    # The query count should remain the same or increase minimally
+    assert new_queries == baseline_queries, (
+        f"Query count increased from {baseline_queries} to {new_queries} "
+        f"when adding more events with images. This suggests an N+1 query problem."
+    )
 
 
 @pytest.mark.django_db
