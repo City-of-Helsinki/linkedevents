@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
+from django.shortcuts import get_object_or_404
 from django.utils.timezone import localdate, localtime
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiTypes, extend_schema_field
@@ -1792,7 +1793,7 @@ class SignUpGroupSerializer(
             if not self.partial:
                 signup_data["signup_group"] = instance
 
-            signup = SignUp.objects.get(pk=signup_data["id"])
+            signup = get_object_or_404(SignUp, pk=signup_data["id"])
             signup_serializer = SignUpSerializer(
                 instance=signup,
                 data=signup_data,
