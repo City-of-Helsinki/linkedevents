@@ -18,18 +18,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: audit_log/models.py:6
-msgid "is sent"
-msgstr "är skickat"
-
-#: audit_log/models.py:7
-msgid "message"
-msgstr "meddelande"
-
-#: audit_log/models.py:8
-msgid "created at"
-msgstr "Skapad kl"
-
 #: data_analytics/forms.py:13
 msgid "Unique name"
 msgstr "Unikt namn"

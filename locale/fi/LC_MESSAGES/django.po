@@ -19,18 +19,6 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Translated-Using: django-rosetta 0.7.6\n"
 
-#: audit_log/models.py:6
-msgid "is sent"
-msgstr "lähetetty"
-
-#: audit_log/models.py:7
-msgid "message"
-msgstr "viesti"
-
-#: audit_log/models.py:8
-msgid "created at"
-msgstr "Luotu klo"
-
 #: data_analytics/forms.py:13
 msgid "Unique name"
 msgstr "Yksilöivä nimi"
