@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.23.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.2...linkedevents-v3.23.3) (2026-02-11)
+
+
+### Dependencies
+
+* Bump cryptography from 46.0.1 to 46.0.5 ([14d2ef8](https://github.com/City-of-Helsinki/linkedevents/commit/14d2ef8080cf3633c9d615618bc245b8955f7ca9))
+
 ## [3.23.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.1...linkedevents-v3.23.2) (2026-02-05)
 
 
