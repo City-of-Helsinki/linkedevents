@@ -112,77 +112,18 @@ class EventSerializerExtension(OpenApiSerializerExtension):
             "this."
         )
 
-        result["properties"]["id"]["description"] = (
-            "Consists of source prefix and source specific identifier. These should be URIs "  # noqa: E501
-            "uniquely identifying the event, and preferably also well formed http-URLs pointing "  # noqa: E501
-            "to more information about the event."
-        )
-
-        result["properties"]["keywords"]["description"] = (
-            "The keywords that describe the topic and type of this event."
-        )
         result["required"].append("keywords")
 
-        result["properties"]["super_event"]["description"] = (
-            "References the aggregate event containing this event."
-        )
         result["properties"]["super_event_type"]["description"] = (
             "If the event has sub_events, describes the type of the event. Current options are "  # noqa: E501
             "<code>null</code>, <code>recurring</code>, which means a repeating event, and "  # noqa: E501
             "<code>umbrella</code>, which means a major event that has sub-events."
         )
-        result["properties"]["event_status"]["description"] = (
-            "As defined in schema.org/Event. Postponed events do not have a date set, "
-            "rescheduled events have been moved to different date."
-        )
-        result["properties"]["type_id"]["description"] = (
-            "Event type. Current options are General (Event), Course and Volunteering."
-        )
 
-        result["properties"]["publication_status"]["description"] = (
-            "Specifies whether the event should be published in the API (<code>public</code>) or "  # noqa: E501
-            "not (<code>draft</code>)."
-        )
         result["required"].append("publication_status")
 
-        result["properties"]["data_source"]["description"] = (
-            "Unique identifier (URI)for the system from which this event came from, preferably "  # noqa: E501
-            "URL with more information about the system and its policies."
-        )
-        result["properties"]["publisher"]["description"] = (
-            "Id of the organization that published this event in Linked events."
-        )
-        result["properties"]["sub_events"]["description"] = (
-            "For aggregate events this contains references to all sub events. Usually this "  # noqa: E501
-            "means that the sub events are part of series. The field <code>super_event_type</code> "  # noqa: E501
-            "tells the type of the aggregate event."
-        )
-        result["properties"]["in_language"]["description"] = (
-            "The languages spoken or supported at the event."
-        )
-        result["properties"]["audience"]["description"] = (
-            "The audience groups (picked from keywords) this event is intended for."
-        )
-        result["properties"]["created_time"]["description"] = (
-            "Time when the event was created."
-        )
-        result["properties"]["last_modified_time"]["description"] = (
-            "Time when the event was last modified."
-        )
-        result["properties"]["created_by"]["description"] = (
-            "URL reference to the user that created this event (user endpoint)."
-        )
-        result["properties"]["last_modified_by"]["description"] = (
-            "URL reference to the user that last modified this event (user endpoint)."
-        )
-        result["properties"]["date_published"]["description"] = (
-            "Date this event is free to be published."
-        )
-
-        result["properties"]["start_time"]["description"] = "Time the event will start."
         result["required"].append("start_time")
 
-        result["properties"]["end_time"]["description"] = "Time the event will end."
         result["properties"]["user_name"]["description"] = "Name of the external user."
         result["properties"]["user_email"]["description"] = (
             "Email of the external user."
@@ -360,25 +301,8 @@ class ImageSerializerExtension(OpenApiSerializerExtension):
         )
 
         result["properties"]["id"]["description"] = "Identifier of the image."
-        result["properties"]["license"]["description"] = (
-            'License data for the image. May be "cc_by" (default) or "event_only". The latter '  # noqa: E501
-            "license restricts use of the image and is specified on the API front page."
-        )
-        result["properties"]["created_time"]["description"] = (
-            "Time when the image was created."
-        )
-        result["properties"]["last_modified_time"]["description"] = (
-            "Time when the image was last modified."
-        )
-        result["properties"]["created_by"]["description"] = (
-            "URL reference to the user that created this image (user endpoint)."
-        )
-        result["properties"]["last_modified_by"]["description"] = (
-            "URL reference to the user that last modified this image (user endpoint)."
-        )
         result["properties"]["name"]["description"] = "Image description."
 
-        result["properties"]["url"]["description"] = "The image file URL."
         result["required"].append("url")
 
         result["properties"]["cropping"]["description"] = "Cropping data for the image."
@@ -424,27 +348,13 @@ class KeywordSerializerExtension(OpenApiSerializerExtension):
             "field. Data_source field will later specify standardized namespaces as well."  # noqa: E501
         )
 
-        result["properties"]["id"]["description"] = (
-            "Consists of source prefix and source specific identifier. These should be URIs "  # noqa: E501
-            "uniquely identifying the keyword, and preferably also well formed http-URLs "  # noqa: E501
-            "pointing to more information about the keyword."
-        )
         result["properties"]["origin_id"]["description"] = (
             "Identifier for the keyword in the organization using this keyword. For "
             "standardized namespaces this will be a shared identifier."
         )
 
-        result["properties"]["alt_labels"]["description"] = (
-            "Alternative labels for this keyword, no language specified."
-        )
         result["required"].remove("alt_labels")
 
-        result["properties"]["created_time"]["description"] = (
-            "Time when the keyword was created"
-        )
-        result["properties"]["last_modified_time"]["description"] = (
-            "Time when the keyword was last modified"
-        )
         result["properties"]["created_by"]["description"] = (
             "URL reference to the user that created this keyword (user endpoint)."
         )
@@ -511,16 +421,6 @@ class KeywordSetSerializerExtension(OpenApiSerializerExtension):
         result["properties"]["origin_id"]["description"] = (
             "Identifier for the keyword set in the originating system, if any."
         )
-        result["properties"]["usage"]["description"] = (
-            "Usage type for this keyword set. These allow UIs to show the set in "
-            "appropriate place."
-        )
-        result["properties"]["created_time"]["description"] = (
-            "Time when the keyword set was created."
-        )
-        result["properties"]["last_modified_time"]["description"] = (
-            "Time when the keyword set was last modified."
-        )
         result["properties"]["created_by"]["description"] = (
             "URL reference to the user that created this keyword set (user endpoint)."
         )
@@ -572,10 +472,6 @@ class LanguageSerializerExtension(OpenApiSerializerExtension):
 
         result["properties"]["id"]["description"] = (
             "Identifier for the language (typically ISO639-1)."
-        )
-        result["properties"]["translation_available"]["description"] = (
-            "Event data may have translations in the languages which have "
-            "<code>translation_available</code> set to <code>true</code>."
         )
 
         result["properties"]["name"] = {
@@ -704,12 +600,6 @@ class OrganizationSerializerExtensionMixin:
         result["properties"]["dissolution_date"]["description"] = (
             "Time the organization was dissolved. If present, the organization no longer exists."  # noqa: E501
         )
-        result["properties"]["created_time"]["description"] = (
-            "Time when the organization was created."
-        )
-        result["properties"]["last_modified_time"]["description"] = (
-            "Time when the organization was last modified."
-        )
         result["properties"]["created_by"]["description"] = (
             "URL reference to the user that created this organization (user endpoint)."
         )
@@ -720,16 +610,11 @@ class OrganizationSerializerExtensionMixin:
         result["properties"]["sub_organizations"] = {
             "type": "array",
             "items": {"type": "string"},
-            "description": "The organizations that belong to this organization.",
         }
 
         result["properties"]["affiliated_organizations"] = {
             "type": "array",
             "items": {"type": "string"},
-            "description": (
-                "The organizations that are affiliated partners to this organization, "
-                "but not proper suborganizations."
-            ),
         }
 
         result["properties"]["internal"] = {
@@ -742,17 +627,10 @@ class OrganizationSerializerExtensionMixin:
 
         result["properties"]["has_regular_user"] = {
             "type": "boolean",
-            "description": (
-                "Whether the organization has non-admin users in addition to admin users."  # noqa: E501
-            ),
         }
 
         result["properties"]["is_affiliated"] = {
             "type": "boolean",
-            "description": (
-                "Whether the organization is an affiliated organization of the parent, "
-                "instead of a proper suborganization"
-            ),
         }
 
         return result
@@ -829,27 +707,8 @@ class PlaceSerializerExtension(OpenApiSerializerExtension):
             "semantics between places sourced from different organizations."
         )
 
-        result["properties"]["id"]["description"] = (
-            "Consists of source prefix and source specific identifier. These should be URIs "  # noqa: E501
-            "uniquely identifying the place, and preferably also well formed http-URLs pointing "  # noqa: E501
-            "to more information about the place."
-        )
-
-        result["properties"]["origin_id"]["description"] = (
-            "Place identifier in the originating system. Same as id but without the data "  # noqa: E501
-            "source prefix."
-        )
         result["required"].append("origin_id")
 
-        result["properties"]["publisher"]["description"] = (
-            "Organization that provided the location data"
-        )
-        result["properties"]["created_time"]["description"] = (
-            "Time when the place was created"
-        )
-        result["properties"]["last_modified_time"]["description"] = (
-            "Time when the place was last modified"
-        )
         result["properties"]["created_by"]["description"] = (
             "URL reference to the user that created this place (user endpoint)."
         )

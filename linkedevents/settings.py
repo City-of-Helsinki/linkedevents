@@ -863,6 +863,14 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": (
         "Linked Events provides categorized data on events and places using JSON-LD format."  # noqa: E501
         "\n\n"
+        "This Linked events API contains event data from the City of Helsinki, including:"  # noqa: E501
+        "\n\n"
+        "- [Helsinki Marketing](http://www.myhelsinki.fi/)"
+        "\n\n"
+        "- [Helsinki Cultural Centres](https://www.hel.fi/helsinki/fi/kulttuuri-ja-vapaa-aika/kulttuuri/kulttuuritalot/)"
+        "\n\n"
+        "- [Helmet metropolitan area public libraries](http://www.helmet.fi/)"
+        "\n\n"
         "Events can be searched by date and location. Location can be exact address or larger "  # noqa: E501
         "area such as neighbourhood or borough."
         "\n\n"
@@ -872,10 +880,40 @@ SPECTACULAR_SETTINGS = {
         "Several fields are multilingual. These are implemented as object with each language variant "  # noqa: E501
         "as property. In this specification each multilingual field has (fi,sv,en) property triplet as "  # noqa: E501
         "example."
+        "\n\n"
+        "## Data License\n\n"
+        "Unless otherwise stated, the data is licensed using CC BY 4.0 license: "
+        "[FI](http://creativecommons.org/licenses/by/4.0/deed.fi) | "
+        "[SV](http://creativecommons.org/licenses/by/4.0/deed.sv) | "
+        "[EN](http://creativecommons.org/licenses/by/4.0/deed.en)."
+        "\n\n"
+        "However, some images may only be used for marketing the specific event and may not be used "  # noqa: E501
+        "outside this context. These images are marked as `event_only` in the API."
+        "\n\n"
+        "**FI:** Helsingin kaupungilla on kuviin kaikki oikeudet. Mikäli rajapinnassa jaettavan kuvan "  # noqa: E501
+        "tietojen kohdassa `license` on merkintä `event_only`, saa kuvaa käyttää ainoastaan kuvan "  # noqa: E501
+        "tapahtumaa käsittelevään tiedotukseen ja viestintään. Kuvien käyttäminen tähän tarkoitukseen "  # noqa: E501
+        "on käyttäjälle ilmaista. Kuvan käyttö tai siirto muihin tarkoituksiin on kielletty. "  # noqa: E501
+        "Kuvia käytettäessä on ehdottomasti mainittava kuvien lähde ja kuvaaja."
+        "\n\n"
+        "**SV:** Helsingfors stad äger alla rättigheter till bilderna. Om beteckningen `event_only` "  # noqa: E501
+        "förekommer under `license` i uppgifterna för en bild som delas i gränssnittet, får bilden "  # noqa: E501
+        "användas endast för informering eller kommunikation som gäller evenemanget på bilden. "  # noqa: E501
+        "Att använda bilderna för det här ändamålet är gratis. Att använda eller flytta bilden för "  # noqa: E501
+        "andra ändamål är förbjudet. Vid användning av bilder ska källan och fotografen absolut nämnas."  # noqa: E501
+        "\n\n"
+        "**EN:** The City of Helsinki reserves all rights to the images. If the data at `license` "  # noqa: E501
+        "of an image shared in the interface contains the text `event_only`, then the image can only "  # noqa: E501
+        "be used for information and communications connected to the event depicted in the image. "  # noqa: E501
+        "The images can be used free of charge for this purpose. To use or move the image for other "  # noqa: E501
+        "purposes is forbidden. The source and photographer must absolutely be mentioned when using "  # noqa: E501
+        "an image."
     ),
-    "VERSION": None,
+    "VERSION": __version__,
+    "SERVE_INCLUDE_SCHEMA": False,
     "SCHEMA_PATH_PREFIX": r"/v1/",
     "SCHEMA_PATH_PREFIX_TRIM": True,
+    "COMPONENT_SPLIT_PATCH": True,
     "PREPROCESSING_HOOKS": ["linkedevents.schema_utils.swagger_endpoint_filter"],
     "POSTPROCESSING_HOOKS": ["linkedevents.schema_utils.swagger_postprocessing_hook"],
     "GET_LIB_DOC_EXCLUDES": "linkedevents.schema_utils.swagger_get_lib_doc_excludes",

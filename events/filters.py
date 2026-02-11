@@ -262,7 +262,12 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         ),
     )
     dwithin = django_filters.Filter(
-        method="filter_dwithin", widget=DistanceWithinWidget()
+        method="filter_dwithin",
+        widget=DistanceWithinWidget(),
+        help_text=_(
+            "Search for events within a certain distance from a point. Use with "
+            "<code>dwithin_origin</code> (lon,lat) and <code>dwithin_metres</code> (radius in metres)."  # noqa: E501
+        ),
     )
     maximum_attendee_capacity_gte = django_filters.NumberFilter(
         field_name="maximum_attendee_capacity",
@@ -301,9 +306,22 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         help_text=_("Hide all events which are super events."),
     )
 
-    full_text = django_filters.CharFilter(method="filter_full_text")
+    full_text = django_filters.CharFilter(
+        method="filter_full_text",
+        help_text=_(
+            "Full-text search using Finnish language processing. "
+            "Supports websearch query syntax."
+        ),
+    )
 
-    ongoing = django_filters.BooleanFilter(method="filter_ongoing")
+    ongoing = django_filters.BooleanFilter(
+        method="filter_ongoing",
+        help_text=_(
+            "Filter for events that are currently ongoing or ended. "
+            "<code>true</code> returns events with end_time in the future, "
+            "<code>false</code> returns events that have ended."
+        ),
+    )
 
     registration_admin_user = django_filters.BooleanFilter(
         method="filter_registration_admin_user",
@@ -383,6 +401,9 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             "registration__remaining_attendee_capacity": ["gte", "isnull"],
             "registration__remaining_waiting_list_capacity": ["gte", "isnull"],
         }
+        # Note: help_text for Meta-generated filters should be added via
+        # extra_kwargs in the get_filter_field_extra_kwargs method if needed
+        # For now, drf-spectacular will auto-generate basic descriptions
 
     def filter_weekday(self, queryset, name, values):
         if not values:
