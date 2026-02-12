@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.23.4](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.3...linkedevents-v3.23.4) (2026-02-12)
+
+
+### Dependencies
+
+* Bump pillow from 11.3.0 to 12.1.1 ([85af7de](https://github.com/City-of-Helsinki/linkedevents/commit/85af7de288e825340dca37bd1d55232e9cdd91b3))
+
 ## [3.23.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.2...linkedevents-v3.23.3) (2026-02-11)
 
 
