@@ -1112,9 +1112,16 @@ def test_soft_deleted_signup_group_is_not_moved_to_attending_from_waiting_list(
 
     signup_group = SignUpGroupFactory(registration=registration)
     SignUpContactPersonFactory(signup_group=signup_group, email=test_email1)
+    # Waiting list requires an attending signup to be deleted so that a waiting
+    # signup is moved up.
+    SignUpFactory(
+        registration=registration,
+        signup_group=signup_group,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
 
     soft_deleted_signup_group = SignUpGroupFactory(registration=registration)
-    signup = SignUpFactory(
+    soft_deleted_signup = SignUpFactory(
         registration=registration,
         signup_group=soft_deleted_signup_group,
         attendee_status=SignUp.AttendeeStatus.WAITING_LIST,
@@ -1127,8 +1134,8 @@ def test_soft_deleted_signup_group_is_not_moved_to_attending_from_waiting_list(
 
     assert_delete_signup_group(api_client, signup_group.id)
 
-    signup.refresh_from_db()
-    assert signup.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
+    soft_deleted_signup.refresh_from_db()
+    assert soft_deleted_signup.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
 
     # The deleted signup group will get a cancellation email, but the soft deleted one will not
     # get any.
