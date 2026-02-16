@@ -18,7 +18,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django_jinja.builtins import DEFAULT_EXTENSIONS
 from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa: N813
 from sentry_sdk.integrations.django import DjangoIntegration
-from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
+from sentry_sdk.scrubber import DEFAULT_DENYLIST, DEFAULT_PII_DENYLIST, EventScrubber
 from sentry_sdk.serializer import add_global_repr_processor
 from sentry_sdk.types import SamplingContext
 
@@ -334,6 +334,11 @@ if DJANGO_EXTENSIONS_AVAILABLE:
 COMMIT_HASH = get_release_string()
 SENTRY_DENYLIST = DEFAULT_DENYLIST + [
     "access_code",
+    "native_language",
+    "service_language",
+    "extra_info",
+]
+SENTRY_PII_DENYLIST = DEFAULT_PII_DENYLIST + [
     "user_name",
     "user_email",
     "user_phone_number",
@@ -347,9 +352,6 @@ SENTRY_DENYLIST = DEFAULT_DENYLIST + [
     "postal_code",
     "date_of_birth",
     "membership_number",
-    "native_language",
-    "service_language",
-    "extra_info",
 ]
 
 SENTRY_TRACES_SAMPLE_RATE = env("SENTRY_TRACES_SAMPLE_RATE")
@@ -370,13 +372,18 @@ def sentry_traces_sampler(sampling_context: SamplingContext) -> float:
     return SENTRY_TRACES_SAMPLE_RATE or 0
 
 
+EVENT_SCRUBBER = EventScrubber(
+    denylist=SENTRY_DENYLIST,
+    pii_denylist=SENTRY_PII_DENYLIST,
+)
+
 if env("SENTRY_DSN"):
     sentry_sdk.init(
         dsn=env("SENTRY_DSN"),
         environment=env("SENTRY_ENVIRONMENT"),
         release=env("SENTRY_RELEASE"),
         integrations=[DjangoIntegration()],
-        event_scrubber=EventScrubber(denylist=SENTRY_DENYLIST),
+        event_scrubber=EVENT_SCRUBBER,
         traces_sampler=sentry_traces_sampler,
         profile_session_sample_rate=env("SENTRY_PROFILE_SESSION_SAMPLE_RATE"),
         profile_lifecycle="trace",
