@@ -1,8 +1,6 @@
 # ruff: noqa: F841
 import pytest
-from django.conf import settings as django_settings
 from sentry_sdk import capture_exception
-from sentry_sdk.scrubber import EventScrubber
 from sentry_sdk.serializer import global_repr_processors
 
 from events.tests.factories import ApiKeyUserFactory
@@ -38,12 +36,12 @@ def test_anonymize_user_repr_function():
     assert nonetype_repr == NotImplemented
 
 
-def test_custom_denylist_part1(sentry_init, sentry_capture_events):
-    sentry_init(event_scrubber=EventScrubber(denylist=django_settings.SENTRY_DENYLIST))
+def test_custom_denylist_part1(settings, sentry_init, sentry_capture_events):
+    """Only test a limited amount of fields to avoid hitting a limit."""
+    sentry_init(event_scrubber=settings.EVENT_SCRUBBER)
     events = sentry_capture_events()
 
     try:
-        access_code = "1234"
         user_name = "John Doe"
         user_email = "user@test.dev"
         user_phone_number = "+3581234567890"
@@ -57,7 +55,6 @@ def test_custom_denylist_part1(sentry_init, sentry_capture_events):
     _assert_sensitive_fields_scrubbed(
         events,
         (
-            "access_code",
             "user_name",
             "user_email",
             "user_phone_number",
@@ -68,18 +65,19 @@ def test_custom_denylist_part1(sentry_init, sentry_capture_events):
     )
 
 
-def test_custom_denylist_part2(sentry_init, sentry_capture_events):
-    sentry_init(event_scrubber=EventScrubber(denylist=django_settings.SENTRY_DENYLIST))
+def test_custom_denylist_part2(settings, sentry_init, sentry_capture_events):
+    """Only test a limited amount of fields to avoid hitting a limit."""
+    sentry_init(event_scrubber=settings.EVENT_SCRUBBER)
     events = sentry_capture_events()
 
     try:
+        access_code = "1234"
         email = "user@test.dev"
         city = "Helsinki"
         street_address = "Test street 1"
         zipcode = "00100"
         postal_code = "00100"
-        date_of_birth = "1970-01-01"
-        membership_number = "123456"
+
         raise ValueError()
     except ValueError:
         capture_exception()
@@ -87,22 +85,24 @@ def test_custom_denylist_part2(sentry_init, sentry_capture_events):
     _assert_sensitive_fields_scrubbed(
         events,
         (
+            "access_code",
             "email",
             "city",
             "street_address",
             "zipcode",
             "postal_code",
-            "date_of_birth",
-            "membership_number",
         ),
     )
 
 
-def test_custom_denylist_part3(sentry_init, sentry_capture_events):
-    sentry_init(event_scrubber=EventScrubber(denylist=django_settings.SENTRY_DENYLIST))
+def test_custom_denylist_part3(settings, sentry_init, sentry_capture_events):
+    """Only test a limited amount of fields to avoid hitting a limit."""
+    sentry_init(event_scrubber=settings.EVENT_SCRUBBER)
     events = sentry_capture_events()
 
     try:
+        date_of_birth = "1970-01-01"
+        membership_number = "123456"
         native_language = "fi"
         service_language = "en"
         extra_info = "extra info"
@@ -111,5 +111,12 @@ def test_custom_denylist_part3(sentry_init, sentry_capture_events):
         capture_exception()
 
     _assert_sensitive_fields_scrubbed(
-        events, ("native_language", "service_language", "extra_info")
+        events,
+        (
+            "date_of_birth",
+            "membership_number",
+            "native_language",
+            "service_language",
+            "extra_info",
+        ),
     )
