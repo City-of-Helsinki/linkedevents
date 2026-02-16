@@ -1779,6 +1779,17 @@ class SignUpGroupSerializer(
                 "You may not change the registration of an existing object."
             )
 
+        signups_data = validated_data.get("signups", [])
+        for signup_data in signups_data:
+            # Check that referenced signups exist. This is needed when updating signups.
+            if not (signup_id := signup_data.get("id")):
+                continue
+
+            if not SignUp.objects.filter(pk=signup_id).exists():
+                errors.setdefault("signups", []).append(
+                    _("Sign up with id: {} doesn't exist.").format(signup_id)
+                )
+
         if errors:
             raise serializers.ValidationError(errors)
 
