@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.24.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.4...linkedevents-v3.24.0) (2026-02-16)
+
+
+### Features
+
+* Remove old AuditLogEntry model ([eca95ea](https://github.com/City-of-Helsinki/linkedevents/commit/eca95ea252f331d7240ad824b09bd4a80d9e1676))
+
 ## [3.23.4](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.3...linkedevents-v3.23.4) (2026-02-12)
 
 
