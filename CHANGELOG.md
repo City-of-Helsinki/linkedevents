@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.24.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.4...linkedevents-v3.24.0) (2026-02-18)
+
+
+### Features
+
+* Check signups exists when updating with SignUpGroupSerializer ([0f44886](https://github.com/City-of-Helsinki/linkedevents/commit/0f44886abb1ab43a2fed24c89b25998fd6d25a16))
+* List personally identifiable information separately for sentry ([4d5bd39](https://github.com/City-of-Helsinki/linkedevents/commit/4d5bd3968d756a772ac230d0e620b9a079282ed0))
+* Remove old AuditLogEntry model ([eca95ea](https://github.com/City-of-Helsinki/linkedevents/commit/eca95ea252f331d7240ad824b09bd4a80d9e1676))
+
 ## [3.23.4](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.3...linkedevents-v3.23.4) (2026-02-12)
 
 
