@@ -1594,10 +1594,10 @@ def test_update_registration_increase_attendee_capacity_move_signups_to_attendin
     assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
 
     signup2.refresh_from_db()
-    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+    assert signup2.attendee_status == SignUp.AttendeeStatus.AWAITING_PAYMENT
 
     signup3.refresh_from_db()
-    assert signup3.attendee_status == SignUp.AttendeeStatus.ATTENDING
+    assert signup3.attendee_status == SignUp.AttendeeStatus.AWAITING_PAYMENT
 
     signup4.refresh_from_db()
     assert signup4.attendee_status == SignUp.AttendeeStatus.WAITING_LIST
@@ -1707,7 +1707,7 @@ def test_increase_attendee_capacity_move_signups_to_attending_with_payments_api_
     assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
 
     signup2.refresh_from_db()
-    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+    assert signup2.attendee_status == SignUp.AttendeeStatus.AWAITING_PAYMENT
 
     signup3.refresh_from_db()
     assert signup3.attendee_status == SignUp.AttendeeStatus.WAITING_LIST

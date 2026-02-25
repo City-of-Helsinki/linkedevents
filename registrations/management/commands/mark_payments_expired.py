@@ -9,10 +9,10 @@ from django.utils.timezone import localtime
 from requests import RequestException
 from rest_framework import status
 
-from registrations.models import SignUp, SignUpPayment
+from registrations.api import WebStorePaymentWebhookViewSet
+from registrations.models import SignUpPayment
 from registrations.notifications import SignUpNotificationType
 from registrations.utils import (
-    get_access_code_for_contact_person,
     move_waitlisted_to_attending,
 )
 from web_store.order.clients import WebStoreOrderAPIClient
@@ -33,25 +33,11 @@ class Command(BaseCommand):
         payment.status = SignUpPayment.PaymentStatus.PAID
         payment.save(update_fields=["status"])
 
-        contact_person = payment.signup_or_signup_group.actual_contact_person
-        if not contact_person:
-            return
-
-        access_code = get_access_code_for_contact_person(
-            contact_person, payment.signup_or_signup_group.created_by
-        )
-        contact_person.send_notification(
-            SignUpNotificationType.CONFIRMATION, access_code=access_code
-        )
+        WebStorePaymentWebhookViewSet.confirm_signup(payment.signup_or_signup_group)
 
     @staticmethod
     def _handle_payment_cancelled(payment):
-        if isinstance(payment.signup_or_signup_group, SignUp):
-            payment.signup_or_signup_group._individually_deleted = True
-
-        payment.signup_or_signup_group.delete(
-            bypass_web_store_api_calls=True, payment_cancelled=True
-        )
+        WebStorePaymentWebhookViewSet.cancel_signup(payment.signup_or_signup_group)
 
     @staticmethod
     def _handle_payment_expired(payment, order_api_client):
