@@ -1213,7 +1213,7 @@ def test_send_email_with_payment_link_when_moving_participant_from_waitlist(
     assert SignUpPayment.objects.count() == 1
 
     signup2.refresh_from_db()
-    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+    assert signup2.attendee_status == SignUp.AttendeeStatus.AWAITING_PAYMENT
 
     assert_payment_link_email_sent(
         contact_person2,
@@ -1319,7 +1319,7 @@ def test_send_email_with_payment_link_when_moving_participant_from_waitlist_for_
     assert SignUpPayment.objects.count() == 1
 
     signup2.refresh_from_db()
-    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+    assert signup2.attendee_status == SignUp.AttendeeStatus.AWAITING_PAYMENT
 
     assert_payment_link_email_sent(
         contact_person2,
@@ -1393,7 +1393,7 @@ def test_email_with_payment_link_sent_when_moving_participant_with_zero_price(
     assert SignUpPayment.objects.first().amount == zero_price
 
     signup2.refresh_from_db()
-    assert signup2.attendee_status == SignUp.AttendeeStatus.ATTENDING
+    assert signup2.attendee_status == SignUp.AttendeeStatus.AWAITING_PAYMENT
 
     assert len(mail.outbox) == 2
     assert mail.outbox[0].to[0] == contact_person2.email

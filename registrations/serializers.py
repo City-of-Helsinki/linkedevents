@@ -74,7 +74,11 @@ def _get_attending_and_waitlisted_capacities(
 
     if attendee_capacity is not None:
         already_attending = SignUp.objects.filter(
-            registration=registration, attendee_status=SignUp.AttendeeStatus.ATTENDING
+            registration=registration,
+            attendee_status__in=(
+                SignUp.AttendeeStatus.ATTENDING,
+                SignUp.AttendeeStatus.AWAITING_PAYMENT,
+            ),
         ).count()
         add_as_attending = attendee_capacity - already_attending
 
@@ -98,6 +102,7 @@ def _notify_contact_person(contact_person, attendee_status, current_user=None):
 
     confirmation_type_mapping = {
         SignUp.AttendeeStatus.ATTENDING: SignUpNotificationType.CONFIRMATION,
+        SignUp.AttendeeStatus.AWAITING_PAYMENT: SignUpNotificationType.CONFIRMATION,
         SignUp.AttendeeStatus.WAITING_LIST: SignUpNotificationType.CONFIRMATION_TO_WAITING_LIST,  # noqa: E501
     }
 
@@ -465,6 +470,8 @@ class SignUpSerializer(
             # A group will have a single shared payment that is created in the group
             # serializer.
             payment = self._create_payment(signup)
+            signup.attendee_status = SignUp.AttendeeStatus.AWAITING_PAYMENT
+            signup.save(update_fields=["attendee_status"])
 
         payment_link = getattr(payment, "checkout_url", None)
         if signup:
@@ -1694,8 +1701,13 @@ class SignUpGroupCreateSerializer(
 
         if create_payment and instance.attending_signups:
             payment = self._create_payment(instance)
+            instance.attending_signups.update(
+                attendee_status=SignUp.AttendeeStatus.AWAITING_PAYMENT
+            )
 
-        if payment or instance.attending_signups:
+        if payment:
+            attendee_status = SignUp.AttendeeStatus.AWAITING_PAYMENT
+        elif instance.attending_signups:
             attendee_status = SignUp.AttendeeStatus.ATTENDING
         else:
             attendee_status = SignUp.AttendeeStatus.WAITING_LIST
@@ -1879,7 +1891,10 @@ class SeatReservationCodeSerializer(serializers.ModelSerializer):
             return False
 
         attendee_count = registration.signups.filter(
-            attendee_status=SignUp.AttendeeStatus.ATTENDING
+            attendee_status__in=(
+                SignUp.AttendeeStatus.ATTENDING,
+                SignUp.AttendeeStatus.AWAITING_PAYMENT,
+            )
         ).count()
 
         return maximum_attendee_capacity - attendee_count <= 0

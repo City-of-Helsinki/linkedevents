@@ -449,7 +449,10 @@ class RegistrationViewSet(
             )
             signups = registration.signups.filter(
                 contact_person__email__isnull=False,
-                attendee_status=SignUp.AttendeeStatus.ATTENDING,
+                attendee_status__in=(
+                    SignUp.AttendeeStatus.ATTENDING,
+                    SignUp.AttendeeStatus.AWAITING_PAYMENT,
+                ),
             )
 
         message_contact_persons = self._get_message_contact_persons(
@@ -1157,7 +1160,19 @@ class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
             raise ConflictException(_("Could not check order status from Talpa API."))
 
     @staticmethod
-    def _confirm_signup(signup_or_signup_group: SignUp | SignUpGroup) -> None:
+    def confirm_signup(signup_or_signup_group: SignUp | SignUpGroup) -> None:
+        if (
+            isinstance(signup_or_signup_group, SignUp)
+            and signup_or_signup_group.attendee_status
+            == SignUp.AttendeeStatus.AWAITING_PAYMENT
+        ):
+            signup_or_signup_group.attendee_status = SignUp.AttendeeStatus.ATTENDING
+            signup_or_signup_group.save(update_fields=["attendee_status"])
+        elif isinstance(signup_or_signup_group, SignUpGroup):
+            signup_or_signup_group.signups.filter(
+                attendee_status=SignUp.AttendeeStatus.AWAITING_PAYMENT
+            ).update(attendee_status=SignUp.AttendeeStatus.ATTENDING)
+
         contact_person = signup_or_signup_group.actual_contact_person
         if not contact_person:
             return
@@ -1170,7 +1185,7 @@ class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
         )
 
     @staticmethod
-    def _cancel_signup(signup_or_signup_group: SignUp | SignUpGroup) -> None:
+    def cancel_signup(signup_or_signup_group: SignUp | SignUpGroup) -> None:
         if isinstance(signup_or_signup_group, SignUp):
             signup_or_signup_group._individually_deleted = True
 
@@ -1205,7 +1220,7 @@ class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
 
             # Order cancelled => cancel signup
             # (email notification is sent automatically as a result of that).
-            self._cancel_signup(payment.signup_or_signup_group)
+            self.cancel_signup(payment.signup_or_signup_group)
 
         self._add_audit_logged_object_ids(payment)
 
@@ -1240,7 +1255,7 @@ class WebStorePaymentWebhookViewSet(WebStoreWebhookBaseViewSet):
             payment.status = SignUpPayment.PaymentStatus.PAID
             payment.save(update_fields=["status", "last_modified_time"])
 
-            self._confirm_signup(payment.signup_or_signup_group)
+            self.confirm_signup(payment.signup_or_signup_group)
 
         self._add_audit_logged_object_ids(payment)
 

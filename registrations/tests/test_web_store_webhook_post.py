@@ -80,9 +80,15 @@ def create_signup_payment(
     create_contact_person: bool = True,
     service_language: str = "en",
 ) -> SignUpPayment:
+    signup_attendee_status = (
+        SignUp.AttendeeStatus.AWAITING_PAYMENT
+        if payment_status == SignUpPayment.PaymentStatus.CREATED
+        else SignUp.AttendeeStatus.ATTENDING
+    )
     payment = SignUpPaymentFactory(
         external_order_id=external_order_id,
         status=payment_status,
+        signup__attendee_status=signup_attendee_status,
         signup__created_by=user,
         created_by=user,
     )
@@ -111,6 +117,7 @@ def create_signup_group_payment(
     payment_status: str = SignUpPayment.PaymentStatus.CREATED,
     user: get_user_model() | None = None,
     create_contact_person: bool = True,
+    create_signup: bool = False,
     service_language: str = "en",
 ) -> SignUpPayment:
     signup_group = SignUpGroupFactory(created_by=user)
@@ -122,6 +129,18 @@ def create_signup_group_payment(
         status=payment_status,
         created_by=user,
     )
+
+    if create_signup:
+        signup_attendee_status = (
+            SignUp.AttendeeStatus.AWAITING_PAYMENT
+            if payment_status == SignUpPayment.PaymentStatus.CREATED
+            else SignUp.AttendeeStatus.ATTENDING
+        )
+        SignUpFactory(
+            signup_group=payment.signup_group,
+            created_by=payment.signup_group.created_by,
+            attendee_status=signup_attendee_status,
+        )
 
     if not create_contact_person:
         return payment
@@ -350,6 +369,10 @@ def test_payment_paid_webhook_for_signup_payment(
     )
 
     assert payment.status == SignUpPayment.PaymentStatus.CREATED
+    assert (
+        payment.signup_or_signup_group.attendee_status
+        == SignUp.AttendeeStatus.AWAITING_PAYMENT
+    )
 
     data = get_webhook_data(
         payment.external_order_id,
@@ -367,6 +390,9 @@ def test_payment_paid_webhook_for_signup_payment(
 
         assert_payment_paid(api_client, data, payment)
         assert_confirmation_sent_to_contact_person(payment.signup_or_signup_group)
+
+        # After payment is marked as paid, the signup status is not waiting payment anymore, but attending.
+        assert payment.signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
 
         assert req_mock.call_count == 1
 
@@ -389,9 +415,13 @@ def test_payment_paid_webhook_for_signup_group_payment(
     payment = create_signup_group_payment(
         user=created_by_user() if callable(created_by_user) else created_by_user,
         create_contact_person=has_contact_person,
+        create_signup=True,
     )
 
     assert payment.status == SignUpPayment.PaymentStatus.CREATED
+    assert payment.signup_group.attending_signups.count() > 0
+    for signup in payment.signup_group.attending_signups.all():
+        assert signup.attendee_status == SignUp.AttendeeStatus.AWAITING_PAYMENT
 
     data = get_webhook_data(
         payment.external_order_id,
@@ -409,6 +439,11 @@ def test_payment_paid_webhook_for_signup_group_payment(
 
         assert_payment_paid(api_client, data, payment)
         assert_confirmation_sent_to_contact_person(payment.signup_or_signup_group)
+
+        # After payment is marked as paid, the signup status is not waiting payment anymore, but attending.
+        assert payment.signup_group.attending_signups.count() > 0
+        for signup in payment.signup_group.attending_signups.all():
+            assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
 
         assert req_mock.call_count == 1
 

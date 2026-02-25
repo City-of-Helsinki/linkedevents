@@ -96,20 +96,28 @@ def test_head_method_not_allowed(user_api_client, registration):
     assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
+@pytest.mark.parametrize(
+    "attendee_status",
+    [SignUp.AttendeeStatus.ATTENDING, SignUp.AttendeeStatus.AWAITING_PAYMENT],
+)
 @pytest.mark.django_db
 def test_registration_created_admin_user_can_send_message_to_all_signups(
-    user_api_client, registration, user
+    user_api_client, registration, user, attendee_status
 ):
     assert registration.created_by_id == user.id
 
     signup_group = SignUpGroupFactory(registration=registration)
-    SignUpFactory(registration=registration, signup_group=signup_group)
+    SignUpFactory(
+        registration=registration,
+        signup_group=signup_group,
+        attendee_status=attendee_status,
+    )
     group_contact_person = SignUpContactPersonFactory(
         signup_group=signup_group,
         email="test@test.com",
     )
 
-    signup = SignUpFactory(registration=registration)
+    signup = SignUpFactory(registration=registration, attendee_status=attendee_status)
     signup_contact_person = SignUpContactPersonFactory(
         signup=signup, email="test2@test.com"
     )

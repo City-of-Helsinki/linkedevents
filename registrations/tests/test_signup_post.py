@@ -108,12 +108,16 @@ def assert_default_contact_person_created(contact_person_data):
     assert contact_person.service_language.pk == "fi"
 
 
-def assert_default_signup_created(signups_data, user):
+def assert_default_signup_created(signups_data, user, with_payment=False):
     assert SignUp.objects.count() == 1
     assert SeatReservationCode.objects.count() == 0
 
     signup = SignUp.objects.first()
-    assert signup.attendee_status == SignUp.AttendeeStatus.ATTENDING
+    assert (
+        signup.attendee_status == SignUp.AttendeeStatus.AWAITING_PAYMENT
+        if with_payment
+        else SignUp.AttendeeStatus.ATTENDING
+    )
     assert signup.first_name == signups_data["signups"][0]["first_name"]
     assert signup.last_name == signups_data["signups"][0]["last_name"]
     assert signup.phone_number == signups_data["signups"][0]["phone_number"]
@@ -478,7 +482,7 @@ def test_create_signup_payment_without_pricetotal_in_response(api_client):
 
     assert SignUpPayment.objects.count() == 1
 
-    assert_default_signup_created(signups_data, user)
+    assert_default_signup_created(signups_data, user, with_payment=True)
     assert_signup_payment_data_is_correct(
         response.data[0]["payment"],
         user,

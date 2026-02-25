@@ -538,7 +538,10 @@ class Registration(CreatedModifiedBaseModel):
     @cached_property
     def current_attendee_count(self):
         return self.signups.filter(
-            attendee_status=SignUp.AttendeeStatus.ATTENDING
+            attendee_status__in=(
+                SignUp.AttendeeStatus.ATTENDING,
+                SignUp.AttendeeStatus.AWAITING_PAYMENT,
+            )
         ).count()
 
     @cached_property
@@ -612,7 +615,7 @@ class Registration(CreatedModifiedBaseModel):
             )
             return
 
-        first_on_list.attendee_status = SignUp.AttendeeStatus.ATTENDING
+        first_on_list.attendee_status = SignUp.AttendeeStatus.AWAITING_PAYMENT
         first_on_list.save(update_fields=["attendee_status"])
 
         contact_person = first_on_list.actual_contact_person
@@ -1298,7 +1301,12 @@ class SignUpGroup(
 
     @cached_property
     def attending_signups(self):
-        return self.signups.filter(attendee_status=SignUp.AttendeeStatus.ATTENDING)
+        return self.signups.filter(
+            attendee_status__in=(
+                SignUp.AttendeeStatus.ATTENDING,
+                SignUp.AttendeeStatus.AWAITING_PAYMENT,
+            )
+        )
 
     @cached_property
     def total_payment_amount(self):
@@ -1460,10 +1468,12 @@ class SignUp(
     class AttendeeStatus:
         WAITING_LIST = "waitlisted"
         ATTENDING = "attending"
+        AWAITING_PAYMENT = "awaiting_payment"
 
     ATTENDEE_STATUSES = (
         (AttendeeStatus.WAITING_LIST, _("Waitlisted")),
         (AttendeeStatus.ATTENDING, _("Attending")),
+        (AttendeeStatus.AWAITING_PAYMENT, _("Awaiting payment")),
     )
 
     class PresenceStatus:
@@ -1722,7 +1732,10 @@ class SignUp(
 
     @property
     def is_attending(self):
-        return self.attendee_status == SignUp.AttendeeStatus.ATTENDING
+        return (
+            self.attendee_status == SignUp.AttendeeStatus.ATTENDING
+            or self.attendee_status == SignUp.AttendeeStatus.AWAITING_PAYMENT
+        )
 
     @transaction.atomic
     def anonymize(self):
