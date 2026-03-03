@@ -22,6 +22,7 @@ from django.db.models import (
     When,
 )
 from django.db.models import DateTimeField as ModelDateTimeField
+from django.db.models.functions import Greatest
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
@@ -234,6 +235,15 @@ class EventFilter(django_filters.rest_framework.FilterSet):
                 "other filters to sub-events."
             )
 
+        # Verify that full_text_language comes before full_text
+        if "full_text_language" in filters and "full_text" in filters:
+            language_index = filters.index("full_text_language")
+            text_index = filters.index("full_text")
+            if language_index > text_index:
+                raise ImproperlyConfigured(
+                    "full_text_language filter must come before full_text filter."
+                )
+
     division = django_filters.Filter(
         field_name="location__divisions",
         widget=django_filters.widgets.CSVWidget(),
@@ -306,11 +316,26 @@ class EventFilter(django_filters.rest_framework.FilterSet):
         help_text=_("Hide all events which are super events."),
     )
 
+    full_text_language = django_filters.Filter(
+        widget=django_filters.widgets.CSVWidget(),
+        method="filter_full_text_language",
+        help_text=_(
+            "Specify search languages for full-text search. "
+            "Multiple languages are separated by comma. Defaults to 'fi'."
+        ),
+    )
+
     full_text = django_filters.CharFilter(
         method="filter_full_text",
         help_text=_(
-            "Full-text search using Finnish language processing. "
-            "Supports websearch query syntax."
+            "Search events by full-text query with weighted relevance ranking. "
+            "Searches across event names and location names (highest priority), "
+            "keywords and audience keywords (high priority), "
+            "short descriptions (medium priority), and full descriptions "
+            "(lowest priority). Supports PostgreSQL full-text search with "
+            "stemming. Use with 'full_text_language' parameter to specify "
+            "search languages. Results are ranked by relevance when no other "
+            "sorting is specified."
         ),
     )
 
@@ -519,35 +544,71 @@ class EventFilter(django_filters.rest_framework.FilterSet):
             | Exists(EventAggregate.objects.filter(super_event=OuterRef("pk")))
         )
 
+    def filter_full_text_language(self, qs, name, value: str | None):
+        """
+        Validate and store language values for use in filter_full_text
+        """
+        requested_languages = value or ["fi"]
+
+        # Remove duplicates while preserving order
+        requested_languages = list(dict.fromkeys(requested_languages))
+
+        # Validate all languages
+        invalid_languages = [
+            lang for lang in requested_languages if lang not in languages
+        ]
+        if invalid_languages:
+            raise serializers.ValidationError(
+                {
+                    "full_text_language": _(
+                        f"Invalid language(s): {', '.join(invalid_languages)}. "
+                        f"full_text supports the following languages: "
+                        f"{', '.join(languages)}"
+                    )
+                }
+            )
+
+        # Store validated languages for use in filter_full_text
+        self._validated_languages = requested_languages or ["fi"]
+        return qs
+
     def filter_full_text(self, qs, name, value: str | None):
         if not value:
             return qs
 
-        language = self.request.query_params.get("full_text_language", "fi")
-        if language not in languages:
-            raise serializers.ValidationError(
-                {
-                    "full_text_language": _(
-                        f"full_text supports the following "
-                        f"languages: {', '.join(languages)}"
-                    )
-                }
-            )
+        # Use validated languages if available, otherwise default to Finnish
+        requested_languages = getattr(self, "_validated_languages", None) or ["fi"]
+
         # replace non-word characters with space
         search_value = re.sub(r"\W", " ", value)
-        words = []
-        extract_word_bases(search_value, words, language)
-        search_value = " ".join(words)
-        search_vector_name = f"full_text__search_vector_{language}"
-        search_query = SearchQuery(
-            search_value, search_type="websearch", config="simple"
-        )
 
-        qs = qs.filter(**{search_vector_name: search_query})
+        # Build query for multiple languages
+        language_queries = Q()
+        search_ranks = []
+
+        for language in requested_languages:
+            words = []
+            extract_word_bases(search_value, words, language)
+            language_search_value = " ".join(words)
+            search_vector_name = f"full_text__search_vector_{language}"
+            search_query = SearchQuery(
+                language_search_value, search_type="websearch", config="simple"
+            )
+
+            # Add to OR query
+            language_queries |= Q(**{search_vector_name: search_query})
+
+            # Prepare search rank for this language
+            search_ranks.append(SearchRank(F(search_vector_name), search_query))
+
+        qs = qs.filter(language_queries)
         sort = self.request.query_params.get("sort", "")
         if not sort:
             # default to search rank if no other sorting is defined
-            search_rank = SearchRank(F(search_vector_name), search_query)
+            if len(search_ranks) == 1:
+                search_rank = search_ranks[0]
+            else:
+                search_rank = Greatest(*search_ranks)
             # Warning: order matters, annotate should follow filter
             # Otherwise Django creates a redundant LEFT OUTER JOIN for sorting
             return qs.annotate(rank=search_rank).order_by("-rank", "id")
