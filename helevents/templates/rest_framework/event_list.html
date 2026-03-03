@@ -249,6 +249,32 @@
         <pre><code>event/?combined_text=lapppset</code></pre>
         <p><a href="?combined_text=lapppset" title="json">See the result</a></p>
 
+        <h3 id="full-text-search">Full-text search</h3>
+        <p>Use <code>full_text</code> to perform advanced PostgreSQL full-text search with weighted relevance ranking.
+            This search method provides more sophisticated results than basic text matching by:</p>
+        <ul>
+            <li>Searching across multiple fields with different priority levels</li>
+            <li>Supporting stemming and language-specific text processing</li>
+            <li>Ranking results by relevance when no other sorting is specified</li>
+        </ul>
+        <p>The search covers the following fields with weighted priorities:</p>
+        <ul>
+            <li><strong>Highest priority (A):</strong> Event names, location names</li>
+            <li><strong>High priority (B):</strong> Keywords, audience keywords</li>
+            <li><strong>Medium priority (C):</strong> Short descriptions</li>
+            <li><strong>Lowest priority (D):</strong> Full descriptions</li>
+        </ul>
+        <p>Use <code>full_text_language</code> to specify the search language. Accepts single language
+            (e.g., 'fi') or comma-separated multiple languages (e.g., 'fi,en,sv'). Supported languages:
+            fi, en, sv, zh_hans, ru, ar. Defaults to 'fi' if not specified.</p>
+        <p>Examples:</p>
+        <pre><code>event/?full_text=musiikki</code></pre>
+        <p><a href="?full_text=musiikki" title="json">See the result</a></p>
+        <pre><code>event/?full_text=music&amp;full_text_language=en</code></pre>
+        <p><a href="?full_text=music&amp;full_text_language=en" title="json">See the result</a></p>
+        <pre><code>event/?full_text=lapset&amp;full_text_language=fi,en,sv</code></pre>
+        <p><a href="?full_text=lapset&amp;full_text_language=fi,en,sv" title="json">See the result</a></p>
+
         <h3 id="event-price">Event price</h3>
         <p>Events may or may not contain the <code>offers</code> field that lists event pricing.
             To return only free or non-free events, use the query parameter<code>is_free</code>. However,
