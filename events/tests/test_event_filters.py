@@ -54,7 +54,9 @@ def test_filter_full_text_wrong_language():
     request.query_params = {"full_text_language": "unknown"}
     filter_set = EventFilter(request=request)
     with pytest.raises(ValidationError):
-        filter_set.filter_full_text(None, "full_text", "something")
+        # Call filter_full_text_language first (as django-filters would do)
+        # This will validate the language and raise ValidationError for "unknown"
+        filter_set.filter_full_text_language(None, "full_text_language", ["unknown"])
 
 
 @pytest.mark.django_db
@@ -168,7 +170,12 @@ def test_get_event_list_full_text(language, query_event, query_place, query_keyw
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
+        # Call filter_full_text_language first to validate and store languages
+        queryset = Event.objects.all()
+        queryset = filter_set.filter_full_text_language(
+            queryset, "full_text_language", [language]
+        )
+        return filter_set.filter_full_text(queryset, "full_text", f"{query}")
 
     result = do_filter(query_event)
     assert result.count() == 1
@@ -210,7 +217,12 @@ def test_get_event_search_full_text():
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
+        # Call filter_full_text_language first to validate and store languages
+        queryset = Event.objects.all()
+        queryset = filter_set.filter_full_text_language(
+            queryset, "full_text_language", ["fi"]
+        )
+        return filter_set.filter_full_text(queryset, "full_text", f"{query}")
 
     result = do_filter("kissoja")
     assert result.count() == 1
@@ -286,7 +298,12 @@ def test_get_event_search_full_text_special_characters():
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
+        # Call filter_full_text_language first to validate and store languages
+        queryset = Event.objects.all()
+        queryset = filter_set.filter_full_text_language(
+            queryset, "full_text_language", ["fi"]
+        )
+        return filter_set.filter_full_text(queryset, "full_text", f"{query}")
 
     result = do_filter("kevääksi .,:;()[]{}*'\"^¨+=-_<>")
     assert result.count() == 1
@@ -335,11 +352,121 @@ def test_get_event_search_full_text_with_embedded_html():
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
+        # Call filter_full_text_language first to validate and store languages
+        queryset = Event.objects.all()
+        queryset = filter_set.filter_full_text_language(
+            queryset, "full_text_language", ["fi"]
+        )
+        return filter_set.filter_full_text(queryset, "full_text", f"{query}")
 
     result = do_filter("tapahtuma,eläkeläisille")
     assert result.count() == 1
     assert result[0].id == "test:fi"
+
+
+@pytest.mark.django_db
+def test_filter_full_text_multiple_simultaneous_languages():
+    """Test that multiple languages can be searched simultaneously using comma-separated values."""
+
+    # Create events where the SAME SEARCH TERM can match different language content
+    # Event 1: English event that contains "festival" and "music"
+    EventFactory(
+        id="test:en_festival",
+        name_en="Summer Music Festival",
+        description_en="Annual festival with great music and food",
+        name_fi="Eri tapahtuma",
+        name_sv="Annan händelse",
+    )
+
+    # Event 2: Finnish event that ALSO contains "festival" (loan word)
+    EventFactory(
+        id="test:fi_festival",
+        name_fi="Helsingin Jazz Festival",  # Contains "Festival"!
+        description_fi="Suuri jazz-festivaali Helsingissä",
+        name_en="Different event",
+        name_sv="Annan sorts händelse",
+    )
+
+    # Event 3: Swedish event with "stockholm"
+    EventFactory(
+        id="test:sv_kultur",
+        name_sv="Stockholms festival",  # Contains "stockholm" and "festival"!
+        description_sv="Årlig festival i Stockholm",
+        name_fi="Eri kulttuuritapahtuma",
+        name_en="Different cultural event",
+    )
+
+    # Event 4: Finnish event with English word "music" in description
+    EventFactory(
+        id="test:fi_music",
+        name_fi="Konsertti Tampereella",
+        description_fi="Live music -tapahtuma Tampereella",  # Contains "music"!
+        name_en="Different concert",
+        name_sv="Annan konsert",
+    )
+
+    call_command("rebuild_event_search_index")
+
+    request = Mock()
+    filter_set = EventFilter(request=request)
+
+    def do_filter(query):
+        # Get current language from request and call filter_full_text_language first
+        current_language = filter_set.request.query_params.get(
+            "full_text_language", "fi"
+        )
+        queryset = Event.objects.all()
+        queryset = filter_set.filter_full_text_language(
+            queryset, "full_text_language", current_language.split(",")
+        )
+        return filter_set.filter_full_text(queryset, "full_text", f"{query}")
+
+    def assert_event_ids(results, expected_ids):
+        result_ids = [event.id for event in results]
+        assert set(result_ids) == expected_ids
+
+    # Test 1: Search for "stockholm" is different in English vs Swedish - should find the Swedish event when searching both languages
+    request.query_params = {"full_text_language": "en"}
+    en_stockholm = do_filter("stockholm")
+    assert_event_ids(en_stockholm, set())
+
+    request.query_params = {"full_text_language": "en,sv"}
+    multi_stockholm = do_filter("stockholm")
+    assert_event_ids(multi_stockholm, {"test:sv_kultur"})
+    assert multi_stockholm.count() > en_stockholm.count()
+
+    # Test 2: Search for "festival" across multiple languages - should find all events that contain "festival" in any of the specified languages
+    request.query_params = {"full_text_language": "en"}
+    single_results = do_filter("festival")
+    assert_event_ids(single_results, {"test:en_festival"})
+
+    request.query_params = {"full_text_language": "en,fi,sv"}
+    multi_results = do_filter("festival")
+    assert_event_ids(
+        multi_results,
+        {
+            "test:en_festival",
+            "test:fi_festival",
+            "test:sv_kultur",
+        },
+    )
+
+    assert multi_results.count() >= single_results.count()
+
+    # Test 3: Search "music" across en,fi should find both events with "music"
+    request.query_params = {"full_text_language": "en,fi"}
+    music_results = do_filter("music")
+    assert_event_ids(music_results, {"test:en_festival", "test:fi_music"})
+
+    # Test 4: Error handling still works
+    request.query_params = {"full_text_language": "fi,invalid_lang"}
+    with pytest.raises(ValidationError) as exc_info:
+        # Call filter_full_text_language first (it will raise ValidationError for invalid language)
+        queryset = Event.objects.all()
+        filter_set.filter_full_text_language(
+            queryset, "full_text_language", ["fi", "invalid_lang"]
+        )
+    assert "Invalid language(s): invalid_lang" in str(exc_info.value)
 
 
 @pytest.mark.django_db
@@ -379,7 +506,12 @@ def test_get_event_search_full_text_default_order():
     filter_set = EventFilter(request=request)
 
     def do_filter(query):
-        return filter_set.filter_full_text(Event.objects.all(), "full_text", f"{query}")
+        # Call filter_full_text_language first to validate and store languages
+        queryset = Event.objects.all()
+        queryset = filter_set.filter_full_text_language(
+            queryset, "full_text_language", ["fi"]
+        )
+        return filter_set.filter_full_text(queryset, "full_text", f"{query}")
 
     result = do_filter("Testisana")
     assert result.count() == 4

@@ -2820,10 +2820,6 @@ class EventViewSet(
         auth=[],
         parameters=[
             OpenApiParameter(
-                name="full_text",
-                exclude=True,
-            ),
-            OpenApiParameter(
                 name="ongoing",
                 exclude=True,
             ),
