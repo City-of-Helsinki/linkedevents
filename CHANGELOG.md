@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.25.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.24.0...linkedevents-v3.25.0) (2026-03-08)
+
+
+### Features
+
+* Add new SignUp attendee status for awaiting payment ([db9187b](https://github.com/City-of-Helsinki/linkedevents/commit/db9187bb697bcb2ef31f267c9062967c7838767f))
+* **events:** Prefetch image related fields in event API ([666c896](https://github.com/City-of-Helsinki/linkedevents/commit/666c89675daa85b2c87c367480e7c87bfab1a589))
+* Set attendee status "awaiting payment" for existing SignUps ([d0dfdd5](https://github.com/City-of-Helsinki/linkedevents/commit/d0dfdd5db26a9cce60c44ba860ebea1b2cc7a003))
+
+
+### Dependencies
+
+* Bump authlib from 1.6.6 to 1.6.7 ([63af80b](https://github.com/City-of-Helsinki/linkedevents/commit/63af80becd8dd84cb7bf134b362c3089dbae3b9b))
+* Bump django from 5.2.11 to 5.2.12 ([38af17b](https://github.com/City-of-Helsinki/linkedevents/commit/38af17b7956a05220ef771c98a6ab8362a777ab6))
+
 ## [3.24.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.4...linkedevents-v3.24.0) (2026-02-18)
 
 
