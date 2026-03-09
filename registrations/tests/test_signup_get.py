@@ -773,6 +773,10 @@ def test_signup_list_assert_attendee_status_filter(api_client, registration):
     signup2 = SignUpFactory(
         registration=registration, attendee_status=SignUp.AttendeeStatus.WAITING_LIST
     )
+    signup3 = SignUpFactory(
+        registration=registration,
+        attendee_status=SignUp.AttendeeStatus.AWAITING_PAYMENT,
+    )
 
     get_list_and_assert_signups(
         api_client,
@@ -786,11 +790,17 @@ def test_signup_list_assert_attendee_status_filter(api_client, registration):
     )
     get_list_and_assert_signups(
         api_client,
+        f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.AWAITING_PAYMENT}",
+        [signup3],
+    )
+    get_list_and_assert_signups(
+        api_client,
         f"registration={registration.id}&attendee_status={SignUp.AttendeeStatus.ATTENDING},"
-        f"{SignUp.AttendeeStatus.WAITING_LIST}",
+        f"{SignUp.AttendeeStatus.WAITING_LIST},{SignUp.AttendeeStatus.AWAITING_PAYMENT}",
         [
             signup,
             signup2,
+            signup3,
         ],
     )
 
