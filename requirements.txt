@@ -350,9 +350,9 @@ django-filter==25.1 \
 django-haystack==3.3.0 \
     --hash=sha256:e3ceed6b8000625da14d409eb4dac69894905e2ac8ac18f9bfdb59323ca02eab
     # via -r requirements.in
-django-helusers==0.14.0 \
-    --hash=sha256:424f97e7aa6792ae255de56344f765795444849ea82e9d4e01666494c28e960c \
-    --hash=sha256:79b922d51278a9e9793a00279782e5455b72e9e9d0f261dd17be2f0dbcbaa1f9
+django-helusers==1.0.0 \
+    --hash=sha256:0e33e238347a4088927675574a7dad179ee1f9d9e958daecfa4862ad6f63f79c \
+    --hash=sha256:c18ff8ff0ff8fb72c2b802e005c680d4d477273b705a5c524aaff31c665d8e25
     # via
     #   -r requirements.in
     #   helsinki-profile-gdpr-api
