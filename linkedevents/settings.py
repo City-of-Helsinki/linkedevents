@@ -134,6 +134,7 @@ env = environ.Env(
     GDPR_API_DELETE_SCOPE=(str, ""),
     GDPR_API_DELETE_EVENT_END_THRESHOLD_DAYS=(int, 30),
     HELUSERS_BACK_CHANNEL_LOGOUT_ENABLED=(bool, True),
+    HELUSERS_PASSWORD_LOGIN_DISABLED=(bool, False),
     INSTANCE_NAME=(str, "Linked Events"),
     INTERNAL_IPS=(list, []),
     LANGUAGES=(list, ["fi", "sv", "en", "zh-hans", "ru", "ar"]),
@@ -475,7 +476,7 @@ USE_X_FORWARDED_HOST = env("TRUST_X_FORWARDED_HOST")
 AUTH_USER_MODEL = "helevents.User"
 AUTHENTICATION_BACKENDS = (
     "helusers.tunnistamo_oidc.TunnistamoOIDCAuth",
-    "django.contrib.auth.backends.ModelBackend",
+    "helusers.auth.HelusersModelBackend",
 )
 
 LOGIN_REDIRECT_URL = "/"
@@ -743,6 +744,7 @@ FULLTEXT_SEARCH_LANGUAGES = {"fi": "finnish", "sv": "swedish", "en": "english"}
 SESSION_SERIALIZER = "helusers.sessions.TunnistamoOIDCSerializer"
 
 HELUSERS_BACK_CHANNEL_LOGOUT_ENABLED = env("HELUSERS_BACK_CHANNEL_LOGOUT_ENABLED")
+HELUSERS_PASSWORD_LOGIN_DISABLED = env("HELUSERS_PASSWORD_LOGIN_DISABLED")
 
 OIDC_API_TOKEN_AUTH = {
     "AUDIENCE": env("TOKEN_AUTH_ACCEPTED_AUDIENCE"),
