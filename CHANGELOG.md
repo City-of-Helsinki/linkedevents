@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.25.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.24.0...linkedevents-v3.25.0) (2026-03-12)
+
+
+### Features
+
+* Add new SignUp attendee status for awaiting payment ([db9187b](https://github.com/City-of-Helsinki/linkedevents/commit/db9187bb697bcb2ef31f267c9062967c7838767f))
+* Disable django admin password login ([1f73b4d](https://github.com/City-of-Helsinki/linkedevents/commit/1f73b4d3ab87a835fa02794aa20849d2107472bd))
+* **events:** Prefetch image related fields in event API ([666c896](https://github.com/City-of-Helsinki/linkedevents/commit/666c89675daa85b2c87c367480e7c87bfab1a589))
+* Set attendee status "awaiting payment" for existing SignUps ([d0dfdd5](https://github.com/City-of-Helsinki/linkedevents/commit/d0dfdd5db26a9cce60c44ba860ebea1b2cc7a003))
+* Support full-text search for multiple languages ([d4a6d65](https://github.com/City-of-Helsinki/linkedevents/commit/d4a6d65bd6ebfa51d9cbb56f27d8bac0630f67a8))
+
+
+### Dependencies
+
+* Bump authlib from 1.6.6 to 1.6.7 ([63af80b](https://github.com/City-of-Helsinki/linkedevents/commit/63af80becd8dd84cb7bf134b362c3089dbae3b9b))
+* Bump django from 5.2.11 to 5.2.12 ([38af17b](https://github.com/City-of-Helsinki/linkedevents/commit/38af17b7956a05220ef771c98a6ab8362a777ab6))
+* Bump werkzeug from 3.1.5 to 3.1.6 ([6fe8e2b](https://github.com/City-of-Helsinki/linkedevents/commit/6fe8e2b3923f1e7629f54350ca668e153884cbed))
+
+
+### Documentation
+
+* Add documentation for full_text search filters ([f1379c6](https://github.com/City-of-Helsinki/linkedevents/commit/f1379c68da00b09a58c39acdc72cf2001070880e))
+
 ## [3.24.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.4...linkedevents-v3.24.0) (2026-02-18)
 
 
