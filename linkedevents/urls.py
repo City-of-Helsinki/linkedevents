@@ -38,12 +38,12 @@ urlpatterns = [
     # Legacy redirects for backward compatibility
     path(
         "docs/schema/",
-        RedirectView.as_view(url="/api-docs/schema/", permanent=True),
+        RedirectView.as_view(pattern_name="schema-unversioned", permanent=True),
         name="legacy-schema",
     ),
     path(
         "docs/swagger-ui/",
-        RedirectView.as_view(url="/api-docs/swagger-ui/", permanent=True),
+        RedirectView.as_view(pattern_name="swagger-ui-unversioned", permanent=True),
         name="legacy-swagger-ui",
     ),
     # Redirect root to versioned API documentation
