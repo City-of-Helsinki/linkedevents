@@ -342,7 +342,7 @@ For an example extension implementation, see [course extension](extension_course
 
 ## API documentation
 
-API documentation is available at the endpoint `/api-docs/swagger-ui/`. The documentation is generated using [drf-spectacular](https://github.com/tfranzel/drf-spectacular).
+API documentation is available at the endpoint `/api-docs/`. There is also Swagger UI version at `/api-docs/swagger-ui`. The documentation is generated using [drf-spectacular](https://github.com/tfranzel/drf-spectacular).
 
 Development/local servers use a dynamic schema that is generated on-the-fly, and production servers use a pregenerated static YAML file.
 
