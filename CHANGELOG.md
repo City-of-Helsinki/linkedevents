@@ -22,6 +22,7 @@
 ### Documentation
 
 * Add documentation for full_text search filters ([f1379c6](https://github.com/City-of-Helsinki/linkedevents/commit/f1379c68da00b09a58c39acdc72cf2001070880e))
+* Update api docs ([272f443](https://github.com/City-of-Helsinki/linkedevents/commit/272f4431a1929a357be1490ab4a8c78a0f4499b7))
 
 ## [3.24.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.23.4...linkedevents-v3.24.0) (2026-02-18)
 
