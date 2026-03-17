@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.25.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.25.0...linkedevents-v3.25.1) (2026-03-17)
+
+
+### Bug Fixes
+
+* **api-docs:** Fix legacy url redirects in production ([fa883a8](https://github.com/City-of-Helsinki/linkedevents/commit/fa883a8aae0dd5680597dd3465d201c5e17ee7ee))
+
+
+### Dependencies
+
+* Bump authlib from 1.6.7 to 1.6.9 ([05deb04](https://github.com/City-of-Helsinki/linkedevents/commit/05deb049939af1ee74c66e72ec5861ae8a3cef8b))
+* Bump pyjwt from 2.10.1 to 2.12.0 ([efa78d0](https://github.com/City-of-Helsinki/linkedevents/commit/efa78d0608f7cce2c90acfc9d3a24ebed3a30046))
+
 ## [3.25.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.24.0...linkedevents-v3.25.0) (2026-03-12)
 
 
