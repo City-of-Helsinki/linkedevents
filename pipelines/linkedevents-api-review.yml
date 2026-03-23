@@ -2,6 +2,16 @@
 # Review pipeline. Run build and deploy for Platta dev environments.
 # Pipeline runs different tests e.g. unittest and browser tests.
 #
+parameters:
+  - name: region
+    displayName: Pool region
+    type: string
+    default: we
+    values:
+      - we
+      - we-next
+      - se
+
 # Continuous integration (CI) triggers cause a pipeline to run whenever you push
 # an update to the specified branches or you push specified tags.
 # only PR trigger pipeline
@@ -30,21 +40,20 @@ pr:
     - 'pipelines/linkedevents-api-dev.yml'
     - 'docker-compose*'
 
-# By default, use self-hosted agents
-pool: Default
-
 resources:
   repositories:
     # Azure DevOps repository
     - repository: linkedevents-pipelines
       type: git
+      ref: replace_oc-cmd_PLATTA-7360
       #  Azure DevOps project/repository
       name: linkedevents/linkedevents-pipelines
 
 extends:
   # Filename in Azure DevOps Repository
   template: components/linkedevents-api/pipelines/linkedevents-api-review.yml@linkedevents-pipelines
-  # parameters:
+  parameters:
+    region: ${{ parameters.region }}
     # Application build arguments and config map values as key value pairs.
     # Does not contain all buildArguments or configMap values, the rest located in linkedevents-pipelines
     # Default value to pythonVersion is set on template.
