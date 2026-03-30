@@ -8,6 +8,7 @@ django-environ
 django-filter
 django-haystack
 django-helusers
+django-helsinki-health-endpoints
 django-image-cropping
 django-jinja
 django-leaflet

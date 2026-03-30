@@ -1,7 +1,6 @@
+import pytest
 import yaml
 from drf_spectacular.validation import validate_schema
-
-from linkedevents import __version__
 
 
 def test_healthz(client):
@@ -10,16 +9,13 @@ def test_healthz(client):
     assert response.status_code == 200
 
 
+@pytest.mark.django_db
 def test_readiness(client, settings):
     response = client.get("/readiness")
-
     data = response.json()
     assert response.status_code == 200
     assert len(data) == 4
     assert data["status"] == "ok"
-    assert data["packageVersion"] == __version__
-    assert data["commitHash"] == settings.COMMIT_HASH
-    assert "buildTime" in data
 
 
 def test_openapi_schema(client):

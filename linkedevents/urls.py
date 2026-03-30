@@ -1,13 +1,11 @@
 from django.conf import settings
 from django.conf.urls import include
 from django.contrib import admin
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.urls import path, re_path
 from django.views.decorators.http import require_GET
 from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView
-
-from linkedevents import __version__
 
 from .api import CustomSpectacularSwaggerView, LinkedEventsAPIRouter
 
@@ -66,15 +64,6 @@ def healthz(*args, **kwargs):
     return HttpResponse(status=200)
 
 
-@require_GET
-def readiness(*args, **kwargs):
-    response_json = {
-        "status": "ok",
-        "packageVersion": __version__,
-        "commitHash": settings.COMMIT_HASH,
-        "buildTime": settings.APP_BUILD_TIME.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-    }
-    return JsonResponse(response_json, status=200)
-
-
-urlpatterns += [path("healthz", healthz), path("readiness", readiness)]
+urlpatterns += [
+    path("", include("helsinki_health_endpoints.urls")),
+]

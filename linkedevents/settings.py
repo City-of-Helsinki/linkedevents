@@ -5,7 +5,7 @@ Django settings module for linkedevents project.
 import importlib.util
 import os
 import subprocess
-from datetime import datetime, timedelta
+from datetime import timedelta
 from urllib.parse import urljoin
 
 import bleach
@@ -317,6 +317,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "logger_extra",
     "resilient_logger",
+    "helsinki_health_endpoints",
     # Local apps
     "linkedevents",
     "helevents",
@@ -378,11 +379,14 @@ EVENT_SCRUBBER = EventScrubber(
     pii_denylist=SENTRY_PII_DENYLIST,
 )
 
+# For helsinki-health-endpoints
+SENTRY_RELEASE = env("SENTRY_RELEASE")
+
 if env("SENTRY_DSN"):
     sentry_sdk.init(
         dsn=env("SENTRY_DSN"),
         environment=env("SENTRY_ENVIRONMENT"),
-        release=env("SENTRY_RELEASE"),
+        release=SENTRY_RELEASE,
         integrations=[DjangoIntegration()],
         event_scrubber=EVENT_SCRUBBER,
         traces_sampler=sentry_traces_sampler,
@@ -998,8 +1002,6 @@ if os.path.exists(f):
     sys.modules[module_name] = module
     exec(open(f, "rb").read())
 
-# get build time from a file in docker image
-APP_BUILD_TIME = datetime.fromtimestamp(os.path.getmtime(__file__))
 
 # list of (base) urls that are never proxied
 SKIP_PROXY_URLS = env("SKIP_PROXY_URLS")
