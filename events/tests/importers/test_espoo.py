@@ -1,6 +1,4 @@
-import io
-from http.client import HTTPMessage, HTTPResponse
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
 import factory
@@ -90,13 +88,10 @@ def test_get_data(requests_mock):
 
 def test_get_max_retries(sleep, settings):
     def build_response(status_code):
-        response = HTTPResponse(Mock())
-        response.msg = HTTPMessage()
-        response.msg["content-length"] = "0"
-        response.fp = io.BytesIO()
-        response.length = 0
+        response = MagicMock()
         response.status = status_code
-        response.chunked = False
+        response.headers.get.return_value = None
+        response.get_redirect_location.return_value = None
         return response
 
     # Can't use requests_mock here
