@@ -296,6 +296,7 @@ django==5.2.12 \
     #   django-cors-headers
     #   django-filter
     #   django-haystack
+    #   django-helsinki-health-endpoints
     #   django-helusers
     #   django-jinja
     #   django-js-asset
@@ -349,6 +350,10 @@ django-filter==25.1 \
     #   djangorestframework-gis
 django-haystack==3.3.0 \
     --hash=sha256:e3ceed6b8000625da14d409eb4dac69894905e2ac8ac18f9bfdb59323ca02eab
+    # via -r requirements.in
+django-helsinki-health-endpoints==1.0.0 \
+    --hash=sha256:75670113e99bfd1fc23e317a3a22cff563140f495655c2a5f6ab219389dafd52 \
+    --hash=sha256:eebf1baa6917d7b0e11123aec191df773883102ec1653025a86d7037dba389e2
     # via -r requirements.in
 django-helusers==1.0.0 \
     --hash=sha256:0e33e238347a4088927675574a7dad179ee1f9d9e958daecfa4862ad6f63f79c \
