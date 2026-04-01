@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.26.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.25.1...linkedevents-v3.26.0) (2026-04-01)
+
+
+### Features
+
+* Use django-helsinki-health-endpoints for readiness and healthz ([b2d488b](https://github.com/City-of-Helsinki/linkedevents/commit/b2d488b5f12ba02db07733fe365ee71e566c4c62))
+
+
+### Dependencies
+
+* Bump cryptography from 46.0.5 to 46.0.6 ([0139853](https://github.com/City-of-Helsinki/linkedevents/commit/01398530b4e19c1f82e74267db347006d1ef9243))
+* Bump pyasn1, elasticsearch, urllib3 and sqlparse ([d9bd108](https://github.com/City-of-Helsinki/linkedevents/commit/d9bd108a3fbd103f5222c38f5ae351f7f8e1da62))
+* Bump requests from 2.32.5 to 2.33.0 ([801ec41](https://github.com/City-of-Helsinki/linkedevents/commit/801ec41de652a854ff0e04139fc08b04970ffaa7))
+
 ## [3.25.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.25.0...linkedevents-v3.25.1) (2026-03-17)
 
 
