@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.26.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.0...linkedevents-v3.26.1) (2026-04-14)
+
+
+### Dependencies
+
+* Bump cryptography from 46.0.6 to 46.0.7 ([15275c3](https://github.com/City-of-Helsinki/linkedevents/commit/15275c374dd4ac0ce7970b722d7724dd7d0b1c79))
+* Bump django from 5.2.12 to 5.2.13 ([d778920](https://github.com/City-of-Helsinki/linkedevents/commit/d778920410648b248aeb6092cdd41f52cb4d8a55))
+* Bump pillow from 12.1.1 to 12.2.0 ([eb9b395](https://github.com/City-of-Helsinki/linkedevents/commit/eb9b395a985583e171598088211fe78c4082dc32))
+* Bump pytest from 9.0.1 to 9.0.3 ([6f5a317](https://github.com/City-of-Helsinki/linkedevents/commit/6f5a317231ec5d72517c1e1370f86f5d8f564b5c))
+
 ## [3.26.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.25.1...linkedevents-v3.26.0) (2026-04-01)
 
 
