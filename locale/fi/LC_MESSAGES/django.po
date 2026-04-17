@@ -793,8 +793,6 @@ msgid "User created"
 msgstr "Käyttäjä luotu"
 
 #: notifications/models.py:31
-#, fuzzy
-#| msgid "New paid registration"
 msgid "Paid registration created"
 msgstr "Uusi maksullinen ilmoittautuminen"
 

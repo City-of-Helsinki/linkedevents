@@ -666,7 +666,7 @@ class EspooImporter(Importer):
         for kw in Keyword.objects.filter(
             data_source=self.data_source, events__in=old_event_ids
         ).iterator():
-            place_syncher.mark(kw)
+            keyword_syncher.mark(kw)
 
         image_map, image_syncher = _import_origin_objs(
             Image,
