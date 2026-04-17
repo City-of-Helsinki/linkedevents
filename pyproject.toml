@@ -1,7 +1,7 @@
 [project]
 name = "linkedevents"
 requires-python = ">=3.12, <3.13"
-version = "3.26.1"
+version = "3.26.2"
 
 [tool.ruff]
 target-version = "py312"

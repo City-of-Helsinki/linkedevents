@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.26.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.1...linkedevents-v3.26.2) (2026-04-17)
+
+
+### Bug Fixes
+
+* **espoo-import:** Preserve related images referenced by old events ([3f19306](https://github.com/City-of-Helsinki/linkedevents/commit/3f19306e928d43a5e2dd69247bd9262cab63d4d5))
+* **espoo-import:** Use keyword-syncher instead of place-syncher ([9af4a1a](https://github.com/City-of-Helsinki/linkedevents/commit/9af4a1a9c5170bd88b1d18a1539a0665bfdbe354))
+
+
+### Dependencies
+
+* Bump authlib from 1.6.9 to 1.6.11 ([28a6fbf](https://github.com/City-of-Helsinki/linkedevents/commit/28a6fbf1cabbf0ff0d6763a9703623b6c69207b2))
+
 ## [3.26.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.0...linkedevents-v3.26.1) (2026-04-14)
 
 
