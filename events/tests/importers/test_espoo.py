@@ -27,6 +27,7 @@ from events.models import Event, Image, Keyword, Place
 from events.tests.factories import (
     DataSourceFactory,
     EventFactory,
+    ImageFactory,
     KeywordFactory,
     OrganizationFactory,
     PlaceFactory,
@@ -655,3 +656,150 @@ def test__import_obj(settings):
     assert instance.name == "Event"
     assert instance.publisher == publisher
     assert instance.description == "<p>Description</p>"
+
+
+@pytest.mark.django_db
+def test_importer_keeps_images_referenced_by_old_events(
+    settings, requests_mock, sleep, api_client
+):
+    """
+    Images referenced by events older than EVENT_START should not be deleted
+    even when those events are outside the import window.
+    """
+    settings.ESPOO_API_URL = "http://localhost/"
+    settings.ESPOO_API_EVENT_QUERY_PARAMS = {"test": 1}
+
+    data_source = DataSourceFactory(id="espoo_le", name="Espoo Linkedevents")
+    org = OrganizationFactory(
+        id="test_org", data_source_id=data_source.id, origin_id="test_org"
+    )
+    place = PlaceFactory(
+        id="espoo_le:place1", publisher_id=org.id, data_source_id=data_source.id
+    )
+    place_data = place_mock_data(place.id, org.id)
+
+    now = timezone.now()
+    wayback = now - timezone.timedelta(
+        days=settings.ESPOO_API_EVENT_START_DAYS_BACK + 7
+    )
+
+    # An old image referenced only by the old event
+    old_image = ImageFactory(
+        data_source=data_source,
+        url="https://localhost/old_image.jpeg",
+    )
+
+    older_event = EventFactory(
+        id="espoo_le:sour",
+        publisher_id=org.id,
+        data_source_id=data_source.id,
+        location_id=place.id,
+        start_time=wayback,
+        end_time=wayback + timezone.timedelta(days=1),
+    )
+    older_event.images.add(old_image)
+
+    new_event = event_mock_data(
+        "espoo_le:fresh",
+        org.id,
+        place_data,
+        start_time=now,
+        end_time=now + timezone.timedelta(days=1),
+    )
+    # The new event's image is different from old_image
+    assert new_event["images"][0]["url"] != old_image.url
+
+    requests_mock.get(
+        f"{settings.ESPOO_API_URL}v1/organization/",
+        json={
+            "meta": {"count": 1, "next": None, "previous": None},
+            "data": [org_mock_data(org.id)],
+        },
+    )
+    requests_mock.get(
+        f"{settings.ESPOO_API_URL}v1/event/?include=keywords%2Caudience%2Clocation&test=1",
+        json={
+            "meta": {"count": 1, "next": None, "previous": None},
+            "data": [new_event],
+        },
+    )
+
+    importer = EspooImporter({"force": False})
+    importer.import_events()
+
+    # The old image should still exist because it is referenced by an old event
+    assert Image.objects.filter(id=old_image.id).exists()
+
+
+@pytest.mark.django_db
+def test_importer_keeps_keywords_referenced_by_old_events(
+    settings, requests_mock, sleep, api_client
+):
+    """
+    Keywords referenced by events older than EVENT_START should not be deleted
+    even when those events are outside the import window.
+    """
+    settings.ESPOO_API_URL = "http://localhost/"
+    settings.ESPOO_API_EVENT_QUERY_PARAMS = {"test": 1}
+
+    data_source = DataSourceFactory(id="espoo_le", name="Espoo Linkedevents")
+    org = OrganizationFactory(
+        id="test_org", data_source_id=data_source.id, origin_id="test_org"
+    )
+    place = PlaceFactory(
+        id="espoo_le:place1", publisher_id=org.id, data_source_id=data_source.id
+    )
+    place_data = place_mock_data(place.id, org.id)
+
+    now = timezone.now()
+    wayback = now - timezone.timedelta(
+        days=settings.ESPOO_API_EVENT_START_DAYS_BACK + 7
+    )
+
+    # A keyword referenced only by the old event
+    old_keyword = KeywordFactory(
+        data_source=data_source,
+        origin_id="espoo_le:old_kw",
+    )
+    old_keyword.id = f"{data_source.id}:{old_keyword.origin_id}"
+    old_keyword.save()
+
+    older_event = EventFactory(
+        id="espoo_le:sour",
+        publisher_id=org.id,
+        data_source_id=data_source.id,
+        location_id=place.id,
+        start_time=wayback,
+        end_time=wayback + timezone.timedelta(days=1),
+    )
+    older_event.keywords.add(old_keyword)
+
+    new_event = event_mock_data(
+        "espoo_le:fresh",
+        org.id,
+        place_data,
+        start_time=now,
+        end_time=now + timezone.timedelta(days=1),
+    )
+    # New event does not reference old_keyword
+
+    requests_mock.get(
+        f"{settings.ESPOO_API_URL}v1/organization/",
+        json={
+            "meta": {"count": 1, "next": None, "previous": None},
+            "data": [org_mock_data(org.id)],
+        },
+    )
+    requests_mock.get(
+        f"{settings.ESPOO_API_URL}v1/event/?include=keywords%2Caudience%2Clocation&test=1",
+        json={
+            "meta": {"count": 1, "next": None, "previous": None},
+            "data": [new_event],
+        },
+    )
+
+    importer = EspooImporter({"force": False})
+    importer.import_events()
+
+    # The old keyword should still exist because it is referenced by an old event
+    assert Keyword.objects.filter(id=old_keyword.id).exists()

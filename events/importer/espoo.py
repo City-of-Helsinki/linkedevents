@@ -689,6 +689,12 @@ class EspooImporter(Importer):
             origin_id_field="url",
         )
 
+        # Mark Images which are referenced in older Espoo events to avoid deletion.
+        for image in Image.objects.filter(
+            data_source=self.data_source, events__in=old_event_ids
+        ).iterator():
+            image_syncher.mark(image)
+
         # And finally import events
         _, event_syncher = _import_origin_objs(
             Event,
