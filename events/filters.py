@@ -19,6 +19,7 @@ from django.db.models import (
     F,
     OuterRef,
     Q,
+    QuerySet,
     When,
 )
 from django.db.models import DateTimeField as ModelDateTimeField
@@ -27,6 +28,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from munigeo.api import srid_to_srs
+from munigeo.models import AdministrativeDivision
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 
@@ -154,18 +156,35 @@ def filter_division(queryset, name: str, value: Iterable[str]):
             # we assume human name
             names.append(item.title())
 
-    if hasattr(queryset, "distinct"):
-        # do the join with Q objects (not querysets) in case the queryset has
-        # extra fields that would crash qs join
-        query = Q(**{name + "__ocd_id__in": ocd_ids}) | Q(
-            **{name + "__translations__name__in": names}
+    if isinstance(queryset, QuerySet):
+        q = Q()
+        if ocd_ids:
+            q |= Q(ocd_id__in=ocd_ids)
+        if names:
+            q |= Q(translations__name__in=names)
+
+        if not q:
+            return queryset.none()
+
+        # Prefetching the divisions makes life a lot easier for the query planner:
+        # The Through table between Place and AdministrativeDivision has 400000
+        # rows in production, joining through it is a performance killer.
+        divisions = list(
+            AdministrativeDivision.objects.filter(q).values_list("id", flat=True)
         )
-        return queryset.filter(
-            Exists(queryset.model.objects.filter(query, pk=OuterRef("pk")))
-        ).prefetch_related(name + "__translations")
+
+        if queryset.model is Place:
+            outer_ref = "id"
+        else:
+            outer_ref = "location_id"
+
+        # Subquery against the through table
+        place_division_qs = Place.divisions.through.objects.filter(
+            place_id=OuterRef(outer_ref), administrativedivision_id__in=divisions
+        )
+        return queryset.filter(Exists(place_division_qs))
     else:
-        # Haystack SearchQuerySet does not support distinct, so we only support
-        # one type of search at a time:
+        # Haystack SearchQuerySet
         if ocd_ids:
             return queryset.filter(**{name + "__ocd_id__in": ocd_ids})
         else:
