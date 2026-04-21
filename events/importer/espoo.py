@@ -9,7 +9,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Model
+from django.db.models import Exists, Model, OuterRef
 from django.utils import timezone
 from django_orghierarchy.models import Organization
 from requests.adapters import HTTPAdapter
@@ -635,9 +635,18 @@ class EspooImporter(Importer):
 
         # Mark Organizations which are referenced in any Espoo event still in the DB
         # to avoid deletion.
-        for org in Organization.objects.filter(
-            data_source=self.data_source, published_events__in=surviving_event_ids
-        ).iterator():
+        for org in (
+            Organization.objects.filter(data_source=self.data_source)
+            .filter(
+                Exists(
+                    Event.objects.filter(
+                        publisher=OuterRef("pk"),
+                        id__in=surviving_event_ids,
+                    )
+                )
+            )
+            .iterator()
+        ):
             org_syncher.mark(org)
 
         # Import places
@@ -657,9 +666,18 @@ class EspooImporter(Importer):
 
         # Mark Places which are referenced in any Espoo event still in the DB
         # to avoid deletion.
-        for place in Place.objects.filter(
-            data_source=self.data_source, events__in=surviving_event_ids
-        ).iterator():
+        for place in (
+            Place.objects.filter(data_source=self.data_source)
+            .filter(
+                Exists(
+                    Event.objects.filter(
+                        location=OuterRef("pk"),
+                        id__in=surviving_event_ids,
+                    )
+                )
+            )
+            .iterator()
+        ):
             place_syncher.mark(place)
 
         # Import keywords
@@ -681,9 +699,18 @@ class EspooImporter(Importer):
 
         # Mark Keywords which are referenced in any Espoo event still in the DB
         # to avoid deletion.
-        for kw in Keyword.objects.filter(
-            data_source=self.data_source, events__in=surviving_event_ids
-        ).iterator():
+        for kw in (
+            Keyword.objects.filter(data_source=self.data_source)
+            .filter(
+                Exists(
+                    Event.objects.filter(
+                        keywords=OuterRef("pk"),
+                        id__in=surviving_event_ids,
+                    )
+                )
+            )
+            .iterator()
+        ):
             keyword_syncher.mark(kw)
 
         image_map, image_syncher = _import_origin_objs(
@@ -709,9 +736,18 @@ class EspooImporter(Importer):
 
         # Mark Images which are referenced in any Espoo event still in the DB
         # to avoid deletion.
-        for image in Image.objects.filter(
-            data_source=self.data_source, events__in=surviving_event_ids
-        ).iterator():
+        for image in (
+            Image.objects.filter(data_source=self.data_source)
+            .filter(
+                Exists(
+                    Event.objects.filter(
+                        images=OuterRef("pk"),
+                        id__in=surviving_event_ids,
+                    )
+                )
+            )
+            .iterator()
+        ):
             image_syncher.mark(image)
 
         # And finally import events
