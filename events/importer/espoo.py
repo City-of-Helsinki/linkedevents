@@ -8,8 +8,8 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from django.conf import settings
-from django.db import transaction
-from django.db.models import Model
+from django.db import models, transaction
+from django.db.models import Exists, Model, OuterRef
 from django.utils import timezone
 from django_orghierarchy.models import Organization
 from requests.adapters import HTTPAdapter
@@ -599,9 +599,25 @@ class EspooImporter(Importer):
         for image_data in origin_images.values():
             _add_id_to_set(origin_org_ids, image_data, "publisher")
 
-        old_event_ids = Event.objects.filter(
-            data_source=self.data_source, start_time__lt=EVENT_START
-        ).values_list("id", flat=True)
+        # IDs of Espoo events that will survive this import run:
+        #   1. Events outside the import window (start_time < EVENT_START) — these are
+        #      never touched by event_syncher.
+        #   2. Events present in the current API response — these are
+        #      being (re-)imported.
+        # Used to protect related objects (places, keywords, images, orgs) from being
+        # deleted when they are still referenced by a surviving event.
+        # NOTE: events inside the window that are NOT in the API response
+        # will be deleted by event_syncher, so their related objects
+        # must NOT be protected here.
+        imported_event_origin_ids = [e["id"] for e in events_data]
+        surviving_event_ids = (
+            Event.objects.filter(data_source=self.data_source)
+            .filter(
+                models.Q(start_time__lt=EVENT_START)
+                | models.Q(origin_id__in=imported_event_origin_ids)
+            )
+            .values_list("id", flat=True)
+        )
 
         # Import organizations
         logger.info("Importing organizations")
@@ -617,10 +633,10 @@ class EspooImporter(Importer):
             copy_fields=["name"],
         )
 
-        # Mark Organizations which are referenced in older Espoo events to avoid
-        # deletion.
+        # Mark Organizations which are referenced in any Espoo event still in the DB
+        # to avoid deletion.
         for org in Organization.objects.filter(
-            data_source=self.data_source, published_events__in=old_event_ids
+                data_source=self.data_source, published_events__in=surviving_event_ids
         ).iterator():
             org_syncher.mark(org)
 
@@ -639,9 +655,10 @@ class EspooImporter(Importer):
             },
         )
 
-        # Mark Places which are referenced in older Espoo events to avoid deletion.
+        # Mark Places which are referenced in any Espoo event still in the DB
+        # to avoid deletion.
         for place in Place.objects.filter(
-            data_source=self.data_source, events__in=old_event_ids
+            data_source=self.data_source, events__in=surviving_event_ids
         ).iterator():
             place_syncher.mark(place)
 
@@ -662,9 +679,10 @@ class EspooImporter(Importer):
             },
         )
 
-        # Mark Keywords which are referenced in older Espoo events to avoid deletion.
+        # Mark Keywords which are referenced in any Espoo event still in the DB
+        # to avoid deletion.
         for kw in Keyword.objects.filter(
-            data_source=self.data_source, events__in=old_event_ids
+            data_source=self.data_source, events__in=surviving_event_ids
         ).iterator():
             keyword_syncher.mark(kw)
 
@@ -689,9 +707,10 @@ class EspooImporter(Importer):
             origin_id_field="url",
         )
 
-        # Mark Images which are referenced in older Espoo events to avoid deletion.
+        # Mark Images which are referenced in any Espoo event still in the DB
+        # to avoid deletion.
         for image in Image.objects.filter(
-            data_source=self.data_source, events__in=old_event_ids
+            data_source=self.data_source, events__in=surviving_event_ids
         ).iterator():
             image_syncher.mark(image)
 
