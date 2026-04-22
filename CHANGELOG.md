@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.26.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.2...linkedevents-v3.26.3) (2026-04-22)
+
+
+### Bug Fixes
+
+* **espoo-import:** Prevent deletion of objects still in DB ([b541f86](https://github.com/City-of-Helsinki/linkedevents/commit/b541f86b08b5b3678bbdea250d654ef6cac99350))
+
+
+### Performance Improvements
+
+* Optimize filter_division ([e4914e7](https://github.com/City-of-Helsinki/linkedevents/commit/e4914e787c86cafd4a98d27bb7d12f0859dfa0b8))
+
+
+### Dependencies
+
+* Bump lxml from 6.0.2 to 6.1.0 ([bc0fd60](https://github.com/City-of-Helsinki/linkedevents/commit/bc0fd60d3375dea6061289ee767ec7519c7c90c6))
+
 ## [3.26.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.1...linkedevents-v3.26.2) (2026-04-17)
 
 
