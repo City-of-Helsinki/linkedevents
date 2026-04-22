@@ -2317,7 +2317,7 @@ class EventViewSet(
             "external_links",
             "keywords",
             "in_language",
-            "offers",
+            "offers__offer_price_groups",
             "registration",
             "videos",
         )
