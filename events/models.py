@@ -1157,6 +1157,13 @@ class Event(
             ),
             models.Index(fields=["publication_status"], name="publication_status_idx"),
             models.Index(fields=["event_status"], name="event_status_idx"),
+            models.Index(
+                fields=["end_time", "type_id"],
+                name="event_common_search_idx",
+                condition=models.Q(
+                    deleted=False, publication_status=PublicationStatus.PUBLIC
+                ),
+            ),
         ]
 
     class MPTTMeta:
