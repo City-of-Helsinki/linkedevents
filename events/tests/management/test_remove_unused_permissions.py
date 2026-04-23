@@ -20,14 +20,14 @@ def _test_remove_unused_admin_permissions(
     expired_months_ago = now - relativedelta(months=expiration_months + 1)
     active_months_ago = now - relativedelta(months=expiration_months, days=-1)
 
-    expired_admin = UserFactory(last_login=expired_months_ago)
+    expired_admin = UserFactory(last_api_use=expired_months_ago)
     getattr(expired_admin, admin_relation).add(organization)
 
-    expired_admin2 = UserFactory(last_login=expired_months_ago)
+    expired_admin2 = UserFactory(last_api_use=expired_months_ago)
     getattr(expired_admin2, admin_relation).add(organization)
     getattr(expired_admin2, admin_relation).add(organization2)
 
-    active_admin = UserFactory(last_login=active_months_ago)
+    active_admin = UserFactory(last_api_use=active_months_ago)
     getattr(active_admin, admin_relation).add(organization)
 
     assert getattr(expired_admin, admin_relation).count() == 1
