@@ -9,7 +9,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import Exists, Model, OuterRef
+from django.db.models import Model
 from django.utils import timezone
 from django_orghierarchy.models import Organization
 from requests.adapters import HTTPAdapter
@@ -636,7 +636,7 @@ class EspooImporter(Importer):
         # Mark Organizations which are referenced in any Espoo event still in the DB
         # to avoid deletion.
         for org in Organization.objects.filter(
-                data_source=self.data_source, published_events__in=surviving_event_ids
+            data_source=self.data_source, published_events__in=surviving_event_ids
         ).iterator():
             org_syncher.mark(org)
 
