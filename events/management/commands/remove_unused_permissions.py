@@ -19,7 +19,7 @@ class Command(BaseCommand):
             months=settings.EVENT_ADMIN_EXPIRATION_MONTHS
         )
         for user in User.objects.filter(
-            last_login__lt=threshold_time, admin_organizations__isnull=False
+            last_api_use__lt=threshold_time, admin_organizations__isnull=False
         ):
             user.admin_organizations.clear()
             admins_count += 1
@@ -34,7 +34,7 @@ class Command(BaseCommand):
             months=settings.FINANCIAL_ADMIN_EXPIRATION_MONTHS
         )
         for user in User.objects.filter(
-            last_login__lt=threshold_time, financial_admin_organizations__isnull=False
+            last_api_use__lt=threshold_time, financial_admin_organizations__isnull=False
         ):
             user.financial_admin_organizations.clear()
             admins_count += 1
@@ -49,7 +49,7 @@ class Command(BaseCommand):
             months=settings.REGISTRATION_ADMIN_EXPIRATION_MONTHS
         )
         for user in User.objects.filter(
-            last_login__lt=threshold_time,
+            last_api_use__lt=threshold_time,
             registration_admin_organizations__isnull=False,
         ):
             user.registration_admin_organizations.clear()
