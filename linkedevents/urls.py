@@ -1,9 +1,7 @@
 from django.conf import settings
 from django.conf.urls import include
 from django.contrib import admin
-from django.http import HttpResponse
 from django.urls import path, re_path
-from django.views.decorators.http import require_GET
 from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView
 
@@ -44,6 +42,8 @@ urlpatterns = [
         RedirectView.as_view(pattern_name="swagger-ui-unversioned", permanent=True),
         name="legacy-swagger-ui",
     ),
+    # Kubernetes liveness & readiness probes
+    path("", include("helsinki_health_endpoints.urls")),
     # Redirect root to versioned API documentation
     path("", RedirectView.as_view(url="/v1/", permanent=False)),
     # API router must come after specific doc paths to avoid conflicts
@@ -54,16 +54,3 @@ if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
     import debug_toolbar
 
     urlpatterns += [path("__debug__/", include(debug_toolbar.urls))]
-
-
-#
-# Kubernetes liveness & readiness probes
-#
-@require_GET
-def healthz(*args, **kwargs):
-    return HttpResponse(status=200)
-
-
-urlpatterns += [
-    path("", include("helsinki_health_endpoints.urls")),
-]
