@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.27.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.3...linkedevents-v3.27.0) (2026-04-30)
+
+
+### Features
+
+* Use last_api_use-timestamp in permission deletions ([b4064ff](https://github.com/City-of-Helsinki/linkedevents/commit/b4064ffd755a45def39eb1376332b3798c3cd667))
+
 ## [3.26.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.2...linkedevents-v3.26.3) (2026-04-22)
 
 
