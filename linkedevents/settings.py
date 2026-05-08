@@ -12,6 +12,7 @@ import bleach
 import environ
 import sentry_sdk
 from corsheaders.defaults import default_headers
+from csp.constants import NONE, SELF
 from django.conf.global_settings import LANGUAGES as GLOBAL_LANGUAGES
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
@@ -212,6 +213,13 @@ env = environ.Env(
     AUDIT_LOG_ES_INDEX=(str, ""),
     AUDIT_LOG_ES_USERNAME=(str, ""),
     AUDIT_LOG_ES_PASSWORD=(str, ""),
+    CSP_CONNECT_SRC=(list, []),
+    CSP_ENABLED=(bool, False),
+    CSP_IMG_SRC=(list, []),
+    CSP_STYLE_SRC=(list, []),
+    CSP_SCRIPT_SRC=(list, []),
+    CSP_REPORT_ONLY=(bool, False),
+    CSP_REPORT_URI=(str, None),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -1005,3 +1013,32 @@ if os.path.exists(f):
 
 # list of (base) urls that are never proxied
 SKIP_PROXY_URLS = env("SKIP_PROXY_URLS")
+
+CSP_ENABLED = env("CSP_ENABLED")
+
+if CSP_ENABLED:
+    INSTALLED_APPS.append("csp")
+    MIDDLEWARE.append("csp.middleware.CSPMiddleware")
+
+    content_security_policy_configuration = {
+        "DIRECTIVES": {
+            "default-src": [NONE],
+            "connect-src": env("CSP_CONNECT_SRC"),
+            "img-src": env("CSP_IMG_SRC"),
+            "form-action": [SELF],
+            "font-src": [SELF],
+            "frame-ancestors": [SELF],
+            "script-src": env("CSP_SCRIPT_SRC"),
+            "style-src": env("CSP_STYLE_SRC"),
+            "upgrade-insecure-requests": True,
+        },
+    }
+
+    if report_uri := env("CSP_REPORT_URI"):
+        content_security_policy_configuration["DIRECTIVES"]["report-uri"] = report_uri
+
+    if env("CSP_REPORT_ONLY"):
+        CONTENT_SECURITY_POLICY_REPORT_ONLY = content_security_policy_configuration
+
+    else:
+        CONTENT_SECURITY_POLICY = content_security_policy_configuration

@@ -1,3 +1,4 @@
+from csp.decorators import csp_exempt
 from django.conf import settings
 from django.conf.urls import include
 from django.contrib import admin
@@ -23,12 +24,20 @@ urlpatterns = [
     ),
     path(
         "api-docs/swagger-ui/",
-        CustomSpectacularSwaggerView.as_view(url_name="schema-unversioned"),
+        csp_exempt()(
+            csp_exempt(REPORT_ONLY=True)(
+                CustomSpectacularSwaggerView.as_view(url_name="schema-unversioned")
+            )
+        ),
         name="swagger-ui-unversioned",
     ),
     path(
         "api-docs/",
-        SpectacularRedocView.as_view(url_name="schema-unversioned"),
+        csp_exempt()(
+            csp_exempt(REPORT_ONLY=True)(
+                SpectacularRedocView.as_view(url_name="schema-unversioned"),
+            )
+        ),
         name="redoc-unversioned",
     ),
     # Legacy redirects for backward compatibility

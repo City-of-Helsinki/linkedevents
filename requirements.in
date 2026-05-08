@@ -4,6 +4,7 @@ bleach
 django-admin-autocomplete-filter
 django-cleanup
 django-cors-headers
+django-csp
 django-environ
 django-filter
 django-haystack
