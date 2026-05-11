@@ -1307,6 +1307,70 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
 
         return registration
 
+    def _update_web_store_data(
+        self,
+        instance,
+        registration_price_groups,
+        registration_merchant,
+        registration_account,
+        update_related,
+    ):
+        is_clearing_price_groups = (
+            isinstance(registration_price_groups, list)
+            and not registration_price_groups
+        )
+
+        # If price groups are being cleared, delete signup price groups first
+        # since they have a RESTRICT FK to registration price groups.
+        if is_clearing_price_groups:
+            SignUpPriceGroup.objects.filter(
+                registration_price_group__registration=instance
+            ).delete()
+
+        if isinstance(registration_price_groups, list):
+            price_groups = update_related(
+                registration_price_groups, "registration_price_groups"
+            )
+        else:
+            price_groups = None
+
+        # If all price groups were removed, clean up the product mapping
+        # as it is no longer needed. Merchant/account updates from the payload
+        # are intentionally not applied here - changing them while removing
+        # pricing is contradictory, and the existing records are kept as-is.
+        if is_clearing_price_groups:
+            RegistrationWebStoreProductMapping.objects.filter(
+                registration=instance
+            ).delete()
+        else:
+            self._sync_web_store_product_mapping(
+                instance, registration_merchant, registration_account, price_groups
+            )
+
+    def _sync_web_store_product_mapping(
+        self, instance, registration_merchant, registration_account, price_groups
+    ):
+        __, merchant_has_changed = self._create_or_update_registration_merchant(
+            instance, registration_merchant
+        )
+
+        __, account_has_changed = self._create_or_update_registration_account(
+            instance, registration_account
+        )
+
+        if (
+            merchant_has_changed
+            or account_has_changed
+            or (
+                price_groups
+                and not RegistrationWebStoreProductMapping.objects.filter(
+                    registration=instance,
+                    vat_code=VAT_CODE_MAPPING[price_groups[0].vat_percentage],
+                ).exists()
+            )
+        ):
+            instance.create_or_update_web_store_product_mapping_and_accounting()
+
     @transaction.atomic
     def update(self, instance, validated_data):
         registration_user_accesses = validated_data.pop(
@@ -1348,50 +1412,13 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
             update_related(registration_user_accesses, "registration_user_accesses")
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
-            # If price groups are being cleared, delete signup price groups first
-            # since they have a RESTRICT FK to registration price groups.
-            if (
-                isinstance(registration_price_groups, list)
-                and not registration_price_groups
-            ):
-                SignUpPriceGroup.objects.filter(
-                    registration_price_group__registration=instance
-                ).delete()
-
-            if isinstance(registration_price_groups, list):
-                price_groups = update_related(
-                    registration_price_groups, "registration_price_groups"
-                )
-            else:
-                price_groups = None
-
-            # If all price groups were removed, clean up the product mapping
-            # as it is no longer needed.
-            if isinstance(registration_price_groups, list) and not price_groups:
-                RegistrationWebStoreProductMapping.objects.filter(
-                    registration=instance
-                ).delete()
-            else:
-                __, merchant_has_changed = self._create_or_update_registration_merchant(
-                    instance, registration_merchant
-                )
-
-                __, account_has_changed = self._create_or_update_registration_account(
-                    instance, registration_account
-                )
-
-                if (
-                    merchant_has_changed
-                    or account_has_changed
-                    or (
-                        price_groups
-                        and not RegistrationWebStoreProductMapping.objects.filter(
-                            registration=instance,
-                            vat_code=VAT_CODE_MAPPING[price_groups[0].vat_percentage],
-                        ).exists()
-                    )
-                ):
-                    instance.create_or_update_web_store_product_mapping_and_accounting()
+            self._update_web_store_data(
+                instance,
+                registration_price_groups,
+                registration_merchant,
+                registration_account,
+                update_related,
+            )
 
         # (free -> paid) --> send notification
         if (
