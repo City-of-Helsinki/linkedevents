@@ -15,7 +15,11 @@ from registrations.models import (
     PriceGroup,
     Registration,
     RegistrationPriceGroup,
+    RegistrationWebStoreAccount,
+    RegistrationWebStoreMerchant,
     RegistrationWebStoreProductMapping,
+    SignUp,
+    SignUpPayment,
 )
 from registrations.tests.factories import (
     PriceGroupFactory,
@@ -25,6 +29,10 @@ from registrations.tests.factories import (
     RegistrationWebStoreAccountFactory,
     RegistrationWebStoreMerchantFactory,
     RegistrationWebStoreProductMappingFactory,
+    SignUpContactPersonFactory,
+    SignUpFactory,
+    SignUpPaymentFactory,
+    SignUpPriceGroupFactory,
     WebStoreAccountFactory,
     WebStoreMerchantFactory,
 )
@@ -64,6 +72,49 @@ def assert_patch_registration(
     assert response.status_code == status.HTTP_200_OK
 
     return response
+
+
+def _create_paid_registration(event):
+    """Create a paid registration with price groups, merchant, account and product mapping."""
+    registration = RegistrationFactory(event=event, maximum_attendee_capacity=10)
+
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group=PriceGroupFactory(publisher=event.publisher),
+        price=Decimal("10"),
+        vat_percentage=VatPercentage.VAT_25_5.value,
+    )
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
+
+    return (
+        registration,
+        registration_price_group,
+        registration_merchant,
+        registration_account,
+    )
+
+
+def _create_signup_with_payment(registration, registration_price_group):
+    """Create a signup with an associated payment and price group."""
+    signup = SignUpFactory(
+        registration=registration,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    SignUpPriceGroupFactory(
+        signup=signup,
+        registration_price_group=registration_price_group,
+    )
+    SignUpContactPersonFactory(signup=signup, email="test@test.dev")
+    SignUpPaymentFactory(signup=signup, status=SignUpPayment.PaymentStatus.PAID)
+
+    return signup
 
 
 # === tests ===
@@ -546,3 +597,48 @@ def test_cannot_patch_registration_web_store_account_read_only_fields(
     assert registration_account.company_code == "123"
     assert registration_account.main_ledger_account == "12345"
     assert registration_account.balance_profit_center == "1234567890"
+
+
+@pytest.mark.django_db
+def test_patch_paid_registration_to_free_no_payments(api_client, event):
+    """Partial update: sending empty price groups should change the registration to free."""
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration, *_ = _create_paid_registration(event)
+
+    response = patch_registration(
+        api_client,
+        registration.pk,
+        {"registration_price_groups": []},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["registration_price_groups"] == []
+    assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 0
+    assert RegistrationWebStoreMerchant.objects.filter(
+        registration=registration
+    ).exists()
+    assert RegistrationWebStoreAccount.objects.filter(
+        registration=registration
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_patch_paid_registration_to_free_with_payments(api_client, event):
+    """Partial update: should allow removing price groups even when payments exist."""
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration, registration_price_group, _, _ = _create_paid_registration(event)
+    _create_signup_with_payment(registration, registration_price_group)
+
+    response = patch_registration(
+        api_client,
+        registration.pk,
+        {"registration_price_groups": []},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["registration_price_groups"] == []
+    assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 0

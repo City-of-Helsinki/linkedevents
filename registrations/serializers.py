@@ -1348,6 +1348,16 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
             update_related(registration_user_accesses, "registration_user_accesses")
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
+            # If price groups are being cleared, delete signup price groups first
+            # since they have a RESTRICT FK to registration price groups.
+            if (
+                isinstance(registration_price_groups, list)
+                and not registration_price_groups
+            ):
+                SignUpPriceGroup.objects.filter(
+                    registration_price_group__registration=instance
+                ).delete()
+
             if isinstance(registration_price_groups, list):
                 price_groups = update_related(
                     registration_price_groups, "registration_price_groups"
@@ -1355,26 +1365,33 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
             else:
                 price_groups = None
 
-            __, merchant_has_changed = self._create_or_update_registration_merchant(
-                instance, registration_merchant
-            )
-
-            __, account_has_changed = self._create_or_update_registration_account(
-                instance, registration_account
-            )
-
-            if (
-                merchant_has_changed
-                or account_has_changed
-                or (
-                    price_groups
-                    and not RegistrationWebStoreProductMapping.objects.filter(
-                        registration=instance,
-                        vat_code=VAT_CODE_MAPPING[price_groups[0].vat_percentage],
-                    ).exists()
+            # If all price groups were removed, clean up the product mapping
+            # as it is no longer needed.
+            if isinstance(registration_price_groups, list) and not price_groups:
+                RegistrationWebStoreProductMapping.objects.filter(
+                    registration=instance
+                ).delete()
+            else:
+                __, merchant_has_changed = self._create_or_update_registration_merchant(
+                    instance, registration_merchant
                 )
-            ):
-                instance.create_or_update_web_store_product_mapping_and_accounting()
+
+                __, account_has_changed = self._create_or_update_registration_account(
+                    instance, registration_account
+                )
+
+                if (
+                    merchant_has_changed
+                    or account_has_changed
+                    or (
+                        price_groups
+                        and not RegistrationWebStoreProductMapping.objects.filter(
+                            registration=instance,
+                            vat_code=VAT_CODE_MAPPING[price_groups[0].vat_percentage],
+                        ).exists()
+                    )
+                ):
+                    instance.create_or_update_web_store_product_mapping_and_accounting()
 
         # (free -> paid) --> send notification
         if (
@@ -1435,7 +1452,19 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
 
         return value
 
+    @staticmethod
+    def _is_clearing_price_groups(data):
+        return (
+            "registration_price_groups" in data
+            and not data["registration_price_groups"]
+        )
+
     def _validate_merchant_and_account(self, data, errors):
+        if self._is_clearing_price_groups(data):
+            # Price groups are being explicitly cleared => merchant and account
+            # are not required in the payload.
+            return
+
         if not (
             data.get("registration_price_groups")
             or self.instance is not None
@@ -1459,6 +1488,15 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
             )
 
     def _validate_registration_price_groups(self, data, errors):
+        if (
+            self._is_clearing_price_groups(data)
+            and self.instance is not None
+            and self.instance.registration_price_groups.exists()
+        ):
+            # Price groups are being explicitly cleared on a registration that
+            # currently has them => paid-to-free transition, skip validation.
+            return
+
         if not (
             data.get("registration_merchant")
             or data.get("registration_account")

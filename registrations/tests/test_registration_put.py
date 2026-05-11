@@ -83,6 +83,49 @@ def assert_update_registration(api_client, pk, registration_data, data_source=No
     return response
 
 
+def _create_paid_registration(event):
+    """Create a paid registration with price groups, merchant, account and product mapping."""
+    registration = RegistrationFactory(event=event, maximum_attendee_capacity=10)
+
+    registration_price_group = RegistrationPriceGroupFactory(
+        registration=registration,
+        price_group=PriceGroupFactory(publisher=event.publisher),
+        price=Decimal("10"),
+        vat_percentage=VatPercentage.VAT_25_5.value,
+    )
+
+    with override_settings(WEB_STORE_INTEGRATION_ENABLED=False):
+        registration_merchant = RegistrationWebStoreMerchantFactory(
+            registration=registration
+        )
+
+    registration_account = RegistrationWebStoreAccountFactory(registration=registration)
+    RegistrationWebStoreProductMappingFactory(registration=registration)
+
+    return (
+        registration,
+        registration_price_group,
+        registration_merchant,
+        registration_account,
+    )
+
+
+def _create_signup_with_payment(registration, registration_price_group):
+    """Create a signup with an associated payment and price group."""
+    signup = SignUpFactory(
+        registration=registration,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    SignUpPriceGroupFactory(
+        signup=signup,
+        registration_price_group=registration_price_group,
+    )
+    SignUpContactPersonFactory(signup=signup, email="test@test.dev")
+    SignUpPaymentFactory(signup=signup, status=SignUpPayment.PaymentStatus.PAID)
+
+    return signup
+
+
 # === tests ===
 
 
@@ -1780,3 +1823,138 @@ def test_update_registration_minimum_attendee_capacity(
 
     registration.refresh_from_db()
     assert registration.minimum_attendee_capacity == expected_minimum_attendee_capacity
+
+
+@pytest.mark.django_db
+def test_update_paid_registration_to_free_no_payments(api_client, event):
+    """Changing a paid registration to free should succeed when there are no signups
+    with payments. Price groups and product mapping should be removed."""
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration, *_ = _create_paid_registration(event)
+
+    assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 1
+    assert RegistrationWebStoreMerchant.objects.filter(
+        registration=registration
+    ).exists()
+    assert RegistrationWebStoreAccount.objects.filter(
+        registration=registration
+    ).exists()
+    assert RegistrationWebStoreProductMapping.objects.filter(
+        registration=registration
+    ).exists()
+
+    registration_data = {
+        **get_minimal_required_registration_data(registration.event_id),
+        "registration_price_groups": [],
+    }
+
+    response = update_registration(api_client, registration.pk, registration_data)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["id"] == registration.pk
+    assert response.data["registration_price_groups"] == []
+    assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 0
+    assert RegistrationWebStoreMerchant.objects.filter(
+        registration=registration
+    ).exists()
+    assert RegistrationWebStoreAccount.objects.filter(
+        registration=registration
+    ).exists()
+    assert not RegistrationWebStoreProductMapping.objects.filter(
+        registration=registration
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_update_paid_registration_to_free_cleans_up_signup_price_groups(
+    api_client, event
+):
+    """Changing a paid registration to free should clean up signup price groups
+    (which have a RESTRICT FK to registration price groups)."""
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration, registration_price_group, *_ = _create_paid_registration(event)
+
+    # Create a signup without a payment
+    signup = SignUpFactory(
+        registration=registration,
+        attendee_status=SignUp.AttendeeStatus.ATTENDING,
+    )
+    SignUpPriceGroupFactory(
+        signup=signup,
+        registration_price_group=registration_price_group,
+    )
+    SignUpContactPersonFactory(signup=signup, email="test@test.dev")
+
+    assert SignUpPayment.objects.filter(signup__registration=registration).count() == 0
+
+    registration_data = {
+        **get_minimal_required_registration_data(registration.event_id),
+        "registration_price_groups": [],
+    }
+
+    response = update_registration(api_client, registration.pk, registration_data)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["id"] == registration.pk
+    assert response.data["registration_price_groups"] == []
+    assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 0
+
+
+@pytest.mark.django_db
+def test_update_paid_registration_to_free_with_payments(api_client, event):
+    """Changing a paid registration to free should succeed even when there are
+    signups with payments."""
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration, registration_price_group, *_ = _create_paid_registration(event)
+    _create_signup_with_payment(registration, registration_price_group)
+
+    assert (
+        SignUpPayment.objects.filter(
+            signup__registration=registration,
+            status=SignUpPayment.PaymentStatus.PAID,
+        ).count()
+        == 1
+    )
+
+    registration_data = {
+        **get_minimal_required_registration_data(registration.event_id),
+        "registration_price_groups": [],
+    }
+
+    response = update_registration(api_client, registration.pk, registration_data)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["registration_price_groups"] == []
+    assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 0
+
+
+@pytest.mark.django_db
+def test_update_paid_to_free_with_merchant_and_account_in_payload(api_client, event):
+    """A full PUT that includes merchant and account alongside empty price groups
+    should still succeed as a paid-to-free transition."""
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration, _, registration_merchant, registration_account = (
+        _create_paid_registration(event)
+    )
+
+    registration_data = {
+        **get_minimal_required_registration_data(registration.event_id),
+        "registration_price_groups": [],
+        **get_registration_merchant_and_account_data(
+            registration_merchant.merchant, registration_account.account
+        ),
+    }
+
+    response = update_registration(api_client, registration.pk, registration_data)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["registration_price_groups"] == []
+    assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 0
