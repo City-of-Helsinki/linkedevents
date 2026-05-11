@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.27.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.3...linkedevents-v3.27.0) (2026-05-11)
+
+
+### Features
+
+* Use last_api_use-timestamp in permission deletions ([b4064ff](https://github.com/City-of-Helsinki/linkedevents/commit/b4064ffd755a45def39eb1376332b3798c3cd667))
+
+
+### Dependencies
+
+* Bump django from 5.2.13 to 5.2.14 ([6715080](https://github.com/City-of-Helsinki/linkedevents/commit/6715080d01cdb0bc1983b48aebbe2753dba4eea1))
+* Bump pip from 26.0 to 26.1 ([e306921](https://github.com/City-of-Helsinki/linkedevents/commit/e3069212f1b28a29b7bdff670322645df38c9133))
+
 ## [3.26.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.2...linkedevents-v3.26.3) (2026-04-22)
 
 
