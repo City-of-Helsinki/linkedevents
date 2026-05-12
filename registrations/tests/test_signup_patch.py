@@ -670,7 +670,9 @@ def test_cannot_patch_signup_with_another_signups_price_group(
 @pytest.mark.parametrize(
     "user_role", ["superuser", "registration_admin", "regular_user"]
 )
-@pytest.mark.parametrize("price_group_data", [None, {}])
+@pytest.mark.parametrize(
+    "price_group_data", [None, {}, {"registration_price_group": None}]
+)
 @pytest.mark.django_db
 def test_patch_signup_price_group_is_required(
     api_client, registration, user_role, price_group_data

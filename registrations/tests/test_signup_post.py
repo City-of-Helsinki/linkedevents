@@ -2552,6 +2552,31 @@ def test_cannot_create_signup_without_price_group_if_registration_has_price_grou
 
 
 @pytest.mark.django_db
+def test_create_signup_with_null_registration_price_group_on_free_registration(
+    api_client, registration
+):
+    user = create_user_by_role("superuser", registration.publisher)
+    api_client.force_authenticate(user)
+
+    LanguageFactory(id="fi", service_language=True)
+    reservation = SeatReservationCodeFactory(registration=registration, seats=1)
+
+    signups_data = deepcopy(default_signups_data)
+    signups_data["registration"] = registration.id
+    signups_data["reservation_code"] = reservation.code
+    signups_data["signups"][0]["price_group"] = {"registration_price_group": None}
+
+    assert SignUp.objects.count() == 0
+    assert SignUpPriceGroup.objects.count() == 0
+
+    response = create_signups(api_client, signups_data)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    assert SignUp.objects.count() == 1
+    assert SignUpPriceGroup.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_not_added_to_waiting_list_if_attending_signup_is_soft_deleted(api_client):
     registration = RegistrationFactory(
         confirmation_message_en="Confirmation message",
