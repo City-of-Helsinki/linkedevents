@@ -1312,13 +1312,37 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
 
         return registration
 
+    def _update_related(self, instance, related_data: list, related_name: str):
+        """Sync a related object set to match the given payload data.
+
+        Deletes any existing related objects whose IDs are not present in
+        ``related_data``, then delegates to the matching
+        ``_create_or_update_<related_name>`` method to upsert the rest.
+
+        The ``data["id"]`` value is unwrapped with ``getattr(id, "id", id)``
+        because ``RegistrationUserAccessSerializer`` resolves the ID to a
+        model instance, whereas other serializers leave it as a plain int.
+        """
+        ids = [
+            getattr(data["id"], "id", data["id"])
+            for data in related_data
+            if data.get("id") is not None
+        ]
+
+        # Delete related objects which are not included in the payload
+        getattr(instance, related_name).exclude(pk__in=ids).delete()
+
+        # Update or create related objects
+        return getattr(self, f"_create_or_update_{related_name}")(
+            instance, related_data
+        )
+
     def _update_web_store_data(
         self,
         instance,
         registration_price_groups,
         registration_merchant,
         registration_account,
-        update_related,
     ):
         is_clearing_price_groups = (
             isinstance(registration_price_groups, list)
@@ -1326,8 +1350,8 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
         )
 
         if isinstance(registration_price_groups, list):
-            price_groups = update_related(
-                registration_price_groups, "registration_price_groups"
+            price_groups = self._update_related(
+                instance, registration_price_groups, "registration_price_groups"
             )
         else:
             price_groups = None
@@ -1388,26 +1412,11 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
         # update validated fields
         super().update(instance, validated_data)
 
-        def update_related(related_data: list, related_name: str):
-            ids = [
-                getattr(
-                    data["id"], "id", data["id"]
-                )  # user access has an object in the "id" field
-                for data in related_data
-                if data.get("id") is not None
-            ]
-
-            # Delete related objects which are not included in the payload
-            getattr(instance, related_name).exclude(pk__in=ids).delete()
-
-            # Update or create related objects
-            return getattr(self, f"_create_or_update_{related_name}")(
-                instance, related_data
-            )
-
         # update registration users
         if isinstance(registration_user_accesses, list):
-            update_related(registration_user_accesses, "registration_user_accesses")
+            self._update_related(
+                instance, registration_user_accesses, "registration_user_accesses"
+            )
 
         if settings.WEB_STORE_INTEGRATION_ENABLED:
             self._update_web_store_data(
@@ -1415,7 +1424,6 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
                 registration_price_groups,
                 registration_merchant,
                 registration_account,
-                update_related,
             )
 
         # (free -> paid) --> send notification
