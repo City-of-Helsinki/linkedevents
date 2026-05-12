@@ -20,6 +20,7 @@ from registrations.models import (
     RegistrationWebStoreProductMapping,
     SignUp,
     SignUpPayment,
+    SignUpPriceGroup,
 )
 from registrations.tests.factories import (
     PriceGroupFactory,
@@ -622,6 +623,9 @@ def test_patch_paid_registration_to_free_no_payments(api_client, event):
     assert RegistrationWebStoreAccount.objects.filter(
         registration=registration
     ).exists()
+    assert not RegistrationWebStoreProductMapping.objects.filter(
+        registration=registration
+    ).exists()
 
 
 @pytest.mark.django_db
@@ -642,3 +646,10 @@ def test_patch_paid_registration_to_free_with_payments(api_client, event):
     assert response.status_code == status.HTTP_200_OK
     assert response.data["registration_price_groups"] == []
     assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 0
+    assert not RegistrationWebStoreProductMapping.objects.filter(
+        registration=registration
+    ).exists()
+
+    # SignUpPriceGroup should be preserved with a null FK so refunds remain possible.
+    signup_price_group = SignUpPriceGroup.objects.get(signup__registration=registration)
+    assert signup_price_group.registration_price_group is None

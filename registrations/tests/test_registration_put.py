@@ -26,6 +26,7 @@ from registrations.models import (
     RegistrationWebStoreProductMapping,
     SignUp,
     SignUpPayment,
+    SignUpPriceGroup,
 )
 from registrations.tests.factories import (
     PriceGroupFactory,
@@ -1868,11 +1869,36 @@ def test_update_paid_registration_to_free_no_payments(api_client, event):
 
 
 @pytest.mark.django_db
-def test_update_paid_registration_to_free_cleans_up_signup_price_groups(
+def test_update_paid_registration_to_free_is_idempotent(api_client, event):
+    """A second PUT with empty price groups after a paid-to-free transition
+    should not fail due to leftover merchant/account records."""
+    user = create_user_by_role("registration_admin", event.publisher)
+    api_client.force_authenticate(user)
+
+    registration, *_ = _create_paid_registration(event)
+
+    registration_data = {
+        **get_minimal_required_registration_data(registration.event_id),
+        "registration_price_groups": [],
+    }
+
+    # First transition: paid -> free
+    response = update_registration(api_client, registration.pk, registration_data)
+    assert response.status_code == status.HTTP_200_OK
+
+    # Second PUT with same payload should also succeed.
+    response = update_registration(api_client, registration.pk, registration_data)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["registration_price_groups"] == []
+
+
+@pytest.mark.django_db
+def test_update_paid_registration_to_free_nullifies_signup_price_group_fk(
     api_client, event
 ):
-    """Changing a paid registration to free should clean up signup price groups
-    (which have a RESTRICT FK to registration price groups)."""
+    """Changing a paid registration to free should set the signup price group's
+    registration_price_group FK to NULL (via SET_NULL), preserving the pricing
+    snapshot and audit data."""
     user = create_user_by_role("registration_admin", event.publisher)
     api_client.force_authenticate(user)
 
@@ -1903,6 +1929,15 @@ def test_update_paid_registration_to_free_cleans_up_signup_price_groups(
     assert response.data["registration_price_groups"] == []
     assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 0
 
+    # SignUpPriceGroup should be preserved with a null FK.
+    signup_price_group = SignUpPriceGroup.objects.get(signup=signup)
+    assert signup_price_group.registration_price_group is None
+
+    # Verify the signup serializes correctly with a null registration_price_group FK.
+    signup_response = api_client.get(reverse("signup-detail", kwargs={"pk": signup.pk}))
+    assert signup_response.status_code == status.HTTP_200_OK
+    assert signup_response.data["price_group"]["registration_price_group"] is None
+
 
 @pytest.mark.django_db
 def test_update_paid_registration_to_free_with_payments(api_client, event):
@@ -1932,6 +1967,10 @@ def test_update_paid_registration_to_free_with_payments(api_client, event):
     assert response.status_code == status.HTTP_200_OK
     assert response.data["registration_price_groups"] == []
     assert RegistrationPriceGroup.objects.filter(registration=registration).count() == 0
+
+    # SignUpPriceGroup should be preserved with a null FK so refunds remain possible.
+    signup_price_group = SignUpPriceGroup.objects.get(signup__registration=registration)
+    assert signup_price_group.registration_price_group is None
 
 
 @pytest.mark.django_db

@@ -278,6 +278,7 @@ class SignUpPriceGroupSerializer(TranslatedModelSerializer):
     )
     registration_price_group = serializers.PrimaryKeyRelatedField(
         queryset=RegistrationPriceGroup.objects.all(),
+        allow_null=True,
         help_text=(
             "ID of one of the registration's available customer group selections."
         ),
@@ -461,7 +462,11 @@ class SignUpSerializer(
 
     @staticmethod
     def _update_or_create_price_group(signup, **price_group_data):
-        if not price_group_data or not settings.WEB_STORE_INTEGRATION_ENABLED:
+        if (
+            not price_group_data
+            or not price_group_data.get("registration_price_group")
+            or not settings.WEB_STORE_INTEGRATION_ENABLED
+        ):
             return
 
         SignUpPriceGroup.objects.update_or_create(
@@ -622,7 +627,7 @@ class SignUpSerializer(
         price_group = validated_data.get("price_group") or {}
 
         if (
-            not price_group
+            not price_group.get("registration_price_group")
             and registration.registration_price_groups.exists()
             and (not self.partial or "price_group" in data.keys())
         ):
@@ -1320,13 +1325,6 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
             and not registration_price_groups
         )
 
-        # If price groups are being cleared, delete signup price groups first
-        # since they have a RESTRICT FK to registration price groups.
-        if is_clearing_price_groups:
-            SignUpPriceGroup.objects.filter(
-                registration_price_group__registration=instance
-            ).delete()
-
         if isinstance(registration_price_groups, list):
             price_groups = update_related(
                 registration_price_groups, "registration_price_groups"
@@ -1515,23 +1513,28 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
             )
 
     def _validate_registration_price_groups(self, data, errors):
+        instance_has_merchant_or_account = self.instance is not None and (
+            getattr(self.instance, "registration_merchant", None) is not None
+            or getattr(self.instance, "registration_account", None) is not None
+        )
+
         if (
             self._is_clearing_price_groups(data)
             and self.instance is not None
-            and self.instance.registration_price_groups.exists()
+            and (
+                self.instance.registration_price_groups.exists()
+                or instance_has_merchant_or_account
+            )
         ):
             # Price groups are being explicitly cleared on a registration that
-            # currently has them => paid-to-free transition, skip validation.
+            # currently has them or previously had them (merchant/account still
+            # exist from the paid state) => skip validation.
             return
 
         if not (
             data.get("registration_merchant")
             or data.get("registration_account")
-            or self.instance is not None
-            and (
-                getattr(self.instance, "registration_merchant", None) is not None
-                or getattr(self.instance, "registration_account", None) is not None
-            )
+            or instance_has_merchant_or_account
         ):
             # Merchant and account not given or they don't exist => no need to validate.
             return
@@ -1787,6 +1790,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
                     SignUpPriceGroup(signup=signup, **signup._price_group)
                     for signup in signups
                     if signup._price_group
+                    and signup._price_group.get("registration_price_group")
                 ]
             )
 

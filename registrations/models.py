@@ -2154,7 +2154,9 @@ class SignUpPriceGroup(RegistrationPriceGroupBaseModel, SoftDeletableBaseModel):
     registration_price_group = models.ForeignKey(
         RegistrationPriceGroup,
         related_name="signup_price_groups",
-        on_delete=models.RESTRICT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
 
     description = models.CharField(max_length=255)
