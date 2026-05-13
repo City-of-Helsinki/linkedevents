@@ -2427,6 +2427,12 @@ class EventViewSet(
 
             queryset = self._optimize_include(includes, queryset)
 
+            if settings.WEB_STORE_INTEGRATION_ENABLED:
+                queryset = queryset.prefetch_related(
+                    "offers__offer_price_groups",
+                    "offers__offer_price_groups__price_group",
+                )
+
             if "sub_events" in includes:
                 sub_event_qs = self._optimize_include(
                     includes, self.queryset.filter(deleted=False)
