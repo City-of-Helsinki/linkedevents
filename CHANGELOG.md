@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.27.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.27.0...linkedevents-v3.27.1) (2026-05-19)
+
+
+### Dependencies
+
+* Bump authlib from 1.6.11 to 1.6.12 ([ee02fa8](https://github.com/City-of-Helsinki/linkedevents/commit/ee02fa82bc016a48d7dce9c6e2841fc2b6d8b560))
+
 ## [3.27.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.26.3...linkedevents-v3.27.0) (2026-05-11)
 
 
