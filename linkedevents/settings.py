@@ -219,7 +219,7 @@ env = environ.Env(
     CSP_STYLE_SRC=(list, []),
     CSP_SCRIPT_SRC=(list, []),
     CSP_REPORT_ONLY=(bool, False),
-    CSP_REPORT_URI=(str, None),
+    CSP_REPORT_URI=(list, []),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
