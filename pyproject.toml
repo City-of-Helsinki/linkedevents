@@ -22,7 +22,7 @@ dependencies = [
     "django-mailer",
     "django-modeltranslation",
     "django-mptt",
-    "django-munigeo",
+    "django-munigeo @ https://github.com/City-of-Helsinki/django-munigeo/archive/RATY-306/1.0-docs.tar.gz",
     "django-orghierarchy",
     # Pinned: django-parler 2.4 replaced `unique_together` on translation models
     # with a named `UniqueConstraint`, which makes `makemigrations` detect drift
