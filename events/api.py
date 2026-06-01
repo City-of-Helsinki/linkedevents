@@ -943,9 +943,9 @@ class PlaceListViewSet(
             "publisher",  # Performs much better as a prefetch
             Prefetch(
                 "divisions",
-                AdministrativeDivision.objects.all()
-                .select_related("type", "municipality")
-                .prefetch_related("municipality__translations", "translations"),
+                AdministrativeDivision.objects.all().select_related(
+                    "type", "municipality"
+                ),
             ),
             # Fields below are mostly null -> prefetch faster than select
             "created_by",
@@ -2386,7 +2386,6 @@ class EventViewSet(
                 "location__divisions",
                 "location__divisions__type",
                 "location__divisions__municipality",
-                "location__divisions__translations",
                 "location__publisher",
             )
         else:
