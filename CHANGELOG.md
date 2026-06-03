@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.28.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.27.1...linkedevents-v3.28.0) (2026-06-03)
+
+
+### Features
+
+* Add django-csp ([8605393](https://github.com/City-of-Helsinki/linkedevents/commit/8605393e2ffcb5d23200575808dbfe5f86b62c76))
+* Add support for changing paid registrations to free ([5fa5421](https://github.com/City-of-Helsinki/linkedevents/commit/5fa5421015bd2956a1c03937af6cb5d7e9884df9))
+* Retain sign up price groups on paid to free transition ([6b1f21d](https://github.com/City-of-Helsinki/linkedevents/commit/6b1f21dba0d9284a631dbceea8766b19b8fd940e))
+
+
+### Bug Fixes
+
+* Apply CodeRabbit auto-fixes ([23e643b](https://github.com/City-of-Helsinki/linkedevents/commit/23e643b4deed512985da9423b5071924d39ed53a))
+
+
+### Performance Improvements
+
+* **espoo-import:** Use EXISTS subquery instead of JOIN+DISTINCT ([02389bf](https://github.com/City-of-Helsinki/linkedevents/commit/02389bf6c0699db6c8e156268c1c55c207ec021d))
+* New index of Events ([ecb7f6e](https://github.com/City-of-Helsinki/linkedevents/commit/ecb7f6e1e70f705d298289d9a141b0157f43b6f7))
+* Prefetch offer_price_groups ([cb71a74](https://github.com/City-of-Helsinki/linkedevents/commit/cb71a742e7c215380c5bb3bf4bdad8ba3b228e3f))
+
+
+### Dependencies
+
+* Bump idna from 3.10 to 3.15 ([16f1e1d](https://github.com/City-of-Helsinki/linkedevents/commit/16f1e1d04ae4dee1b78d2aa751e4d0dec2465642))
+* Bump urllib3 from 2.6.3 to 2.7.0 ([c93eb3f](https://github.com/City-of-Helsinki/linkedevents/commit/c93eb3f487779a191ead46f76d1800d23b8dd2f5))
+
 ## [3.27.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.27.0...linkedevents-v3.27.1) (2026-05-19)
 
 
