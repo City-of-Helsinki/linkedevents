@@ -11,6 +11,15 @@ ENV PYTHONUNBUFFERED=true
 # Works like this: "/example" -> http://hostname.domain.name/example
 ENV DJANGO_URL_PREFIX=/
 
+# uv configuration
+ENV UV_PROJECT_ENVIRONMENT=/opt/app-root \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_NO_CACHE=1 \
+    UV_PYTHON_DOWNLOADS=never
+# Make the project virtualenv binaries available on PATH
+ENV PATH="/opt/app-root/bin:${PATH}"
+
 WORKDIR /app
 USER root
 
@@ -26,12 +35,14 @@ RUN mkdir -p /etc/voikko \
     && wget https://www.puimula.org/htp/testing/voikko-snapshot-v5/dict-morpho.zip \
     && unzip dict-morpho.zip
 
-COPY requirements.txt .
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /uvx /usr/local/bin/
+
+COPY pyproject.toml uv.lock ./
 
 RUN dnf update -y  \
     && dnf install -y nmap-ncat  \
-    && pip install --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir -r requirements.txt \
+    && uv sync --frozen --no-dev --group prod \
     && uwsgi --build-plugin https://github.com/City-of-Helsinki/uwsgi-sentry \
     && dnf clean all
 
@@ -51,8 +62,8 @@ ENTRYPOINT ["/app/docker/django/docker-entrypoint.sh"]
 FROM appbase AS development
 # ==============================
 
-COPY requirements-dev.txt .
-RUN pip install --no-cache-dir -r requirements-dev.txt
+# pyproject.toml and uv.lock are already present from appbase.
+RUN uv sync --frozen --group prod
 
 ENV DEV_SERVER=true
 
