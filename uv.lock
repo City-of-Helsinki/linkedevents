@@ -560,14 +560,14 @@ wheels = [
 
 [[package]]
 name = "django-parler"
-version = "2.4"
+version = "2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ce/96/e336bd885f185c5d4336217b26dfdd1a8a295ed6f5ea8d8b24a2e0f4d870/django_parler-2.4.tar.gz", hash = "sha256:6c70f853cf19c09fd72d9a10aa784ae57da9094178c650eab0c5d30c0a48be40", size = 91503, upload-time = "2026-05-14T08:58:08.128Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8c/2b/2423d31620efe8ab0d0390e60afab4f9cc2e62d4bf39fe0e05df0eef1b93/django-parler-2.3.tar.gz", hash = "sha256:2c8f5012ceb5e49af93b16ea3fe4d0c83d70b91b2d0f470c05d7d742b6f3083d", size = 69167, upload-time = "2021-11-18T09:32:28.959Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8b/87/6d6129e14a7815bb383b61e7f86ffa85a4f43132eafa15de4a3a30ff9424/django_parler-2.4-py3-none-any.whl", hash = "sha256:0fff7185d581790d7063cbe0f7c57a399517d5ec976536b6c6bc06cf8ad4b956", size = 112605, upload-time = "2026-05-14T08:58:06.545Z" },
+    { url = "https://files.pythonhosted.org/packages/47/38/11f1a7e3d56f3a6b74cf99e307f2554b741cadebc9b1c45b05e2ec1f35a2/django_parler-2.3-py3-none-any.whl", hash = "sha256:8f6c8061e4b5690f1ee2d8e5760940ef06bf78a5bfa033d11178377559c749cf", size = 83288, upload-time = "2021-11-18T09:32:27.193Z" },
 ]
 
 [[package]]
@@ -1041,7 +1041,7 @@ wheels = [
 
 [[package]]
 name = "linkedevents"
-version = "3.28.0"
+version = "3.29.0"
 source = { virtual = "." }
 dependencies = [
     { name = "attrs" },
@@ -1066,6 +1066,7 @@ dependencies = [
     { name = "django-mptt" },
     { name = "django-munigeo" },
     { name = "django-orghierarchy" },
+    { name = "django-parler" },
     { name = "django-redis" },
     { name = "django-resilient-logger" },
     { name = "django-rest-knox" },
@@ -1152,6 +1153,7 @@ requires-dist = [
     { name = "django-mptt" },
     { name = "django-munigeo" },
     { name = "django-orghierarchy" },
+    { name = "django-parler", specifier = "==2.3" },
     { name = "django-redis" },
     { name = "django-resilient-logger" },
     { name = "django-rest-knox" },
