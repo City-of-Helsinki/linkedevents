@@ -18,6 +18,7 @@ data/
 static/
 django-munigeo/
 venv*/
+.venv
 .pytest_cache/
 templates/rest_framework/*
 

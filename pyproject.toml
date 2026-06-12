@@ -2,6 +2,94 @@
 name = "linkedevents"
 requires-python = ">=3.12, <3.13"
 version = "3.29.0"
+dependencies = [
+    "attrs",
+    "beautifulsoup4",
+    "bleach",
+    "django-admin-autocomplete-filter",
+    "django-cleanup",
+    "django-cors-headers",
+    "django-csp",
+    "django-environ",
+    "django-filter",
+    "django-haystack",
+    "django-helusers",
+    "django-helsinki-health-endpoints",
+    "django-image-cropping",
+    "django-jinja",
+    "django-leaflet",
+    "django-logger-extra",
+    "django-mailer",
+    "django-modeltranslation",
+    "django-mptt",
+    "django-munigeo",
+    "django-orghierarchy",
+    "django-redis",
+    "django-resilient-logger",
+    "django-rest-knox",
+    "django-reversion",
+    "django-searchable-encrypted-fields",
+    "djangorestframework",
+    "djangorestframework-bulk",
+    "djangorestframework-gis",
+    "django~=5.2",
+    "drf-oidc-auth",
+    "drf-spectacular",
+    "easy-thumbnails",
+    "elasticsearch<8",
+    "helsinki-profile-gdpr-api",
+    "httmock",
+    "icalendar",
+    "ipython",
+    "isodate",
+    "jinja2",
+    "langdetect",
+    "libvoikko",
+    "lxml",
+    "markdown",
+    "num2words",
+    "pillow",
+    "psycopg[c]",
+    "pyYAML",
+    "python-dateutil",
+    "python-docx",
+    "rdflib==6.3.2",
+    "regex",
+    "requests",
+    "requests-cache",
+    "sentry-sdk[django]",
+    "social-auth-app-django",
+    "social-auth-core",
+    "whitenoise",
+    "xlsxwriter",
+]
+
+[dependency-groups]
+dev = [
+    "Werkzeug",
+    "django-anymail",
+    "django-debug-toolbar",
+    "django-extensions",
+    "django-test-migrations",
+    "factory-boy",
+    "freezegun",
+    "pytest",
+    "pytest-cov",
+    "pytest-django",
+    "pytest-factoryboy",
+    "pytest-freezer",
+    "python-jose",
+    "requests-mock",
+    "snakemd",
+]
+prod = [
+    "uwsgi",
+    "uwsgitop",
+]
+
+[tool.uv]
+package = false
+exclude-newer = "P3D"
 
 [tool.ruff]
 target-version = "py312"
@@ -28,10 +116,6 @@ select = [
 ]
 extend-per-file-ignores = { "*/migrations/*" = ["E501"], "*/tests/*" = ["E501"] }
 
-[tool.pip-tools.compile]
-allow-unsafe = true
-generate-hashes = true
-strip-extras = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "linkedevents.test_settings"
