@@ -612,9 +612,38 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin, TranslatableSerializableMi
         verbose_name = _("keyword")
         verbose_name_plural = _("keywords")
         indexes = [
+            # Per-language keyword name indexes with Finnish name as secondary
+            # sort. Defined explicitly (using concrete column names) to avoid
+            # modeltranslation's auto-expansion which would produce a redundant
+            # (name_fi, name_fi) index for Finnish.
             Index(
-                name="keywords_index",
-                fields=("name", "name_fi"),
+                name="keywords_index_fi",
+                fields=["name_fi"],
+                condition=Q(n_events__gt=0),
+            ),
+            Index(
+                name="keywords_index_sv",
+                fields=["name_sv", "name_fi"],
+                condition=Q(n_events__gt=0),
+            ),
+            Index(
+                name="keywords_index_en",
+                fields=["name_en", "name_fi"],
+                condition=Q(n_events__gt=0),
+            ),
+            Index(
+                name="keywords_index_zh_hans",
+                fields=["name_zh_hans", "name_fi"],
+                condition=Q(n_events__gt=0),
+            ),
+            Index(
+                name="keywords_index_ru",
+                fields=["name_ru", "name_fi"],
+                condition=Q(n_events__gt=0),
+            ),
+            Index(
+                name="keywords_index_ar",
+                fields=["name_ar", "name_fi"],
                 condition=Q(n_events__gt=0),
             ),
             models.Index(

@@ -24,6 +24,11 @@ dependencies = [
     "django-mptt",
     "django-munigeo",
     "django-orghierarchy",
+    # Pinned: django-parler 2.4 replaced `unique_together` on translation models
+    # with a named `UniqueConstraint`, which makes `makemigrations` detect drift
+    # for the third-party munigeo app (whose migrations still use
+    # `unique_together`). Stay on 2.3 until munigeo ships compatible migrations.
+    "django-parler==2.3",
     "django-redis",
     "django-resilient-logger",
     "django-rest-knox",
