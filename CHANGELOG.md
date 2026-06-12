@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.29.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.28.0...linkedevents-v3.29.0) (2026-06-12)
+
+
+### Features
+
+* Add management command to delete inactive users ([a91ec89](https://github.com/City-of-Helsinki/linkedevents/commit/a91ec89d1bd18bc143a5ac647d24f3c209be92eb))
+* **csp:** Add [SELF] as default ([0ebb7b2](https://github.com/City-of-Helsinki/linkedevents/commit/0ebb7b2c7a66c4c9079d8e3577cb3a5122033bcb))
+* **csp:** Add env configurable form-action ([0fe1207](https://github.com/City-of-Helsinki/linkedevents/commit/0fe1207913a0228f0c57347e570c780365bd4f0e))
+
 ## [3.28.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.27.1...linkedevents-v3.28.0) (2026-06-03)
 
 
