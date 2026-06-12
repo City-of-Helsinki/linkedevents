@@ -170,6 +170,43 @@ After this, everything but search endpoint (/search) is working. See [search](#s
     export GEOS_LIBRARY_PATH=/opt/homebrew/lib/libgeos_c.dylib
     ```
 
+### Voikko / libvoikko
+* Problem on macOS – uv downloads its own Python interpreter which does **not** search
+  Homebrew's library paths, so loading `libvoikko` (or other Homebrew `.dylib` files) fails:
+    ```text
+    OSError: dlopen(libvoikko.1.dylib, 0x0006): tried: … '/usr/lib/libvoikko.1.dylib' (no such file, not in dyld cache)
+    ```
+* Fix (preferred – no shell changes needed):
+  * Install `libvoikko` via Homebrew if not already done:
+    ```bash
+    brew install libvoikko
+    ```
+  * Create (or extend) a `.env` file in the project root – it is already listed in
+    `.gitignore` so it will never be committed:
+    ```dotenv
+    # .env  (project root, gitignored)
+    DYLD_LIBRARY_PATH=/opt/homebrew/lib
+    ```
+  * `uv run` does **not** load `.env` automatically – you must opt in explicitly.
+    Pass `--env-file .env` on every invocation, or set `UV_ENV_FILE=.env` once in
+    your shell profile so all `uv run` calls pick it up:
+    ```bash
+    # Option A – per-command flag:
+    uv run --env-file .env python manage.py runserver
+
+    # Option B – shell-wide (add to .zshrc / .bash_profile):
+    export UV_ENV_FILE=.env
+    # then just:
+    uv run python manage.py runserver
+    ```
+    Either way `DYLD_LIBRARY_PATH` is injected before the Python subprocess starts,
+    so `libvoikko.1.dylib` (and `libgdal`, `libgeos`, …) are found automatically.
+* Alternative fix (shell-wide, no .env needed):
+  * Add to `.zshrc` / `.bash_profile`:
+    ```bash
+    export DYLD_LIBRARY_PATH=/opt/homebrew/lib
+    ```
+
 ### Troubleshooting
 * Problem:
   _Error: no container with name or ID "linkedevents-backend" found: no such container_
