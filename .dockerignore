@@ -2,6 +2,7 @@
 # Exclude all by default
 #################################################
 *
+.venv
 
 #################################################
 # Whitelisted folders
@@ -29,5 +30,5 @@
 !local_settings.py
 !manage.py
 !pyproject.toml
-!requirements*
+!uv.lock
 !setup.cfg
