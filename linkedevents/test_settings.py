@@ -43,6 +43,11 @@ FIELD_ENCRYPTION_KEYS = (
 
 AUDIT_LOG_ENABLED = True
 
+RESILIENT_LOGGER = {
+    **RESILIENT_LOGGER,
+    "environment": "test",
+}
+
 WEB_STORE_INTEGRATION_ENABLED = True
 WEB_STORE_API_BASE_URL = "https://test_api/v1/"
 WEB_STORE_API_KEY = "abcd"

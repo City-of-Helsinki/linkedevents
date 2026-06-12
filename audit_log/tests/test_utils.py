@@ -7,7 +7,7 @@ import pytest
 from django.contrib.auth.models import AnonymousUser
 from freezegun import freeze_time
 from resilient_logger.models import ResilientLogEntry
-from resilient_logger.sources import ResilientLogSource
+from resilient_logger.sources.resilient_log_source_entry import ResilientLogSourceEntry
 
 from audit_log.enums import Operation, Role, Status
 from audit_log.mixins import AuditLogApiViewMixin
@@ -22,7 +22,7 @@ from helevents.tests.factories import UserFactory
 def _assert_basic_log_entry_data(log_entry):
     current_time = datetime.now(tz=UTC)
     iso_8601_date = f"{current_time.replace(tzinfo=None).isoformat(sep='T', timespec='milliseconds')}Z"
-    document = ResilientLogSource(log_entry).get_document()
+    document = ResilientLogSourceEntry(log_entry).get_document()
 
     assert document["audit_event"]["origin"] == "linkedevents-api"
     assert document["audit_event"]["date_time"] == iso_8601_date
