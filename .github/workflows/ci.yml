@@ -9,7 +9,7 @@ on:
 
 jobs:
   common:
-    uses: City-of-Helsinki/.github/.github/workflows/ci-django-api.yml@main
+    uses: City-of-Helsinki/.github/.github/workflows/ci-uv-django-api.yml@main
     secrets: inherit
     with:
       python-version: 3.12
@@ -17,4 +17,4 @@ jobs:
       use-postgis: true
       extra-commands: |
         sudo apt-get install voikko-fi libvoikko-dev
-        python manage.py spectacular --lang en --validate --fail-on-warn --api-version v1
+        uv run python manage.py spectacular --lang en --validate --fail-on-warn --api-version v1
