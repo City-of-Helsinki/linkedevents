@@ -149,8 +149,8 @@ def test_can_patch_presence_status_of_signup_based_on_role(
             "registration_created_admin": lambda usr: usr.admin_organizations.add(
                 organization
             ),
-            "registration_user_admin": lambda usr: usr.registration_admin_organizations.add(
-                organization
+            "registration_user_admin": lambda usr: (
+                usr.registration_admin_organizations.add(organization)
             ),
             "registration_user_superuser": lambda usr: None,
             "created_user": lambda usr: None,
