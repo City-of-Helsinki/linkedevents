@@ -53,19 +53,23 @@ If you've already cloned this repository, just move repository root into $INSTAL
 ```bash
 git clone https://github.com/City-of-Helsinki/linkedevents.git $INSTALL_BASE/linkedevents
 ```
-Prepare Python 3.x virtualenv using your favorite tools and activate it. Plain virtualenv is like so:
-```bash
-virtualenv -p python3 $INSTALL_BASE/venv
-source $INSTALL_BASE/venv/bin/activate
-```
-Install required Python packages into the virtualenv
+This project uses [uv](https://docs.astral.sh/uv/) for dependency and virtualenv management.
+Install `uv` by following the [official installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
+
+Create the virtualenv and install all (production + development) dependencies into it:
 ```bash
 cd $INSTALL_BASE/linkedevents
-pip install -r requirements.txt
+uv sync
 ```
+`uv` automatically creates a `.venv` in the project directory. You can run any command inside
+the environment with `uv run`, e.g. `uv run python manage.py migrate`, or activate it with
+`source .venv/bin/activate`.
 
 Install Voikko by following [these](https://voikko.puimula.org/python.html) instructions.
 Recommendation is to use "morpho" Finnish language dictionary.
+
+> **macOS**: install via Homebrew (`brew install libvoikko`) and make sure the library is
+> visible to uv-managed Python – see the [Voikko section](#voikko--libvoikko) below.
 
 Create the database, like so: (we have only tested on PostgreSQL)
 ```bash
@@ -225,29 +229,38 @@ For more information about `django-mailer` and the management commands, you can 
 
 ## Requirements
 
-Linked Events uses two files for requirements. The workflow is as follows.
+Linked Events uses [uv](https://docs.astral.sh/uv/) for dependency management.
+The workflow is as follows.
 
-`requirements.txt` is not edited manually, but is generated
-with `pip-compile`.
+`pyproject.toml` contains the primary, mostly unpinned requirements of the project:
 
-`requirements.txt` always contains fully tested, pinned versions
-of the requirements. `requirements.in` contains the primary, unpinned
-requirements of the project without their dependencies.
+* `[project].dependencies` — production dependencies
+* `[dependency-groups].dev` — development and testing dependencies
+* `[dependency-groups].prod` — production-only server dependencies (`uwsgi`, `uwsgitop`)
 
-In production, deployments should always use `requirements.txt`
-and the versions pinned therein. In development, new virtualenvs
-and development environments should also be initialised using
-`requirements.txt`. `pip-sync` will synchronize the active
-virtualenv to match exactly the packages in `requirements.txt`.
+`uv.lock` is not edited manually. It contains the fully resolved, pinned and
+hashed versions of every dependency and is committed to the repository. It is
+generated and updated by `uv`.
 
-In development and testing, to update to the latest versions
-of requirements, use the command `pip-compile`. You can
-use [requires.io](https://requires.io) to monitor the
-pinned versions for updates.
+In production, deployments use `uv.lock` and the versions pinned therein. In
+development, set up your environment with the same locked versions:
 
-To remove a dependency, remove it from `requirements.in`,
-run `pip-compile` and then `pip-sync`. If everything works
-as expected, commit the changes.
+```bash
+# Install everything (production + dev), matching uv.lock exactly
+uv sync
+
+# Install only production dependencies (incl. the prod group)
+uv sync --no-dev --group prod
+```
+
+The `[tool.uv]` section sets `package = false` (the project itself is not built
+as a package) and `exclude-newer = "3 days"`, which ignores package releases
+published within the last 3 days as supply-chain protection.
+
+To add or remove a dependency, edit the appropriate list in `pyproject.toml`,
+then run `uv lock` to refresh `uv.lock` and `uv sync` to update your
+environment. If everything works as expected, commit both `pyproject.toml` and
+`uv.lock`. The `uv-lock` pre-commit hook keeps `uv.lock` in sync automatically.
 
 ## Code format
 
