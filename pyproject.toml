@@ -1,7 +1,7 @@
 [project]
 name = "linkedevents"
 requires-python = ">=3.12, <3.13"
-version = "3.29.0"
+version = "3.29.1"
 dependencies = [
     "attrs",
     "beautifulsoup4",

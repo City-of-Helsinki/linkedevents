@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.29.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.0...linkedevents-v3.29.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* **audit_log:** Fix test failures after django-resilient-logger 2.3 ([0f05a17](https://github.com/City-of-Helsinki/linkedevents/commit/0f05a172e866d09374d23a09c214f2f0afdb0df6))
+* **docker-compose:** Use standard Debian-based tag for postgis-image ([507cb8b](https://github.com/City-of-Helsinki/linkedevents/commit/507cb8bb7cb6eef747281c64652974b95b1059e1))
+* **migrations:** Add events migration for the Keyword name indexes ([aa29504](https://github.com/City-of-Helsinki/linkedevents/commit/aa29504bda6fdb9196db9bc3daf917c5095fb5a7))
+
+
+### Dependencies
+
+* Update pre-commit tool versions ([4d5c1b3](https://github.com/City-of-Helsinki/linkedevents/commit/4d5c1b38ac3ace5dd8ba37203171f6cfb49851a1))
+
+
+### Documentation
+
+* Update Voikko linking instructions for macOS with uv ([e0ffc57](https://github.com/City-of-Helsinki/linkedevents/commit/e0ffc579f8a6fa64f15959da2b6c2d805395e4ae))
+
 ## [3.29.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.28.0...linkedevents-v3.29.0) (2026-06-12)
 
 
