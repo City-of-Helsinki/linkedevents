@@ -552,7 +552,7 @@ wheels = [
 
 [[package]]
 name = "django-orghierarchy"
-version = "0.6.2"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
@@ -561,9 +561,9 @@ dependencies = [
     { name = "requests" },
     { name = "swapper" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/ef/8dbde581a8282dcf3dd29dbca82e96dc6da181de7bc1f4295fcb5a56a539/django_orghierarchy-0.6.2.tar.gz", hash = "sha256:2038480d29d95864973f1d5488fef72c54ba7eb183cb7f0c54408742ccb24578", size = 32399, upload-time = "2025-11-05T10:35:10.36Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/dd/0616e5145cdab1dac5083c7b06e42bff602440910960163e4cdcb59aed63/django_orghierarchy-0.7.0.tar.gz", hash = "sha256:8cdaa2c2f6493ce95181f59d3cbb7ba6ad78c07919cb0f0290d98e179d92a8e5", size = 35402, upload-time = "2026-06-25T12:16:56.348Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/a6/8599b3e813835afbf0a47fa8932ce72060eb9148e14b418acdaef3f5b64f/django_orghierarchy-0.6.2-py3-none-any.whl", hash = "sha256:891961afc95f4d2e7bf843295d8ddf21e9dbe7ef612465db902c8efca4c5f1d6", size = 28721, upload-time = "2025-11-05T10:35:09.186Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/3a/2bad907aeb3f94bdfa7cc0ad74e99922c940f453eadab4a320f5a33db426/django_orghierarchy-0.7.0-py3-none-any.whl", hash = "sha256:27950555c7e1bf67c021b5941f6b3c561bf48bbed9b40c71011ab15db1ad2a9f", size = 29500, upload-time = "2026-06-25T12:16:55.211Z" },
 ]
 
 [[package]]
