@@ -96,6 +96,15 @@ prod = [
 package = false
 exclude-newer = "P3D"
 
+[tool.uv.exclude-newer-package]
+# HKI packages excluded
+django-helsinki-health-endpoints = false
+django-helusers = false
+django-munigeo = false
+django-orghierarchy = false
+django-resilient-logger = false
+helsinki-profile-gdpr-api = false
+
 [tool.ruff]
 target-version = "py312"
 
