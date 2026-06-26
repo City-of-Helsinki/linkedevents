@@ -9,7 +9,7 @@ on:
 
 jobs:
   common:
-    uses: City-of-Helsinki/.github/.github/workflows/ci-django-api.yml@RATY-350-add-dependabot-and-tests-for-workflows
+    uses: City-of-Helsinki/.github/.github/workflows/ci-django-api.yml@dependabot/github_actions/github-actions-3cfa246e60
     secrets: inherit
     with:
       python-version: 3.12
