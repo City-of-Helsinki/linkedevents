@@ -1367,11 +1367,11 @@ msgstr ""
 
 #: registrations/notifications.py:9
 #, python-format
-msgid "Welcome %(username)s"
+msgid "Hello %(username)s"
 msgstr "Hei %(username)s"
 
 #: registrations/notifications.py:10
-msgid "Welcome"
+msgid "Hello"
 msgstr "Hei"
 
 #: registrations/notifications.py:12
