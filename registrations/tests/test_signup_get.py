@@ -1080,18 +1080,18 @@ def test_signups_list_ordering(
         ),
         SignUpFactory(
             registration=registration,
-            first_name="Äää",
-            last_name="Ööö",
+            first_name="Cde",
+            last_name="Cde",
         ),
         SignUpFactory(
             registration=registration,
-            first_name="Äöö",
-            last_name="Äää",
+            first_name="Cde",
+            last_name="Def",
         ),
         SignUpFactory(
             registration=registration,
-            first_name="Öää",
-            last_name="Äää",
+            first_name="xyz",
+            last_name="zyx",
         ),
         SignUpFactory(
             registration=registration,
