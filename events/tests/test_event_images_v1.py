@@ -574,6 +574,17 @@ def test_upload_an_invalid_dict(api_client, list_url, user, organization):
 
 
 @pytest.mark.django_db
+def test_upload_a_url_too_long(api_client, list_url, user, organization):
+    organization.admin_users.add(user)
+    api_client.force_authenticate(user)
+
+    too_long_url = "https://example.com/" + "a" * 400
+    response = api_client.post(list_url, {"url": too_long_url})
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "url" in response.data
+
+
+@pytest.mark.django_db
 def test_image_upload_cannot_set_arbitrary_publisher(
     api_client, external_user, list_url, image_data, organization
 ):

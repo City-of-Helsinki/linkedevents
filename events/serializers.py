@@ -247,6 +247,7 @@ class ImageSerializer(EditableLinkedEventsObjectSerializer):
         {"version": "v1"},
         required=False,
         allow_null=True,
+        max_length=400,
         help_text="The image file URL.",
     )
 
