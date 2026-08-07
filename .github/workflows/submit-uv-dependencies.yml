@@ -1,0 +1,36 @@
+name: Dependency Submission
+
+on:
+  # trigger manually (e.g. for initial setup)
+  workflow_dispatch:
+  # trigger when uv.lock files change in the default branch.
+  push:
+    branches: ['main']
+    paths:
+      - '**/uv.lock'
+  # trigger on pull requests (e.g. to test the workflow in a PR).
+  pull_request:
+    branches: ['main']
+# Drop the broad default GITHUB_TOKEN permissions for least-privilege:
+# https://docs.zizmor.sh/audits/#excessive-permissions
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-submission:
+    name: Submit uv dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # needs to submit dependency graph data
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Submit dependency snapshot
+        uses: rmuir/uv-dependency-submission@8c650a3e5e519b93e604e644f7a4a3953144babe # v1.1.1
