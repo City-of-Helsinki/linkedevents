@@ -1,12 +1,14 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import pytest
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
 from django.core.management import call_command
+from django.test import override_settings
 from django.utils import timezone, translation
 from django.utils.encoding import force_str
 from resilient_logger.models import ResilientLogEntry
@@ -14,7 +16,8 @@ from rest_framework import status
 
 from events.api import KeywordSerializer
 from events.auth import ApiKeyUser
-from events.models import Event, Keyword, Place
+from events.models import Event, EventSearchIndex, Keyword, Place
+from events.search_index.postgres import EventSearchIndexService
 from events.tests.utils import assert_event_data_is_equal
 from registrations.enums import VatPercentage
 from registrations.models import OfferPriceGroup, PriceGroup
@@ -56,6 +59,38 @@ def test__create_a_minimal_event_with_post(api_client, minimal_event_dict, user)
     api_client.force_authenticate(user=user)
     response = create_with_post(api_client, minimal_event_dict)
     assert_event_data_is_equal(minimal_event_dict, response.data)
+
+
+@pytest.mark.django_db
+@override_settings(EVENT_SEARCH_INDEX_SIGNALS_ENABLED=True)
+def test__bulk_event_creation_batches_search_index_updates(
+    api_client, minimal_event_dict, user
+):
+    api_client.force_authenticate(user=user)
+    first_event = deepcopy(minimal_event_dict)
+    second_event = deepcopy(minimal_event_dict)
+    second_event["start_time"] = (
+        dateutil_parse(second_event["start_time"]) + timedelta(hours=1)
+    ).isoformat()
+
+    with (
+        patch.object(Event, "update_search_index") as update_search_index,
+        patch.object(
+            EventSearchIndexService,
+            "bulk_update_search_indexes",
+            wraps=EventSearchIndexService.bulk_update_search_indexes,
+        ) as bulk_update_search_indexes,
+    ):
+        response = api_client.post(
+            reverse("event-list"), [first_event, second_event], format="json"
+        )
+
+    assert response.status_code == 201, response.content
+    assert update_search_index.call_count == 0
+    bulk_update_search_indexes.assert_called_once()
+    assert len(bulk_update_search_indexes.call_args.args[0]) == 2
+    assert EventSearchIndex.objects.count() == 2
+    assert EventSearchIndex.objects.filter(search_vector_fi__isnull=False).count() == 2
 
 
 @pytest.mark.django_db

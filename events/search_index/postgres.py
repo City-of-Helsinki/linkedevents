@@ -73,22 +73,27 @@ class EventSearchIndexService:
                     **cls.get_weighted_words(event),
                 },
             )
+            cls._update_index_search_vectors([event.id])
             logger.info(f"Updated search index for event: {event.id}")
 
     @classmethod
-    def bulk_update_search_indexes(cls) -> int:
+    def bulk_update_search_indexes(cls, events: list[Event] | None = None) -> int:
         """
         Bulk update the search index for events.
         Create a new EventSearchIndex object for each event
         and saves it to the database.
         Use bulk_create to improve performance.
+
+        If events are provided, only those events are updated and their search
+        vectors are refreshed. Otherwise, the configured rebuild scope is used
+        and all search vectors are refreshed.
         """
         num_updated = 0
         logger.info("Updating search indexes...")
-        # only include events that are less than rebuild time limit
-        # or those without end_time
-        event_qs = (
-            Event.objects.filter(
+        if events is None:
+            # Only include events that are less than the rebuild time limit
+            # or those without end_time.
+            event_qs = Event.objects.filter(
                 Q(
                     end_time__gte=timezone.now()
                     - relativedelta(
@@ -97,7 +102,14 @@ class EventSearchIndexService:
                 )
                 | Q(end_time=None)
             )
-            .select_related("location")
+        else:
+            event_ids = [event.pk for event in events]
+            if not event_ids:
+                return 0
+            event_qs = Event.objects.filter(pk__in=event_ids)
+
+        event_qs = (
+            event_qs.select_related("location")
             .prefetch_related("keywords", "audience")
             .order_by("pk")
         )
@@ -140,22 +152,27 @@ class EventSearchIndexService:
                     *words_fields,
                 ],
             )
+
+        if events is None:
+            cls._update_index_search_vectors()
+        else:
+            cls._update_index_search_vectors(event_ids)
         logger.info(f"Search index updated for {num_updated} Events")
         return num_updated
 
     @classmethod
-    def update_index_search_vectors(cls, event: Event | None = None) -> None:
+    def _update_index_search_vectors(cls, event_ids: list[int] | None = None) -> None:
         """
-        Update search vectors for the search index.
+        Update search vectors for the supplied event IDs, or all index rows.
+        """
+        if event_ids is not None and not event_ids:
+            return
 
-        If event is given, only update that event's search vectors.
-        Otherwise, update all events' search vectors.
-        """
         logger.info("Updating search vectors...")
-        if event:
-            qs = EventSearchIndex.objects.filter(event=event)
-        else:
+        if event_ids is None:
             qs = EventSearchIndex.objects.all()
+        else:
+            qs = EventSearchIndex.objects.filter(event_id__in=event_ids)
 
         qs.update(
             **{
