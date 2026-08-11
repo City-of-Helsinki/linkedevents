@@ -18,7 +18,6 @@ class Command(BaseCommand):
         logger.info("Cleaning the search index...")
         self.delete_index_in_batches()
         EventSearchIndexService.bulk_update_search_indexes()
-        EventSearchIndexService.update_index_search_vectors()
 
     @transaction.atomic
     def delete_index_in_batches(self):

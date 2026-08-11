@@ -95,6 +95,8 @@ from events.permissions import (
     UserIsAdminInAnyOrganization,
 )
 from events.renderers import DOCXRenderer
+from events.search_index.postgres import EventSearchIndexService
+from events.search_index.signals import suppress_search_index_signals
 from events.serializers import (
     DataSourceSerializer,
     EventSerializer,
@@ -2758,7 +2760,12 @@ class EventViewSet(
             ):
                 raise DRFPermissionDenied()
 
-        super().perform_create(serializer)
+        if len(event_data_list) > 1 and settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED:
+            with suppress_search_index_signals():
+                super().perform_create(serializer)
+            EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
+        else:
+            super().perform_create(serializer)
 
     @extend_schema(
         summary="Delete an event",

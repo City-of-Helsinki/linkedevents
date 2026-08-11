@@ -1436,7 +1436,6 @@ class Event(
         from events.search_index.postgres import EventSearchIndexService
 
         EventSearchIndexService.update_search_index(self)
-        EventSearchIndexService.update_index_search_vectors(self)
 
     @property
     def is_created_with_apikey(self) -> bool:
