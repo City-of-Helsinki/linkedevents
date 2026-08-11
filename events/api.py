@@ -95,6 +95,9 @@ from events.permissions import (
     UserIsAdminInAnyOrganization,
 )
 from events.renderers import DOCXRenderer
+from events.search_index.haystack import HaystackSearchIndexService
+from events.search_index.postgres import EventSearchIndexService
+from events.search_index.signals import suppress_search_index_updates
 from events.serializers import (
     DataSourceSerializer,
     EventSerializer,
@@ -2602,7 +2605,7 @@ class EventViewSet(
                 raise DRFPermissionDenied()
 
         try:
-            super().perform_update(serializer)
+            self.perform_update(serializer)
         except WebStoreAPIError as exc:
             raise serializers.ValidationError(exc.messages)
 
@@ -2758,7 +2761,26 @@ class EventViewSet(
             ):
                 raise DRFPermissionDenied()
 
-        super().perform_create(serializer)
+        if len(event_data_list) > 1 and settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED:
+            with suppress_search_index_updates():
+                super().perform_create(serializer)
+            EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
+            HaystackSearchIndexService.bulk_update_search_indexes(serializer.instance)
+        else:
+            super().perform_create(serializer)
+
+    def perform_update(self, serializer):
+        if (
+            isinstance(serializer.validated_data, list)
+            and len(serializer.validated_data) > 1
+            and settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED
+        ):
+            with suppress_search_index_updates():
+                super().perform_update(serializer)
+            EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
+            HaystackSearchIndexService.bulk_update_search_indexes(serializer.instance)
+        else:
+            super().perform_update(serializer)
 
     @extend_schema(
         summary="Delete an event",
