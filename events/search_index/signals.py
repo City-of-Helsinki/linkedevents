@@ -5,6 +5,7 @@ from contextvars import ContextVar
 from django.conf import settings
 from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
+from haystack.signals import RealtimeSignalProcessor
 
 from events.models import Event, Keyword, Place
 
@@ -17,8 +18,12 @@ _search_index_signals_suppressed = ContextVar(
 
 def search_index_signals_enabled() -> bool:
     return settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED and not (
-        _search_index_signals_suppressed.get()
+        search_index_signals_suppressed()
     )
+
+
+def search_index_signals_suppressed() -> bool:
+    return _search_index_signals_suppressed.get()
 
 
 @contextmanager
@@ -28,6 +33,20 @@ def suppress_search_index_signals():
         yield
     finally:
         _search_index_signals_suppressed.reset(token)
+
+
+class ScopedRealtimeSignalProcessor(RealtimeSignalProcessor):
+    """Skip Haystack realtime updates only inside a bulk operation."""
+
+    def handle_save(self, sender, instance, **kwargs):
+        if search_index_signals_suppressed():
+            return
+        return super().handle_save(sender, instance, **kwargs)
+
+    def handle_delete(self, sender, instance, **kwargs):
+        if search_index_signals_suppressed():
+            return
+        return super().handle_delete(sender, instance, **kwargs)
 
 
 @receiver(

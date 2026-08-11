@@ -95,6 +95,7 @@ from events.permissions import (
     UserIsAdminInAnyOrganization,
 )
 from events.renderers import DOCXRenderer
+from events.search_index.haystack import HaystackSearchIndexService
 from events.search_index.postgres import EventSearchIndexService
 from events.search_index.signals import suppress_search_index_signals
 from events.serializers import (
@@ -2764,6 +2765,7 @@ class EventViewSet(
             with suppress_search_index_signals():
                 super().perform_create(serializer)
             EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
+            HaystackSearchIndexService.bulk_update_search_indexes(serializer.instance)
         else:
             super().perform_create(serializer)
 

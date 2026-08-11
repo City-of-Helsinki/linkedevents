@@ -661,7 +661,7 @@ def dummy_haystack_connection_for_lang(language_code):
     }
 
 
-HAYSTACK_SIGNAL_PROCESSOR = "haystack.signals.RealtimeSignalProcessor"
+HAYSTACK_SIGNAL_PROCESSOR = "events.search_index.signals.ScopedRealtimeSignalProcessor"
 
 HAYSTACK_CONNECTIONS = {
     "default": {
