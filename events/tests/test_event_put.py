@@ -1,6 +1,7 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -12,7 +13,9 @@ from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
 from events.auth import ApiKeyUser
-from events.models import Event, Image, Keyword, Offer, Place
+from events.models import Event, EventSearchIndex, Image, Keyword, Offer, Place
+from events.search_index.haystack import HaystackSearchIndexService
+from events.search_index.postgres import EventSearchIndexService
 from events.tests.test_event_post import create_with_post
 from events.tests.utils import assert_event_data_is_equal
 from registrations.enums import VatPercentage
@@ -307,6 +310,54 @@ def test__bulk_update_single_event(api_client, complex_event_dict, user):
     data3 = [data2]
     response2 = api_client.put("http://testserver/v1/event/", data3, format="json")
     assert_event_data_is_equal(data3, response2.data)
+
+
+@pytest.mark.django_db
+def test__bulk_update_multiple_events_batches_search_index_updates(
+    api_client, minimal_event_dict, user
+):
+    api_client.force_authenticate(user=user)
+    first_event = deepcopy(minimal_event_dict)
+    second_event = deepcopy(minimal_event_dict)
+    second_event["start_time"] = (
+        dateutil_parse(second_event["start_time"]) + timedelta(hours=1)
+    ).isoformat()
+
+    response = api_client.post(
+        reverse("event-list"), [first_event, second_event], format="json"
+    )
+    assert response.status_code == status.HTTP_201_CREATED, response.content
+
+    updated_events = deepcopy(response.data)
+    for event in updated_events:
+        event["name"]["fi"] = f"{event['name']['fi']} updated"
+
+    with (
+        patch.object(Event, "update_search_index") as update_search_index,
+        patch.object(
+            EventSearchIndexService,
+            "bulk_update_search_indexes",
+            wraps=EventSearchIndexService.bulk_update_search_indexes,
+        ) as postgres_bulk_update,
+        patch.object(
+            HaystackSearchIndexService,
+            "bulk_update_search_indexes",
+            wraps=HaystackSearchIndexService.bulk_update_search_indexes,
+        ) as haystack_bulk_update,
+    ):
+        response = api_client.put(reverse("event-list"), updated_events, format="json")
+
+    assert response.status_code == status.HTTP_200_OK, response.content
+    update_search_index.assert_not_called()
+    postgres_bulk_update.assert_called_once()
+    haystack_bulk_update.assert_called_once()
+    assert len(postgres_bulk_update.call_args.args[0]) == 2
+    assert len(haystack_bulk_update.call_args.args[0]) == 2
+    assert EventSearchIndex.objects.filter(search_vector_fi__isnull=False).count() == 2
+    assert all(
+        "updated" in str(index.search_vector_fi)
+        for index in EventSearchIndex.objects.all()
+    )
 
 
 @pytest.mark.django_db

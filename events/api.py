@@ -2605,7 +2605,7 @@ class EventViewSet(
                 raise DRFPermissionDenied()
 
         try:
-            super().perform_update(serializer)
+            self.perform_update(serializer)
         except WebStoreAPIError as exc:
             raise serializers.ValidationError(exc.messages)
 
@@ -2768,6 +2768,19 @@ class EventViewSet(
             HaystackSearchIndexService.bulk_update_search_indexes(serializer.instance)
         else:
             super().perform_create(serializer)
+
+    def perform_update(self, serializer):
+        if (
+            isinstance(serializer.validated_data, list)
+            and len(serializer.validated_data) > 1
+            and settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED
+        ):
+            with suppress_search_index_signals():
+                super().perform_update(serializer)
+            EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
+            HaystackSearchIndexService.bulk_update_search_indexes(serializer.instance)
+        else:
+            super().perform_update(serializer)
 
     @extend_schema(
         summary="Delete an event",
