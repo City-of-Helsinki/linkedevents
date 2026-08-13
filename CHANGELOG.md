@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.29.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.1...linkedevents-v3.29.2) (2026-08-13)
+
+
+### Bug Fixes
+
+* **release-please:** Update uv.lock TOML JSONPath ([ef2c087](https://github.com/City-of-Helsinki/linkedevents/commit/ef2c087a3351e7e6bc37bd85d174b54767daa187))
+* Validate image URL max length before hitting the database ([8f8206b](https://github.com/City-of-Helsinki/linkedevents/commit/8f8206b04203bcf35a1e57898fac21e543c6fabb))
+
+
+### Performance Improvements
+
+* **events:** Optimize indexing for multi-event create and update ([b32a744](https://github.com/City-of-Helsinki/linkedevents/commit/b32a7449542223bf87ad34333fcd7e060688f6a4))
+
+
+### Dependencies
+
+* Bump cryptography from 48.0.1 to 50.0.0 ([febb391](https://github.com/City-of-Helsinki/linkedevents/commit/febb391f2d7a0aad09060d7faae9bc9667ba491f))
+* Bump django from 5.2.15 to 5.2.16 ([b795920](https://github.com/City-of-Helsinki/linkedevents/commit/b7959201f8a1d3b557dcff6b5c6e091792ea2e6c))
+* Bump pillow from 12.2.0 to 12.3.0 ([2fa0438](https://github.com/City-of-Helsinki/linkedevents/commit/2fa043889aaf0d11d989db2fdec7403974c90475))
+* Bump pyasn1 from 0.6.3 to 0.6.4 ([93f1d62](https://github.com/City-of-Helsinki/linkedevents/commit/93f1d621c7782b59d31c890916a44b384d5759d7))
+* Bump setuptools from 82.0.1 to 83.0.0 ([a3565ed](https://github.com/City-of-Helsinki/linkedevents/commit/a3565ed215be4e505b725d5edf9f8b7d5e3137d2))
+* Remove exclude newer from  HKI packages ([c44d52b](https://github.com/City-of-Helsinki/linkedevents/commit/c44d52b973e0d9bf195db2b6a171f831e465209d))
+* Update django-orghierarchy for CSP compatibility ([1ff229d](https://github.com/City-of-Helsinki/linkedevents/commit/1ff229da6c6de1d04aa663273352ab3b2f038d16))
+
 ## [3.29.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.0...linkedevents-v3.29.1) (2026-06-22)
 
 
