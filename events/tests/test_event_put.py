@@ -413,6 +413,37 @@ def test__bulk_update_public_event_to_draft_removes_haystack_document(
 
 
 @pytest.mark.django_db
+@override_settings(EVENT_SEARCH_INDEX_SIGNALS_ENABLED=True)
+def test__bulk_update_already_draft_events_skips_haystack_removal(
+    api_client, minimal_event_dict, user
+):
+    api_client.force_authenticate(user=user)
+    first_event = deepcopy(minimal_event_dict)
+    second_event = deepcopy(minimal_event_dict)
+    first_event["publication_status"] = "draft"
+    second_event["publication_status"] = "draft"
+    second_event["start_time"] = (
+        dateutil_parse(second_event["start_time"]) + timedelta(hours=1)
+    ).isoformat()
+
+    response = api_client.post(
+        reverse("event-list"), [first_event, second_event], format="json"
+    )
+    assert response.status_code == status.HTTP_201_CREATED, response.content
+
+    updated_events = deepcopy(response.data)
+    for event in updated_events:
+        event["name"]["fi"] = f"{event['name']['fi']} updated"
+    backend = connections["default"].get_backend()
+
+    with patch.object(backend, "remove") as remove:
+        response = api_client.put(reverse("event-list"), updated_events, format="json")
+
+    assert response.status_code == status.HTTP_200_OK, response.content
+    remove.assert_not_called()
+
+
+@pytest.mark.django_db
 def test__update_an_event_with_naive_datetime(api_client, minimal_event_dict, user):
     # create an event
     api_client.force_authenticate(user=user)

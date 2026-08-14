@@ -17,6 +17,7 @@ from rest_framework import status
 from events.api import KeywordSerializer
 from events.auth import ApiKeyUser
 from events.models import Event, EventSearchIndex, Keyword, Place
+from events.search_index.haystack import HaystackSearchIndexService
 from events.search_index.postgres import EventSearchIndexService
 from events.tests.utils import assert_event_data_is_equal
 from registrations.enums import VatPercentage
@@ -91,6 +92,30 @@ def test__bulk_event_creation_batches_search_index_updates(
     assert len(bulk_update_search_indexes.call_args.args[0]) == 2
     assert EventSearchIndex.objects.count() == 2
     assert EventSearchIndex.objects.filter(search_vector_fi__isnull=False).count() == 2
+
+
+@pytest.mark.django_db
+@override_settings(EVENT_SEARCH_INDEX_SIGNALS_ENABLED=True)
+def test__bulk_draft_event_creation_skips_haystack_updates(
+    api_client, minimal_event_dict, user
+):
+    api_client.force_authenticate(user=user)
+    first_event = deepcopy(minimal_event_dict)
+    second_event = deepcopy(minimal_event_dict)
+    first_event["publication_status"] = "draft"
+    second_event["publication_status"] = "draft"
+
+    with patch.object(
+        HaystackSearchIndexService,
+        "bulk_update_search_indexes",
+        wraps=HaystackSearchIndexService.bulk_update_search_indexes,
+    ) as bulk_update_search_indexes:
+        response = api_client.post(
+            reverse("event-list"), [first_event, second_event], format="json"
+        )
+
+    assert response.status_code == status.HTTP_201_CREATED, response.content
+    bulk_update_search_indexes.assert_called_once_with([])
 
 
 @pytest.mark.django_db

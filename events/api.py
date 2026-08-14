@@ -2765,7 +2765,15 @@ class EventViewSet(
             with suppress_search_index_updates():
                 super().perform_create(serializer)
             EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
-            HaystackSearchIndexService.bulk_update_search_indexes(serializer.instance)
+            # Haystack only indexes public events, so omit newly created drafts
+            # instead of trying to remove documents that cannot exist yet.
+            HaystackSearchIndexService.bulk_update_search_indexes(
+                [
+                    event
+                    for event in serializer.instance
+                    if event.publication_status == PublicationStatus.PUBLIC
+                ]
+            )
         else:
             super().perform_create(serializer)
 
@@ -2775,10 +2783,30 @@ class EventViewSet(
             and len(serializer.validated_data) > 1
             and settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED
         ):
+            # Capture this before saving: after the update, a public event changed
+            # to draft is indistinguishable from an event that was already a draft.
+            previously_public_event_ids = set(
+                serializer.instance.filter(
+                    publication_status=PublicationStatus.PUBLIC,
+                    deleted=False,
+                ).values_list("pk", flat=True)
+            )
             with suppress_search_index_updates():
                 super().perform_update(serializer)
             EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
-            HaystackSearchIndexService.bulk_update_search_indexes(serializer.instance)
+            # Index active public events and remove only documents that may have
+            # existed before the update; already-draft events need no Haystack call.
+            HaystackSearchIndexService.bulk_update_search_indexes(
+                [
+                    event
+                    for event in serializer.instance
+                    if (
+                        event.publication_status == PublicationStatus.PUBLIC
+                        and not event.deleted
+                    )
+                    or event.pk in previously_public_event_ids
+                ]
+            )
         else:
             super().perform_update(serializer)
 
