@@ -54,7 +54,7 @@ def separate_scripts(text, scripts):
     # separate the text by paragraphs, matching to select html and plain text
     # delimiters in data
     paragraphs = re.split(r"(</p><p>|\n|</p>|<p>| – |<br><br><br>)+", text)
-    separated = {script: "" for script in scripts}
+    separated = dict.fromkeys(scripts, "")
     # the first language given is the default one
     last_language = scripts[0]
     last_paragraph = ""

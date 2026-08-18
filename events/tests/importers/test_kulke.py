@@ -6,7 +6,12 @@ import pytest
 from django.test import TestCase
 from django.utils import timezone
 
-from events.importer.kulke import KulkeImporter, parse_age_range, parse_course_time
+from events.importer.kulke import (
+    KulkeImporter,
+    get_event_name,
+    parse_age_range,
+    parse_course_time,
+)
 from events.models import Event
 from events.tests.factories import DataSourceFactory, EventFactory, KeywordFactory
 from events.tests.utils import create_super_event
@@ -61,6 +66,19 @@ def test_parse_age_range_returns_correct_result(test_input, expected):
 )
 def test_parse_course_time_returns_correct_result(test_input, expected):
     assert parse_course_time(test_input) == expected
+
+
+@pytest.mark.parametrize(
+    "event,expected",
+    [
+        ({"name": {"fi": "Finnish name", "en": "English name"}}, "Finnish name"),
+        ({"name": {"fi": "", "sv": "Swedish name"}}, "Swedish name"),
+        ({"name": {"sv": "Swedish name"}}, "Swedish name"),
+        ({"name": {}}, None),
+    ],
+)
+def test_get_event_name_returns_available_name(event, expected):
+    assert get_event_name(event) == expected
 
 
 class TestKulkeImporter(TestCase):

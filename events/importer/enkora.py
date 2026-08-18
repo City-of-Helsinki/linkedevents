@@ -2285,7 +2285,7 @@ class EnkoraImporter(Importer):
             .replace(")", " ")
         )
         words = re.sub(
-            r"(\d+)\s+(m)", r"\1\2", words, flags=re.IGNORECASE
+            r"(\d+)\s+m", r"\1m", words, flags=re.IGNORECASE
         )  # attach meters into number
         words = words.split()
         for description_word in words:
