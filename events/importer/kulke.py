@@ -247,14 +247,11 @@ def make_event_name(title, subtitle):
 
 
 def get_event_name(event):
-    if "fi" in event["name"]:
-        return event["name"]["fi"]
-    else:
-        names = list(event["name"].values())
-        if len(names):
-            return None
-        else:
-            return names[0]
+    names = event["name"]
+    if names.get("fi"):
+        return names["fi"]
+
+    return next((name for name in names.values() if name), None)
 
 
 def parse_age_range(secondary_headline):

@@ -766,10 +766,7 @@ class EspooImporter(Importer):
                 "super_event_type",
             ],
             pre_field_mappers={
-                **{
-                    translation_field_name: _pre_map_translation
-                    for translation_field_name in EventTranslationOptions.fields
-                },
+                **dict.fromkeys(EventTranslationOptions.fields, _pre_map_translation),
                 "event_status": _build_pre_map({v: k for k, v in Event.STATUSES}),
                 "location": _build_pre_map_to_id(place_map),
                 "publisher": _build_pre_map_to_id(org_map),
