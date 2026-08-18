@@ -1,5 +1,6 @@
 import collections
 import datetime
+import functools
 import io
 
 from django.utils.html import strip_tags
@@ -86,6 +87,7 @@ def group_by_location(events):
     return events_by_location
 
 
+@functools.total_ordering
 class DateRange:
     # Getting these by changing localization doesn't seem to work,
     # ideally you would use start.strftime(short_date + ' %A') instead.
@@ -126,11 +128,14 @@ class DateRange:
         # Multiple years, e.g. 1.1.2017-31.12.2019
         return f"{start.strftime(long_date)}-{end.strftime(long_date)}"
 
+    def _comparison_key(self):
+        return self.start, self.end
+
     def __lt__(self, other):
-        return self.start < other.start
+        return self._comparison_key() < other._comparison_key()
 
     def __eq__(self, other):
-        return self.start == other.start and self.end == other.end
+        return self._comparison_key() == other._comparison_key()
 
     def __hash__(self):
         return hash(str(self.start) + str(self.end))
