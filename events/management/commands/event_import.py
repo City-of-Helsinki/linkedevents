@@ -2,6 +2,7 @@ import os
 
 from django.apps import apps
 from django.conf import settings
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import override
 
@@ -74,6 +75,12 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS("Disabling haystack's RealtimeSignalProcessor")
             )
+            settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED = False
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "Disabling custom search index signals (EVENT_SEARCH_INDEX_SIGNALS_ENABLED)"
+                )
+            )
 
         if hasattr(settings, "PROJECT_ROOT"):
             root_dir = settings.PROJECT_ROOT
@@ -108,3 +115,11 @@ class Command(BaseCommand):
 
                 if method:
                     method()
+
+        if options["disable_indexing"]:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "Import complete. Rebuilding search index in bulk..."
+                )
+            )
+            call_command("rebuild_event_search_index")
