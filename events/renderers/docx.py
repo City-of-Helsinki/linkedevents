@@ -59,7 +59,7 @@ class EventParser:
             self.earliest_date = start_time.date()
 
         if self.latest_date is None or end_time.date() > self.latest_date:
-            self.latest_date = start_time.date()
+            self.latest_date = end_time.date()
 
         price = get_price(raw_event)
         if price is not None:
