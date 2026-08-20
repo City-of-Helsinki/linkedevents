@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.29.4](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.3...linkedevents-v3.29.4) (2026-08-20)
+
+
+### Bug Fixes
+
+* Complete DateRange ordering ([1573ce9](https://github.com/City-of-Helsinki/linkedevents/commit/1573ce96435220bc1a442043d2bc4ae5de16a100))
+* Correct API template and email markup ([3401cdd](https://github.com/City-of-Helsinki/linkedevents/commit/3401cdd38275d5003f24c04608234c8e11ea186f))
+* Correct end date handling in DOCX exports ([7c6c3f2](https://github.com/City-of-Helsinki/linkedevents/commit/7c6c3f2fcb654bee38a922039260bca48cb03255))
+* Correct importer reliability issues ([7dd2598](https://github.com/City-of-Helsinki/linkedevents/commit/7dd2598b36c0eead865ade93b56ed8c13c11c842))
+
+
+### Performance Improvements
+
+* Avoid unnecessary Haystack removals for draft events ([84cf81b](https://github.com/City-of-Helsinki/linkedevents/commit/84cf81b73ff8fc74f0d794b0f414f4d308e3f136))
+
+
+### Dependencies
+
+* Bump sqlparse from 0.5.5 to 0.6.0 ([b085c64](https://github.com/City-of-Helsinki/linkedevents/commit/b085c64bb6135b6af96b4f33926d4c859c038609))
+
 ## [3.29.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.2...linkedevents-v3.29.3) (2026-08-14)
 
 
