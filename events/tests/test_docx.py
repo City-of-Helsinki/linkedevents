@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import UTC, date, datetime
 
 import pytest
 
-from events.renderers.docx import DateRange
+from events.renderers.docx import DateRange, EventParser
 
 from .utils import versioned_reverse as reverse
 
@@ -34,3 +34,20 @@ def test_date_range_supports_all_ordering_comparisons():
     assert earlier != later
     assert earlier == equal
     assert same_start_shorter < same_start_longer
+
+
+def test_event_parser_uses_event_end_date_for_latest_date():
+    event_parser = EventParser()
+    event_parser.parse_event(
+        {
+            "start_time_obj": datetime(2026, 1, 1, 12, tzinfo=UTC),
+            "end_time_obj": datetime(2026, 1, 3, 12, tzinfo=UTC),
+            "name": {},
+            "short_description": {},
+            "description": {},
+            "location": None,
+            "offers": [],
+        }
+    )
+
+    assert event_parser.latest_date == date(2026, 1, 3)
