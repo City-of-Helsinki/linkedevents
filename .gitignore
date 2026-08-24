@@ -11,6 +11,8 @@ media/
 .env
 config_dev.env
 .idea
+.vscode
+.github/skills
 .django_secret
 *.iml
 *.kate-swp
