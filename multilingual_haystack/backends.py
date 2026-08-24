@@ -82,12 +82,15 @@ class LanguageSearchEngine(BaseEngine):
 
 class SimpleSearchBackendWithoutWarnings(SimpleSearchBackend):
     def update(self, indexer, iterable, commit=True):
+        # Intentionally disable indexing in the simple backend used for tests.
         pass
 
     def remove(self, obj, commit=True):
+        # Intentionally disable index removals in the simple backend used for tests.
         pass
 
     def clear(self, models=None, commit=True):
+        # Intentionally disable index clearing in the simple backend used for tests.
         pass
 
 

@@ -9,6 +9,7 @@ class Exporter:
         self.setup()
 
     def setup(self):
+        # Subclasses can override this hook when exporter-specific setup is needed.
         pass
 
 
