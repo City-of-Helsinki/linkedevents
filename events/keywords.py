@@ -9,9 +9,6 @@ from events.models import KeywordLabel
 
 
 class KeywordMatcher:
-    def __init__(self):
-        pass
-
     def full_text_matching(self, text, language=None):
         used_langs = settings.FULLTEXT_SEARCH_LANGUAGES
         if language:

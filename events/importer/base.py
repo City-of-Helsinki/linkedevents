@@ -84,6 +84,7 @@ class Importer:
         }
 
     def setup(self):
+        # Subclasses can override this hook when importer-specific setup is needed.
         pass
 
     @staticmethod
