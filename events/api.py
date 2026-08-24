@@ -286,8 +286,7 @@ class KeywordViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = Keyword.objects.all()
-    queryset = queryset.select_related("data_source", "publisher")
+    queryset = Keyword.objects.select_related("data_source", "publisher")
     serializer_class = KeywordSerializer
     permission_classes = [
         DataSourceResourceEditPermission & OrganizationUserEditPermission
@@ -721,8 +720,7 @@ class PlaceRetrieveViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = Place.objects.all()
-    queryset = queryset.select_related("data_source", "publisher")
+    queryset = Place.objects.select_related("data_source", "publisher")
     serializer_class = PlaceSerializer
     permission_classes = [
         DataSourceResourceEditPermission & OrganizationUserEditPermission
