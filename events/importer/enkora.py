@@ -2101,23 +2101,12 @@ class EnkoraImporter(Importer):
 
     def convert_price(self, course: dict, url: str) -> list[dict]:
         offers = []
-        fare_words_to_remove = ("itäinen", "läntinen", "pohjoinen")
-        do_fare_description = False
         if course["fare_products"]:
             for fare_product in course["fare_products"]:
-                if do_fare_description:
-                    offer_desc = fare_product["fare_product_name"]
-                    if offer_desc.lower().startswith(fare_words_to_remove):
-                        # Let loose the first word and any possible white-space after it.  # noqa: E501
-                        # Capitalize the first letter of the description
-                        offer_desc = re.sub(r"^\b\w+\b\s*", "", offer_desc)
-                        offer_desc = offer_desc[0].upper() + offer_desc[1:]
                 offer = recur_dict()
                 price_in_cents = float(fare_product["price"])
                 if price_in_cents > 0.0:
                     offer["price"] = {"fi": f"{price_in_cents / 100:.2f}€"}
-                    if do_fare_description:
-                        offer["description"] = {"fi": offer_desc}
                     price_is_free = False
                 else:
                     price_is_free = True
