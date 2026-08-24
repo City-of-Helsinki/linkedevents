@@ -641,10 +641,10 @@ class Registration(CreatedModifiedBaseModel):
 
         try:
             payment = first_on_list.create_web_store_payment()
-        except ValidationError as exc:
-            logger.error(
+        except ValidationError:
+            logger.exception(
                 f"Failed to create payment when moving waitlisted signup #{first_on_list.pk} "  # noqa: E501
-                f"to attending: {exc}"
+                "to attending"
             )
             return
 
@@ -1070,8 +1070,8 @@ class SignUpMixin:
 
         try:
             external_refund_id = resp_json["refunds"][0]["refundId"]
-        except LookupError as lookup_exc:
-            logger.error(lookup_exc)
+        except LookupError:
+            logger.exception("Failed to parse refund ID from Web Store refund response")
             raise WebStoreRefundValidationError(
                 _("Refund ID not found from the response.")
             )
@@ -2088,8 +2088,10 @@ class SignUpContactPerson(
                     ics_content,
                     "text/calendar",
                 )
-            except ValueError as error:
-                logger.error(error)
+            except ValueError:
+                logger.exception(
+                    "Failed to build calendar attachment for signup notification"
+                )
 
         email.send(fail_silently=False)
 
