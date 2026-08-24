@@ -30,7 +30,10 @@ class Command(BaseCommand):
             )
             return
 
-        notify_payments = SignUpPayment.objects.filter(
+        notify_payments = SignUpPayment.objects.select_related(
+            "signup__contact_person",
+            "signup_group__contact_person",
+        ).filter(
             status=SignUpPayment.PaymentStatus.CREATED,
             expiry_notification_sent_at__isnull=True,
             checkout_url__isnull=False,
