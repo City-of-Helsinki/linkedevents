@@ -204,8 +204,10 @@ class YsoImporter(Importer):
                     label = self.save_alt_label(label_syncher, graph, label)
                     if label:
                         keyword_labels.setdefault(yid, []).append(label)
-                except ValidationError as e:
-                    logger.error(e)
+                except ValidationError:
+                    logger.exception(
+                        f"Failed to save alt label for concept '{subject}'"
+                    )
 
         label_syncher.finish(force=self.options["force"])
 
@@ -236,8 +238,8 @@ class YsoImporter(Importer):
         for subject in graph.subjects(RDF.type, SKOS.Concept):
             try:
                 self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
-            except ValidationError as e:
-                logger.error(e)
+            except ValidationError:
+                logger.exception(f"Failed to save keyword for concept '{subject}'")
         syncher.finish(force=self.options["force"])
 
     def save_keyword_label_relationships_in_bulk(self, keyword_labels):

@@ -410,8 +410,8 @@ class Importer:
             # changed.
             try:
                 obj.save()
-            except ValidationError as error:
-                logger.error(f"Event {obj} could not be saved: {error}")
+            except ValidationError:
+                logger.exception(f"Event {obj} could not be saved")
                 raise
 
         # many-to-many fields

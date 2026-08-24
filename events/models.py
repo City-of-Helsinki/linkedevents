@@ -1394,8 +1394,11 @@ class Event(
             rendered_notification = render_notification_template(
                 notification_type, context
             )
-        except NotificationTemplateError as e:
-            logger.error(e, exc_info=True, extra={"request": request})
+        except NotificationTemplateError:
+            logger.exception(
+                f"Failed to render notification template '{notification_type}'",
+                extra={"request": request},
+            )
             return
 
         send_mail(
