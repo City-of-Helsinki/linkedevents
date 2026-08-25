@@ -13,6 +13,13 @@ class Command(BaseCommand):
 
     importer_types = ["places", "events", "keywords", "courses"]
 
+    @staticmethod
+    def _should_run_import(options, imp_type):
+        if options[imp_type]:
+            return True
+
+        return options["all"]
+
     def __init__(self):
         super().__init__()
         self.importers = get_importers()
@@ -96,15 +103,14 @@ class Command(BaseCommand):
             for imp_type in self.importer_types:
                 name = f"import_{imp_type}"
                 method = getattr(importer, name, None)
-                if options[imp_type]:
-                    if not method:
-                        raise CommandError(
-                            f"Importer {importer.name} does not support "
-                            f"importing {imp_type}"
-                        )
-                else:
-                    if not options["all"]:
-                        continue
+                if options[imp_type] and not method:
+                    raise CommandError(
+                        f"Importer {importer.name} does not support "
+                        f"importing {imp_type}"
+                    )
+
+                if not self._should_run_import(options, imp_type):
+                    continue
 
                 if method:
                     method()

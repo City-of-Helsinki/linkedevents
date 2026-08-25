@@ -10,6 +10,13 @@ class Command(BaseCommand):
 
     exporter_types = ["events"]
 
+    @staticmethod
+    def _should_run_export(options, exp_type):
+        if options[exp_type]:
+            return True
+
+        return options["new"] or options["delete"]
+
     def __init__(self):
         super().__init__()
         self.exporters = get_exporters()
@@ -56,16 +63,15 @@ class Command(BaseCommand):
         for exp_type in self.exporter_types:
             name = f"export_{exp_type}"
             method = getattr(exporter, name, None)
-            if options[exp_type]:
-                if not method:
-                    raise CommandError(
-                        f"Exporter {name} does not support exporter {exp_type}"
-                    )
-            else:
-                if not options["new"] and not options["delete"]:
-                    continue
+            if options[exp_type] and not method:
+                raise CommandError(
+                    f"Exporter {name} does not support exporter {exp_type}"
+                )
+
+            if not self._should_run_export(options, exp_type):
+                continue
 
             if method:
-                method(is_delete=(True if options["delete"] else False))
+                method(is_delete=options["delete"])
 
         activate(old_lang)
