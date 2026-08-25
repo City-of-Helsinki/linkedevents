@@ -198,7 +198,7 @@ def parse_duration_string(duration) -> timedelta:
     180m or 3h (3 hours)
     3d (3 days)
     """
-    m = re.match(r"(\d+)\s*(d|h|m|s)?$", duration.strip().lower())
+    m = re.match(r"(\d+)\s*([dhms])?$", duration.strip().lower())
     if not m:
         raise ParseError("Invalid duration supplied. Try '1d', '2h' or '180m'.")
     val, unit = m.groups()
