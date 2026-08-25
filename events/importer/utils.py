@@ -59,7 +59,7 @@ def separate_scripts(text, scripts):
     last_language = scripts[0]
     last_paragraph = ""
     for paragraph in paragraphs:
-        if paragraph in (r"</p><p>", r"</p>" r"\n", r"<p>", r"<br><br><br>"):
+        if paragraph in (r"</p><p>", r"</p>", r"\n", r"<p>", r"<br><br><br>"):
             # skip paragraph breaks to prevent misdetection
             separated[last_language] += paragraph
             last_paragraph = paragraph
