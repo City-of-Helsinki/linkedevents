@@ -765,12 +765,12 @@ class KulkeImporter(Importer):
     def _update_super_event(
         self, super_event: Event, member_events: list[Event]
     ) -> None:
-        first_event = sorted(
+        first_event = min(
             member_events, key=lambda x: (x.start_time is None, x.start_time)
-        )[0]
-        last_event = sorted(
+        )
+        last_event = max(
             member_events, key=lambda x: (x.end_time is not None, x.end_time)
-        )[-1]
+        )
 
         super_event.start_time = first_event.start_time
         super_event.has_start_time = first_event.has_start_time
