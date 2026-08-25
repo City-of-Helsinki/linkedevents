@@ -139,7 +139,7 @@ def deprecate_and_replace(graph, keyword):
     else:
         logger.info(f"Keyword {keyword} deprecated without replacement!")
         if keyword.events.all().exists() or keyword.audience_events.all().exists():
-            raise Exception(
+            raise RuntimeError(
                 f"Deprecating YSO keyword {str(keyword)} that is referenced in events "
                 f"{str(keyword.events.all() | keyword.audience_events.all())}. "
                 "No replacement keyword was found in YSO. Please manually map the "
