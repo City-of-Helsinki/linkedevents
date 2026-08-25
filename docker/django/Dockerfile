@@ -49,11 +49,11 @@ RUN dnf update -y  \
 # Build and copy specific python-uwsgi-common files.
 ADD https://github.com/City-of-Helsinki/python-uwsgi-common/archive/${UWSGI_COMMON_REF}.tar.gz /usr/src/
 RUN mkdir -p /usr/src/python-uwsgi-common && \
-    tar --strip-components=1 -xzf /usr/src/${UWSGI_COMMON_REF}.tar.gz -C /usr/src/python-uwsgi-common && \
+    tar --strip-components=1 -xzf "/usr/src/${UWSGI_COMMON_REF}.tar.gz" -C /usr/src/python-uwsgi-common && \
     mkdir /etc/uwsgi && \
     cp /usr/src/python-uwsgi-common/uwsgi-base.ini /etc/uwsgi/ && \
     uwsgi --build-plugin /usr/src/python-uwsgi-common && \
-    rm -rf /usr/src/${UWSGI_COMMON_REF}.tar.gz && \
+    rm -rf "/usr/src/${UWSGI_COMMON_REF}.tar.gz" && \
     rm -rf /usr/src/python-uwsgi-common
 
 ENTRYPOINT ["/app/docker/django/docker-entrypoint.sh"]
