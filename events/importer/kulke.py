@@ -730,7 +730,7 @@ class KulkeImporter(Importer):
             self.find_place(event)
         return True
 
-    def _gather_recurring_events(self, lang, event_el, events, recurring_groups):
+    def _gather_recurring_events(self, event_el, recurring_groups):
         references = event_el.find("eventreferences")
         this_id = int(event_el.attrib["id"])
         if references is None or len(references) < 1:
@@ -1042,9 +1042,7 @@ class KulkeImporter(Importer):
             for event_el in self._iter_elis_events(lang, begin_date):
                 success = self._import_event(lang, event_el, events, importing_courses)
                 if success:
-                    self._gather_recurring_events(
-                        lang, event_el, events, recurring_groups
-                    )
+                    self._gather_recurring_events(event_el, recurring_groups)
 
         events.default_factory = None
 

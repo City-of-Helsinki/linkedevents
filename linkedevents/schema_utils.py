@@ -18,6 +18,7 @@ def swagger_endpoint_filter(endpoints) -> list:
 
 def swagger_postprocessing_hook(result, generator, request, public):
     """Among other things, allows to add additional components to the Swagger schema."""
+    _ = request, public
     meta_schema = {
         "type": "object",
         "properties": {
