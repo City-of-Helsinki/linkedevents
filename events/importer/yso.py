@@ -94,7 +94,7 @@ def get_preferred_labels(
 
     if lang is None:
 
-        def langfilter(l_):
+        def langfilter(_):
             return True
 
     elif lang == "":
@@ -201,7 +201,7 @@ class YsoImporter(Importer):
             if (subject, RDF.type, SKOS.Concept) in graph:
                 try:
                     yid = get_yso_id(subject)
-                    label = self.save_alt_label(label_syncher, graph, label)
+                    label = self.save_alt_label(label_syncher, label)
                     if label:
                         keyword_labels.setdefault(yid, []).append(label)
                 except ValidationError:
@@ -234,10 +234,9 @@ class YsoImporter(Importer):
             delete_func=lambda obj: deprecate_and_replace(graph, obj),
             check_deleted_func=lambda obj: obj.deprecated,
         )
-        save_set = set()
         for subject in graph.subjects(RDF.type, SKOS.Concept):
             try:
-                self.save_keyword(syncher, graph, subject, keyword_labels, save_set)
+                self.save_keyword(syncher, graph, subject, keyword_labels)
             except ValidationError:
                 logger.exception(f"Failed to save keyword for concept '{subject}'")
         syncher.finish(force=self.options["force"])
@@ -298,7 +297,7 @@ class YsoImporter(Importer):
                 keywords.append(keyword)
         Keyword.objects.bulk_create(keywords, batch_size=1000)
 
-    def save_alt_label(self, syncher, graph, label):
+    def save_alt_label(self, syncher, label):
         if label.language is None:
             logger.error(f"Error: {label} has no language")
             return None
@@ -322,7 +321,7 @@ class YsoImporter(Importer):
             syncher.mark(label_object)
         return label_object
 
-    def save_keyword(self, syncher, graph, subject, keyword_labels, save_set):
+    def save_keyword(self, syncher, graph, subject, keyword_labels):
         if is_deprecated(graph, subject):
             return
         keyword = syncher.get(get_yso_id(subject))

@@ -1353,7 +1353,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
 
     def run_extension_validations(self, data):
         for ext in self.context.get("extensions", ()):
-            new_data = ext.validate_event_data(self, data)
+            new_data = ext.validate_event_data(data)
             if new_data:
                 data = new_data
         return data
