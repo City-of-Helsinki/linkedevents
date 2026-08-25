@@ -757,7 +757,8 @@ class KulkeImporter(Importer):
                     )
                     if len(inner_group) == 0:
                         logger.warning(
-                            "Event self-identifies to no group, removing.", inner_key
+                            "Event self-identifies to no group, removing: %s",
+                            inner_key,
                         )
                         group.remove(inner_key)
 
