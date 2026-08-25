@@ -1267,12 +1267,12 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             settings.ENABLE_EXTERNAL_USER_EVENTS
             and user.is_authenticated
             and user.is_external
+            and not (data.get("user_email") or data.get("user_phone_number"))
         ):
-            if not (data.get("user_email") or data.get("user_phone_number")):
-                # External users need to fill either email or phone number
-                error = _("You have to set either user_email or user_phone_number.")
-                errors["user_email"] = error
-                errors["user_phone_number"] = error
+            # External users need to fill either email or phone number
+            error = _("You have to set either user_email or user_phone_number.")
+            errors["user_email"] = error
+            errors["user_phone_number"] = error
 
         has_filled_personal_information = any(
             map(lambda x: bool(data.get(x)), self.personal_information_fields)
