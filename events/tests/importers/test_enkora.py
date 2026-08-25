@@ -2485,7 +2485,7 @@ class TestEnkoraImporter:
             "provider_contact_info_zh_hans": None,
             "provider_contact_info_ru": None,
             "provider_contact_info_ar": None,
-            "publisher": EnkoraImporter.ORGANIZATION,
+            "publisher": EnkoraImporter.PUBLISHER_ORIGIN_ID,
             "environmental_certificate": None,
             "event_status": 1,
             "publication_status": 1,

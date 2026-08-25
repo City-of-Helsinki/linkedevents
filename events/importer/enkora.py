@@ -122,8 +122,8 @@ class EnkoraImporter(Importer):
         "sv": "Helsingfors stads idrottsservicen",
         "en": "City of Helsinki Sports Services",
     }
-    ORGANIZATION = "ahjo:u021600"
-    DATASOURCE_ORGANIZATION = "kuva-liikunta"
+    PUBLISHER_ORIGIN_ID = "ahjo:u021600"
+    DATASOURCE_ORIGIN_ID = "kuva-liikunta"
 
     service_map = {
         99: {
@@ -908,7 +908,7 @@ class EnkoraImporter(Importer):
             defaults=defaults, **org_args
         )
 
-        org_parts = EnkoraImporter.ORGANIZATION.split(":")
+        org_parts = EnkoraImporter.PUBLISHER_ORIGIN_ID.split(":")
         ds_args = dict(id=org_parts[0])
         defaults = dict(name=org_parts[0].capitalize())
         self.publisher_datasource, _ = DataSource.objects.get_or_create(
