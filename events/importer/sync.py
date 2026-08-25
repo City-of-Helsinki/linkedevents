@@ -67,9 +67,8 @@ class ModelSyncher:
                 f"Attempting to delete {len(delete_list)} out of a total of {len(self.obj_dict)} items"  # noqa: E501
             )
         for obj in delete_list:
-            if self.allow_deleting_func:
-                if not self.allow_deleting_func(obj):
-                    raise Exception(f"Deleting {str(obj)} not allowed by the importer")
+            if self.allow_deleting_func and not self.allow_deleting_func(obj):
+                raise Exception(f"Deleting {str(obj)} not allowed by the importer")
             if self.delete_func:
                 deleted = self.delete_func(obj)
             else:
