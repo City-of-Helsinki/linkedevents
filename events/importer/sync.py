@@ -43,19 +43,36 @@ class ModelSyncher:
     def get(self, obj_id):
         return self.obj_dict.get(obj_id, None)
 
+    def _should_skip_delete(self, obj):
+        if obj._found:
+            # We have to reset _found so we don't mark or match the same object across several synchers.  # noqa: E501
+            # Only relevant if consecutive synchers get different querysets;
+            # then the marked object might come from outside the initial syncher queryset.  # noqa: E501
+            # That results in spurious _found values in both found and non-found
+            # objects.
+            obj._found = False
+            obj._changed = False
+            return True
+
+        return self.check_deleted_func is not None and self.check_deleted_func(obj)
+
+    def _delete_object(self, obj):
+        if self.allow_deleting_func and not self.allow_deleting_func(obj):
+            raise Exception(f"Deleting {str(obj)} not allowed by the importer")
+
+        if self.delete_func:
+            deleted = self.delete_func(obj)
+        else:
+            obj.delete()
+            deleted = True
+
+        if deleted:
+            logger.info(f"Deleting object {obj}")
+
     def finish(self, force=False):
         delete_list = []
         for _obj_id, obj in self.obj_dict.items():
-            if obj._found:
-                # We have to reset _found so we don't mark or match the same object across several synchers.  # noqa: E501
-                # Only relevant if consecutive synchers get different querysets;
-                # then the marked object might come from outside the initial syncher queryset.  # noqa: E501
-                # That results in spurious _found values in both found and non-found
-                # objects.
-                obj._found = False
-                obj._changed = False
-                continue
-            if self.check_deleted_func is not None and self.check_deleted_func(obj):
+            if self._should_skip_delete(obj):
                 continue
             delete_list.append(obj)
         if (
@@ -67,12 +84,4 @@ class ModelSyncher:
                 f"Attempting to delete {len(delete_list)} out of a total of {len(self.obj_dict)} items"  # noqa: E501
             )
         for obj in delete_list:
-            if self.allow_deleting_func and not self.allow_deleting_func(obj):
-                raise Exception(f"Deleting {str(obj)} not allowed by the importer")
-            if self.delete_func:
-                deleted = self.delete_func(obj)
-            else:
-                obj.delete()
-                deleted = True
-            if deleted:
-                logger.info(f"Deleting object {obj}")
+            self._delete_object(obj)

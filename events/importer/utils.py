@@ -134,6 +134,21 @@ def address_eq(a, b):
     return True
 
 
+def _get_single_place(name, data_source, include_deleted=False):
+    filters = {
+        "name__iexact": name,
+        "data_source": data_source,
+    }
+    if not include_deleted:
+        filters["deleted"] = False
+
+    matches = Place.objects.filter(**filters)
+    if matches.count() == 1:
+        return matches[0]
+
+    return None
+
+
 def replace_location(
     replace=None, from_source="tprek", by=None, by_source="matko", include_deleted=False
 ):
@@ -149,31 +164,15 @@ def replace_location(
     :return: Boolean that determines whether a new location was found for the hapless events
     """  # noqa: E501
     if not by:
-        replacements = Place.objects.filter(
-            name__iexact=replace.name, data_source=by_source, deleted=False
-        )
-        if replacements.count() == 1:
-            by = replacements[0]
-        else:
-            # the backup is to look for deleted locations and reinstate them
-            if include_deleted:
-                replacements = Place.objects.filter(
-                    name__iexact=replace.name, data_source=by_source
-                )
-                if replacements.count() == 1:
-                    by = replacements[0]
-                else:
-                    # no replacement whatsoever was found, this may result in an
-                    # exception
-                    return False
-            else:
-                return False
+        by = _get_single_place(replace.name, by_source)
+        if not by and include_deleted:
+            by = _get_single_place(replace.name, by_source, include_deleted=True)
+        if not by:
+            # no replacement whatsoever was found, this may result in an
+            # exception
+            return False
     if not replace:
-        to_be_replaced = Place.objects.filter(
-            name__iexact=by.name, data_source=from_source
-        )
-        if to_be_replaced.count() == 1:
-            replace = to_be_replaced[0]
+        replace = _get_single_place(by.name, from_source, include_deleted=True)
         # if no place to be replaced was found, it's alright, we might have a
         # brand new location here!
     by.deleted = False
