@@ -73,7 +73,7 @@ class Command(BaseCommand):
         self.stdout.write("creating new SOTE keywords...")
 
         for new_keyword_data in NEW_SOTE_KEYWORDS_DATA:
-            keyword_set, created = Keyword.objects.update_or_create(
+            _, created = Keyword.objects.update_or_create(
                 id=new_keyword_data["id"], defaults=new_keyword_data
             )
             if created:
