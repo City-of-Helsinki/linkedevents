@@ -23,18 +23,18 @@ class OsoiteImporter(Importer):
     supported_languages = ["fi", "sv"]
 
     def setup(self):
-        ds_args = dict(id="osoite")
-        defaults = dict(name="Pääkaupunkiseudun osoiteluettelo")
+        ds_args = {"id": "osoite"}
+        defaults = {"name": "Pääkaupunkiseudun osoiteluettelo"}
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args
         )
 
-        ds_args = dict(id="ahjo")
-        defaults = dict(name="Ahjo")
+        ds_args = {"id": "ahjo"}
+        defaults = {"name": "Ahjo"}
         ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
-        org_args = dict(origin_id="u541000", data_source=ahjo_ds)
-        defaults = dict(name="Kaupunkiympäristön toimiala")
+        org_args = {"origin_id": "u541000", "data_source": ahjo_ds}
+        defaults = {"name": "Kaupunkiympäristön toimiala"}
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )

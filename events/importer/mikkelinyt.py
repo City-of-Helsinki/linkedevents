@@ -50,13 +50,13 @@ class MikkeliNytImporter(Importer):
         return None
 
     def setup(self):
-        defaults = dict(name="MikkeliNyt")
+        defaults = {"name": "MikkeliNyt"}
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults=defaults
         )
         self.mikkelinyt_data_source = DataSource.objects.get(id="mikkelinyt")
-        org_args = dict(id="mikkelinyt")
-        defaults = dict(name="MikkeliNyt", data_source=self.data_source)
+        org_args = {"id": "mikkelinyt"}
+        defaults = {"name": "MikkeliNyt", "data_source": self.data_source}
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )
