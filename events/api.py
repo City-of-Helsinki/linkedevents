@@ -3322,7 +3322,7 @@ class EventViewSet(
             queryset = self.filter_queryset(self.get_queryset())
             if queryset.count() == 0:
                 raise ParseError({"detail": _("No events.")})
-            if len(set([event.location for event in queryset])) > 1:
+            if len({event.location for event in queryset}) > 1:
                 raise ParseError({"detail": _("Only one location allowed.")})
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)

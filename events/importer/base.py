@@ -422,7 +422,7 @@ class Importer:
             self.set_images(obj, info["images"])
 
         keywords = info.get("keywords", [])
-        new_keywords = set([kw.id for kw in keywords])
+        new_keywords = {kw.id for kw in keywords}
         old_keywords = set(obj.keywords.values_list("id", flat=True))
         if new_keywords != old_keywords:
             if obj.is_user_edited():
@@ -436,7 +436,7 @@ class Importer:
             obj._changed_fields.append("keywords")
         self._replace_deprecated_keywords(obj, "keywords")
         audience = info.get("audience", [])
-        new_audience = set([kw.id for kw in audience])
+        new_audience = {kw.id for kw in audience}
         old_audience = set(obj.audience.values_list("id", flat=True))
         if new_audience != old_audience:
             if obj.is_user_edited():
@@ -450,7 +450,7 @@ class Importer:
             obj._changed_fields.append("audience")
         self._replace_deprecated_keywords(obj, "audience")
         in_language = info.get("in_language", [])
-        new_languages = set([lang.id for lang in in_language])
+        new_languages = {lang.id for lang in in_language}
         old_languages = set(obj.in_language.values_list("id", flat=True))
         if new_languages != old_languages:
             if obj.is_user_edited():
