@@ -333,23 +333,13 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
     ):
         allowed_organizations = set(
             self.user.get_admin_organizations_and_descendants()
-        ) | set(
-            map(
-                lambda x: x.replaced_by,
-                self.user.get_admin_organizations_and_descendants(),
-            )
-        )
+        ) | {x.replaced_by for x in self.user.get_admin_organizations_and_descendants()}
 
         # Allow regular users to post if allowed_to_regular_user is True
         if allowed_to_regular_user:
-            allowed_organizations |= set(
-                self.user.organization_memberships.all()
-            ) | set(
-                map(
-                    lambda x: x.replaced_by,
-                    self.user.organization_memberships.all(),
-                )
-            )
+            allowed_organizations |= set(self.user.organization_memberships.all()) | {
+                x.replaced_by for x in self.user.organization_memberships.all()
+            }
 
         if value not in allowed_organizations:
             publisher = self.context.get("publisher")
