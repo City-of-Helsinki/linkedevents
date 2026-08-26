@@ -1220,13 +1220,12 @@ class KulkeImporter(Importer):
         """
             )
         )
-        tprek_id_to_name = {
-            id: name
-            for id, name in Place.objects.filter(
+        tprek_id_to_name = dict(
+            Place.objects.filter(
                 data_source=DataSource.objects.get(id="tprek"),
                 origin_id__in=list(LOCATION_TPREK_MAP.values()),
             ).values_list("id", "name")
-        }
+        )
         doc.add_table(
             header=("Name", "Tprek ID", "Tprek Name (in Finnish)"),
             data=[
@@ -1264,12 +1263,11 @@ class KulkeImporter(Importer):
             )
         )
 
-        id_to_name = {
-            kw_id: name
-            for kw_id, name in Keyword.objects.filter(
+        id_to_name = dict(
+            Keyword.objects.filter(
                 id__in=[make_kulke_id(c) for c in CATEGORIES_TO_IGNORE]
             ).values_list("id", "name")
-        }
+        )
         doc.add_table(
             header=(CATEGORY_ID_HEADER, "Name"),
             data=[
@@ -1292,12 +1290,11 @@ class KulkeImporter(Importer):
         doc.add_paragraph(
             "Any event that has at least one of these categories is considered to be a course."  # noqa: E501
         )
-        id_to_name = {
-            kw_id: name
-            for kw_id, name in Keyword.objects.filter(
+        id_to_name = dict(
+            Keyword.objects.filter(
                 id__in=[make_kulke_id(c) for c in COURSE_CATEGORIES]
             ).values_list("id", "name")
-        }
+        )
         doc.add_table(
             header=(CATEGORY_ID_HEADER, "Name"),
             data=[
@@ -1358,9 +1355,8 @@ class KulkeImporter(Importer):
                 )
             )
 
-        id_to_name = {
-            kw_id: name
-            for kw_id, name in Keyword.objects.filter(
+        id_to_name = dict(
+            Keyword.objects.filter(
                 id__in=[make_kulke_id(c) for c in MANUAL_CATEGORIES]
                 + [
                     f"yso:{c}"
@@ -1368,7 +1364,7 @@ class KulkeImporter(Importer):
                     + KEYWORDS_TO_ADD_TO_AUDIENCE
                 ]
             ).values_list("id", "name")
-        }
+        )
 
         for kulke_id, yso_ids in MANUAL_CATEGORIES.items():
             kulke_name = id_to_name.get(make_kulke_id(kulke_id), NAME_NOT_AVAILABLE)

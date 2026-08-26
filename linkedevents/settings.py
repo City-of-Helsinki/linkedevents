@@ -448,7 +448,7 @@ WSGI_APPLICATION = "linkedevents.wsgi.application"
 # Map language codes to the (code, name) tuples used by Django
 # We want to keep the ordering in LANGUAGES configuration variable,
 # thus some gyrations
-language_map = {x: y for x, y in GLOBAL_LANGUAGES}
+language_map = dict(GLOBAL_LANGUAGES)
 try:
     LANGUAGES = tuple((lang, language_map[lang]) for lang in env("LANGUAGES"))
 except KeyError as e:
