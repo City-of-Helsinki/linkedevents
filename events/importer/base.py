@@ -46,7 +46,7 @@ class Importer:
         self.options = options
 
         importer_langs = set(self.supported_languages)
-        configured_langs = set(lang[0] for lang in settings.LANGUAGES)
+        configured_langs = {lang[0] for lang in settings.LANGUAGES}
         # Intersection is all the languages possible for the importer to use.
         self.languages = {}
         for lang_code in importer_langs & configured_langs:
