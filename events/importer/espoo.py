@@ -516,8 +516,8 @@ class EspooImporter(Importer):
     location_cache = {}
 
     def setup(self):
-        ds_args = dict(id=self.data_source_name)
-        ds_defaults = dict(name="Espoo Linkedevents")
+        ds_args = {"id": self.data_source_name}
+        ds_defaults = {"name": "Espoo Linkedevents"}
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=ds_defaults, **ds_args
         )

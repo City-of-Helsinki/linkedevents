@@ -348,7 +348,7 @@ class Importer:
     def save_event(self, info):  # noqa: C901
         info = info.copy()
 
-        args = dict(data_source=info["data_source"], origin_id=info["origin_id"])
+        args = {"data_source": info["data_source"], "origin_id": info["origin_id"]}
         obj_id = f"{info['data_source'].id}:{info['origin_id']}"
         try:
             obj = Event.objects.get(**args)
@@ -583,7 +583,7 @@ class Importer:
 
     @transaction.atomic
     def save_place(self, info):
-        args = dict(data_source=info["data_source"], origin_id=info["origin_id"])
+        args = {"data_source": info["data_source"], "origin_id": info["origin_id"]}
         obj_id = f"{info['data_source'].id}:{info['origin_id']}"
         try:
             obj = Place.objects.get(**args)

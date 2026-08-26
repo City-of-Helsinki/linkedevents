@@ -903,23 +903,26 @@ class EnkoraImporter(Importer):
     def setup(self) -> None:
         logger.debug("Running Enkora importer setup...")
 
-        defaults = dict(name="Enkora")
+        defaults = {"name": "Enkora"}
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults=defaults
         )
-        org_args = dict(origin_id="enkora", data_source=self.data_source)
+        org_args = {"origin_id": "enkora", "data_source": self.data_source}
         self.datasource_organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )
 
         org_parts = EnkoraImporter.PUBLISHER_ORIGIN_ID.split(":")
-        ds_args = dict(id=org_parts[0])
-        defaults = dict(name=org_parts[0].capitalize())
+        ds_args = {"id": org_parts[0]}
+        defaults = {"name": org_parts[0].capitalize()}
         self.publisher_datasource, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args
         )
-        org_args = dict(origin_id=org_parts[1], data_source=self.publisher_datasource)
-        defaults = dict(name="Liikuntaan aktivointi")
+        org_args = {
+            "origin_id": org_parts[1],
+            "data_source": self.publisher_datasource,
+        }
+        defaults = {"name": "Liikuntaan aktivointi"}
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )

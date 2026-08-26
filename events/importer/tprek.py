@@ -25,18 +25,18 @@ class TprekImporter(Importer):
     supported_languages = ["fi", "sv", "en"]
 
     def setup(self):
-        ds_args = dict(id="tprek")
-        defaults = dict(name="Toimipisterekisteri")
+        ds_args = {"id": "tprek"}
+        defaults = {"name": "Toimipisterekisteri"}
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args
         )
 
-        ds_args = dict(id="ahjo")
-        defaults = dict(name="Ahjo")
+        ds_args = {"id": "ahjo"}
+        defaults = {"name": "Ahjo"}
         ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
-        org_args = dict(origin_id="u021800", data_source=ahjo_ds)
-        defaults = dict(name="Viestintäosasto")
+        org_args = {"origin_id": "u021800", "data_source": ahjo_ds}
+        defaults = {"name": "Viestintäosasto"}
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )

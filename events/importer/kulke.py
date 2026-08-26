@@ -307,29 +307,29 @@ class KulkeImporter(Importer):
             for lang in settings.LANGUAGES
             if lang[0] not in self.supported_languages
         ]
-        ds_args = dict(id=self.name)
-        defaults = dict(name="Kulttuurikeskus")
+        ds_args = {"id": self.name}
+        defaults = {"name": "Kulttuurikeskus"}
 
         self.tprek_data_source, _ = DataSource.objects.get_or_create(
-            id="tprek", defaults=dict(name="Toimipisterekisteri")
+            id="tprek", defaults={"name": "Toimipisterekisteri"}
         )
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=defaults, **ds_args
         )
 
-        ds_args = dict(id="ahjo")
-        defaults = dict(name="Ahjo")
+        ds_args = {"id": "ahjo"}
+        defaults = {"name": "Ahjo"}
         ahjo_ds, _ = DataSource.objects.get_or_create(defaults=defaults, **ds_args)
 
-        org_args = dict(origin_id="u48040010", data_source=ahjo_ds)
-        defaults = dict(name="Kulttuuripalvelukokonaisuus")
+        org_args = {"origin_id": "u48040010", "data_source": ahjo_ds}
+        defaults = {"name": "Kulttuuripalvelukokonaisuus"}
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )
 
         # Create the internet location if missing
-        org_args = dict(origin_id="00001", data_source=ahjo_ds)
-        defaults = dict(name="Helsingin kaupunki")
+        org_args = {"origin_id": "00001", "data_source": ahjo_ds}
+        defaults = {"name": "Helsingin kaupunki"}
         self.city, _ = Organization.objects.get_or_create(defaults=defaults, **org_args)
 
         system_data_source_defaults = {
@@ -339,12 +339,12 @@ class KulkeImporter(Importer):
         self.system_data_source, _ = DataSource.objects.get_or_create(
             id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
         )
-        defaults = dict(
-            data_source=self.system_data_source,
-            publisher=self.city,
-            name="Internet",
-            description="Tapahtuma vain internetissä.",
-        )
+        defaults = {
+            "data_source": self.system_data_source,
+            "publisher": self.city,
+            "name": "Internet",
+            "description": "Tapahtuma vain internetissä.",
+        }
         self.internet_location, _ = Place.objects.get_or_create(
             id=INTERNET_LOCATION_ID, defaults=defaults
         )
@@ -1038,7 +1038,7 @@ class KulkeImporter(Importer):
     def _import_events(self, importing_courses=False):
         begin_date = datetime.now(tz=LOCAL_TZ) - timedelta(days=60)
         events = recur_dict()
-        recurring_groups = dict()
+        recurring_groups = {}
         for lang in self.supported_languages:
             for event_el in self._iter_elis_events(lang, begin_date):
                 success = self._import_event(lang, event_el, events, importing_courses)

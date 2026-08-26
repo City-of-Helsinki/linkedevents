@@ -230,24 +230,24 @@ class LippupisteImporter(Importer):
         ytj_data_source, _ = DataSource.objects.get_or_create(
             defaults={"name": "YTJ"}, id="ytj"
         )
-        parent_org_args = dict(origin_id="0586977-6", data_source=ytj_data_source)
-        parent_defaults = dict(name="Helsinki Marketing Oy")
+        parent_org_args = {"origin_id": "0586977-6", "data_source": ytj_data_source}
+        parent_defaults = {"name": "Helsinki Marketing Oy"}
         self.parent_organization, _ = Organization.objects.get_or_create(
             defaults=parent_defaults, **parent_org_args
         )
 
-        org_args = dict(
-            origin_id="1789232-4",
-            data_source=ytj_data_source,
-            internal_type=Organization.AFFILIATED,
-            parent=self.parent_organization,
-        )
-        org_defaults = dict(name="Lippupiste Oy")
+        org_args = {
+            "origin_id": "1789232-4",
+            "data_source": ytj_data_source,
+            "internal_type": Organization.AFFILIATED,
+            "parent": self.parent_organization,
+        }
+        org_defaults = {"name": "Lippupiste Oy"}
         self.organization, _ = Organization.objects.get_or_create(
             defaults=org_defaults, **org_args
         )
-        data_source_args = dict(id=self.name)
-        data_source_defaults = dict(name="Lippupiste", owner=self.organization)
+        data_source_args = {"id": self.name}
+        data_source_defaults = {"name": "Lippupiste", "owner": self.organization}
         self.data_source, _ = DataSource.objects.get_or_create(
             defaults=data_source_defaults, **data_source_args
         )

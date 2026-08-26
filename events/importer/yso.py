@@ -156,7 +156,7 @@ class YsoImporter(Importer):
     supported_languages = ["fi", "sv", "en"]
 
     def setup(self):
-        defaults = dict(name="Yleinen suomalainen ontologia")
+        defaults = {"name": "Yleinen suomalainen ontologia"}
         self.data_source, _ = DataSource.objects.get_or_create(
             id=self.name, defaults=defaults
         )
@@ -165,8 +165,8 @@ class YsoImporter(Importer):
             defaults={"name": "Helsingin yliopisto"}, id="hy"
         )
 
-        org_args = dict(origin_id="kansalliskirjasto", data_source=hy_ds)
-        defaults = dict(name="Kansalliskirjasto")
+        org_args = {"origin_id": "kansalliskirjasto", "data_source": hy_ds}
+        defaults = {"name": "Kansalliskirjasto"}
         self.organization, _ = Organization.objects.get_or_create(
             defaults=defaults, **org_args
         )
@@ -253,14 +253,12 @@ class YsoImporter(Importer):
             if yid not in yids:
                 continue
             for label in url_labels:
-                params = dict(
-                    keyword_id=yid,
-                    keywordlabel_id=(
-                        label_id_from_name_and_language.get(
-                            (str(label), label.language)
-                        )
+                params = {
+                    "keyword_id": yid,
+                    "keywordlabel_id": label_id_from_name_and_language.get(
+                        (str(label), label.language)
                     ),
-                )
+                }
                 if params["keyword_id"] and params["keywordlabel_id"]:
                     relations_to_create.append(keyword_alt_labels_model(**params))
         keyword_alt_labels_model.objects.bulk_create(relations_to_create)

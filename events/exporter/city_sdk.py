@@ -172,7 +172,7 @@ class CitySDKExporter(Exporter):
 
     @staticmethod
     def _generate_exportable_category(event):
-        citysdk_category = dict()
+        citysdk_category = {}
 
         citysdk_category["author"] = CITYSDK_DEFAULT_AUTHOR
         citysdk_category["lang"] = bcp47_lang_map[settings.LANGUAGES[0][0]]

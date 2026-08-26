@@ -8,7 +8,7 @@ from events import renderers, utils
 
 def rename_fields(dataz):
     if isinstance(dataz, dict):
-        new_data = dict()
+        new_data = {}
         for key, value in dataz.items():
             newkey = utils.convert_from_camelcase(key)
             if isinstance(value, dict | list):
