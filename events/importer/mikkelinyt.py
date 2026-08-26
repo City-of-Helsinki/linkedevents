@@ -72,7 +72,7 @@ class MikkeliNytImporter(Importer):
         return url
 
     def strip_html(self, text):
-        result = re.sub(r"\<.*?>", " ", text, count=0, flags=re.MULTILINE)
+        result = re.sub(r"<[^>]*>", " ", text, count=0, flags=re.MULTILINE)
         result = unescape(result)
         result = " ".join(result.split())
         return result.strip()
