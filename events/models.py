@@ -35,6 +35,7 @@ from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django_orghierarchy.models import Organization
 from image_cropping import ImageRatioField
 from mptt.managers import TreeManager
 from mptt.models import MPTTModel, TreeForeignKey
@@ -87,7 +88,7 @@ class DataSource(models.Model):
     name = models.CharField(verbose_name=_("Name"), max_length=255)
     api_key = models.CharField(max_length=128, blank=True, default="")
     owner = models.ForeignKey(
-        "django_orghierarchy.Organization",
+        Organization,
         on_delete=models.SET_NULL,
         related_name="owned_systems",
         null=True,
@@ -245,7 +246,7 @@ class Image(TranslatableSerializableMixin):
         null=True,
     )
     publisher = models.ForeignKey(
-        "django_orghierarchy.Organization",
+        Organization,
         on_delete=models.CASCADE,
         verbose_name=_("Publisher"),
         db_index=True,
@@ -502,7 +503,7 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin, TranslatableSerializableMi
     ]
 
     publisher = models.ForeignKey(
-        "django_orghierarchy.Organization",
+        Organization,
         on_delete=models.CASCADE,
         verbose_name=_("Publisher"),
         db_index=True,
@@ -672,7 +673,7 @@ class KeywordSet(BaseModel, ImageMixin):
         verbose_name=_("Intended keyword usage"), choices=USAGES, default=ANY
     )
     organization = models.ForeignKey(
-        "django_orghierarchy.Organization",
+        Organization,
         on_delete=models.CASCADE,
         verbose_name=_("Organization which uses this set"),
         null=True,
@@ -723,7 +724,7 @@ class Place(
     geo_objects = objects
 
     publisher = models.ForeignKey(
-        "django_orghierarchy.Organization",
+        Organization,
         on_delete=models.CASCADE,
         verbose_name=_("Publisher"),
         db_index=True,
@@ -1052,7 +1053,7 @@ class Event(
         blank=True,
     )
     publisher = models.ForeignKey(
-        "django_orghierarchy.Organization",
+        Organization,
         verbose_name=_("Publisher"),
         db_index=True,
         on_delete=models.PROTECT,
