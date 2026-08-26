@@ -1275,7 +1275,7 @@ class EventSerializer(BulkSerializerMixin, EditableLinkedEventsObjectSerializer)
             errors["user_phone_number"] = error
 
         has_filled_personal_information = any(
-            map(lambda x: bool(data.get(x)), self.personal_information_fields)
+            bool(data.get(x)) for x in self.personal_information_fields
         )
         if has_filled_personal_information and not data.get("user_consent"):
             errors["user_consent"] = _(

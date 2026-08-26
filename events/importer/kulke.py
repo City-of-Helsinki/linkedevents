@@ -737,8 +737,7 @@ class KulkeImporter(Importer):
             group = set()
         else:
             recurs = references.findall("recurring") or []
-            recur_ids = map(lambda x: int(x.attrib["id"]), recurs)
-            group = set(recur_ids)
+            group = {int(x.attrib["id"]) for x in recurs}
         group.add(this_id)
         recurring_groups[this_id] = group
 
@@ -779,7 +778,7 @@ class KulkeImporter(Importer):
 
         # Functions which map related models into simple comparable values.
         def simple(field):
-            return frozenset(map(lambda x: x.simple_value(), field.all()))
+            return frozenset(x.simple_value() for x in field.all())
 
         value_mappers = {"offers": simple, "external_links": simple}
         fieldnames = expand_model_fields(
