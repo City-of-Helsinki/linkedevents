@@ -360,7 +360,7 @@ class KulkeImporter(Importer):
         categories = self.fetch_kulke_categories()
 
         keyword_matcher = KeywordMatcher()
-        for cid, c in list(categories.items()):
+        for cid, c in categories.items():
             if c is None:
                 continue
             ctext = c["text"]
