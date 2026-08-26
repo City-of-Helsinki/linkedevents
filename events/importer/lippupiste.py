@@ -178,8 +178,7 @@ class LippupisteImporter(Importer):
             return
         keyword_id_set = set()
         for yso_keyword_ids in YSO_KEYWORD_MAPS.values():
-            for keyword_id in yso_keyword_ids:
-                keyword_id_set.add(keyword_id)
+            keyword_id_set.update(yso_keyword_ids)
         keyword_list = Keyword.objects.filter(data_source=yso_data_source).filter(
             id__in=keyword_id_set
         )
