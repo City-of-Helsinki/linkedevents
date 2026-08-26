@@ -178,17 +178,15 @@ class OrganizationEditPermission(BasePermission):
 
         if not obj or not obj.pk:
             # New organization => can only add users.
-            return any([request_data.get(key) for key in user_keys])
+            return any(request_data.get(key) for key in user_keys)
 
         # Existing organization => can add or remove users
         # => check if usernames are equal between request data and the organization's user relations.  # noqa: E501
         return any(
-            [
-                key in request_data
-                and set(request_data[key])
-                != set(getattr(obj, key).values_list("username", flat=True))
-                for key in user_keys
-            ]
+            key in request_data
+            and set(request_data[key])
+            != set(getattr(obj, key).values_list("username", flat=True))
+            for key in user_keys
         )
 
     def has_permission(self, request, view):

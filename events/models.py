@@ -687,7 +687,7 @@ class KeywordSet(BaseModel, ImageMixin):
         return user.is_admin_of(self.organization)
 
     def save(self, *args, **kwargs):
-        if any([keyword.deprecated for keyword in self.keywords.all()]):
+        if any(keyword.deprecated for keyword in self.keywords.all()):
             raise ValidationError(_("KeywordSet can't have deprecated keywords"))
         super().save(*args, **kwargs)
 

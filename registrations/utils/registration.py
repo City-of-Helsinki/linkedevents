@@ -82,10 +82,8 @@ def get_email_noreply_address():
 
 def has_allowed_substitute_user_email_domain(email_address):
     return email_address and any(
-        [
-            email_address.endswith(domain)
-            for domain in settings.SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS
-        ]
+        email_address.endswith(domain)
+        for domain in settings.SUBSTITUTE_USER_ALLOWED_EMAIL_DOMAINS
     )
 
 

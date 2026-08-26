@@ -244,7 +244,7 @@ class PriceGroupFilter(ActionDependingFilter):
         ]
 
         qs_filter = Q(publisher_id__in=publisher_ids)
-        if any([empty_id in value for empty_id in empty_ids]):
+        if any(empty_id in value for empty_id in empty_ids):
             qs_filter |= Q(publisher=None)
 
         return queryset.filter(qs_filter)

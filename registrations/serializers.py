@@ -1465,10 +1465,8 @@ class RegistrationSerializer(LinkedEventsSerializer, CreatedModifiedBaseSerializ
         )
 
         if value and not all(
-            [
-                price_group["vat_percentage"] == value[0]["vat_percentage"]
-                for price_group in value
-            ]
+            price_group["vat_percentage"] == value[0]["vat_percentage"]
+            for price_group in value
         ):
             raise serializers.ValidationError(
                 {
@@ -1681,7 +1679,7 @@ class CreateSignUpsSerializer(serializers.Serializer):
         if (
             settings.WEB_STORE_INTEGRATION_ENABLED
             and signups_count > 1
-            and any([signup.get("create_payment") for signup in data["signups"]])
+            and any(signup.get("create_payment") for signup in data["signups"])
         ):
             raise serializers.ValidationError(
                 {
@@ -2280,10 +2278,10 @@ class PriceGroupSerializer(TranslatedModelSerializer, CreatedModifiedBaseSeriali
         description_fields = ["description_fi", "description_en", "description_sv"]
 
         def any_description_field_in_data():
-            return any([field in data.keys() for field in description_fields])
+            return any(field in data.keys() for field in description_fields)
 
         def any_description_field_has_valid_value():
-            return any([validated_data.get(field) for field in description_fields])
+            return any(validated_data.get(field) for field in description_fields)
 
         return (
             self.partial and not any_description_field_in_data()
