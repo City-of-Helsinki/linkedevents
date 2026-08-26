@@ -577,7 +577,7 @@ class LippupisteImporter(Importer):
                 lang = lang[0]
                 names[lang] = []
                 lang = lang.replace("-", "_")
-                if any([getattr(subevent, "name_" + lang) for subevent in events]):
+                if any(getattr(subevent, "name_" + lang) for subevent in events):
                     names[lang].extend(
                         [
                             getattr(subevent, "name_" + lang)
@@ -590,7 +590,7 @@ class LippupisteImporter(Importer):
                 lang = lang[0]
                 super_event_name[lang] = commonprefix(names[lang]).strip(" -:")
                 lang = lang.replace("-", "_")
-                if any([getattr(subevent, "name_" + lang) for subevent in events]):
+                if any(getattr(subevent, "name_" + lang) for subevent in events):
                     update_dict["name_" + lang] = super_event_name[lang]
         # always update super_event timeframe depending on sub events
         first_event = events.order_by("start_time").first()
@@ -602,7 +602,7 @@ class LippupisteImporter(Importer):
         update_dict["has_end_time"] = last_event.has_end_time
 
         if any(
-            [value != getattr(super_event, key) for key, value in update_dict.items()]
+            value != getattr(super_event, key) for key, value in update_dict.items()
         ):
             # if something changed, update
             for key, value in update_dict.items():

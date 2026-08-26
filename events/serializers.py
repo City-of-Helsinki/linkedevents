@@ -644,7 +644,7 @@ class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
         srs = self.context.get("srs", DEFAULT_SRS)
         if self.request.data["position"]:
             coord = self.request.data["position"]["coordinates"]
-            if len(coord) == 2 and all([isinstance(i, float) for i in coord]):
+            if len(coord) == 2 and all(isinstance(i, float) for i in coord):
                 return Point(
                     self.request.data["position"]["coordinates"], srid=srs.srid
                 )
