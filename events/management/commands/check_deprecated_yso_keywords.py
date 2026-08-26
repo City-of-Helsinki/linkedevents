@@ -31,9 +31,7 @@ class Command(BaseCommand):
                 ok_replacements = []
                 invalid_keyword_ids = []
 
-                replacement_ids = set(
-                    keyword.replaced_by_id for keyword in replacements
-                )
+                replacement_ids = {keyword.replaced_by_id for keyword in replacements}
                 db_replacements = Keyword.objects.filter(
                     id__in=replacement_ids
                 ).values_list("id", flat=True)

@@ -802,7 +802,7 @@ class KulkeImporter(Importer):
         )
 
         # The set of fields which have common values for all events.
-        common_fields = set(
+        common_fields = {
             f
             for f in fieldnames
             if 1
@@ -814,7 +814,7 @@ class KulkeImporter(Importer):
                     )
                 )
             )
-        )
+        }
 
         for fieldname in common_fields:
             value = getattr(first_event, fieldname)
@@ -878,7 +878,7 @@ class KulkeImporter(Importer):
 
     @transaction.atomic
     def _save_super_event(self, recurring_group):
-        kulke_ids = set(make_kulke_id(event) for event in recurring_group)
+        kulke_ids = {make_kulke_id(event) for event in recurring_group}
         superevent_aggregates = EventAggregate.objects.filter(
             members__event__id__in=kulke_ids
         ).distinct()
@@ -897,7 +897,7 @@ class KulkeImporter(Importer):
             logger.warning(
                 "Not all events referenced in the group were found in the database. Group: %s - Events: %s",  # noqa: E501
                 recurring_group,
-                set(e.id for e in events),
+                {e.id for e in events},
             )
 
         if n_super_events == 0:

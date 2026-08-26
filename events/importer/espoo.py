@@ -423,7 +423,7 @@ def _split_common_objs[M: Model](
     to existing models in other data sources. For example tprek entries
     should generally be identical between Helsinki LE and Espoo LE.
     """
-    origin_obj_ids = set(obj["id"] for obj in origin_objs)
+    origin_obj_ids = {obj["id"] for obj in origin_objs}
     common_objs = list(
         model.objects.filter(id__in=origin_obj_ids)
         .exclude(data_source=data_source)

@@ -195,9 +195,9 @@ class UserModelPermissionMixin:
         admin_replaced_tree_ids = admin_queryset.filter(
             replaced_by__isnull=False
         ).values("replaced_by__tree_id")
-        return set(value["tree_id"] for value in admin_tree_ids) | set(
+        return {value["tree_id"] for value in admin_tree_ids} | {
             value["replaced_by__tree_id"] for value in admin_replaced_tree_ids
-        )
+        }
 
     def get_admin_tree_ids(self):
         # returns tree ids for all normal admin organizations and their replacements

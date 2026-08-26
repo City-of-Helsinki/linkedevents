@@ -98,7 +98,7 @@ def get_extensions():
 
 
 def get_extension_ids():
-    return set(ex.identifier for ex in get_extensions())
+    return {ex.identifier for ex in get_extensions()}
 
 
 def get_extensions_from_request(request):
@@ -122,7 +122,7 @@ def get_extensions_from_request(request):
             pass
     extension_ids |= set(getattr(settings, "AUTO_ENABLED_EXTENSIONS", []))
 
-    extensions = set(ex() for ex in get_extensions() if ex.identifier in extension_ids)
+    extensions = {ex() for ex in get_extensions() if ex.identifier in extension_ids}
     request._event_extensions = extensions
     return extensions
 
