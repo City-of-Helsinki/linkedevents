@@ -102,9 +102,7 @@ class Command(BaseCommand):
 
         if should_run:
             for language_data in LANGUAGES:
-                language, created = method(
-                    id=language_data["id"], defaults=language_data
-                )
+                _, created = method(id=language_data["id"], defaults=language_data)
                 if created:
                     self.stdout.write(f"Created language {language_data['id']}.")
                 else:

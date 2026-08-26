@@ -230,7 +230,7 @@ def get_or_create_default_organization() -> Organization | None:
         )
         return None
 
-    data_source, created = DataSource.objects.get_or_create(
+    data_source, _created = DataSource.objects.get_or_create(
         id=settings.SYSTEM_DATA_SOURCE_ID,
         defaults={
             "user_editable_resources": True,
@@ -271,7 +271,7 @@ def get_user_data_source_and_organization_from_request(
             "user_editable_resources": True,
             "user_editable_organizations": True,
         }
-        data_source, created = DataSource.objects.get_or_create(
+        data_source, _created = DataSource.objects.get_or_create(
             id=settings.SYSTEM_DATA_SOURCE_ID, defaults=system_data_source_defaults
         )
         # user organization is used unless api_key is provided
