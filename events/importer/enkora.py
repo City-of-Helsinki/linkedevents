@@ -22,6 +22,10 @@ from .base import Importer, recur_dict, register_importer
 
 logger = logging.getLogger(__name__)
 
+EPSG_4326 = "epsg:4326"
+ENKORA_ID_TEMPLATE = "enkora:{}"
+RESPONSE_ERRORS_TEMPLATE = "Response has errors: {}"
+
 
 @register_importer
 class EnkoraImporter(Importer):
@@ -402,7 +406,7 @@ class EnkoraImporter(Importer):
             "street-address": "Metsäpurontie 25",
             "city": "Helsinki",
             "zip-code": "00630",
-            "epsg:4326": (60.22790426985482, 24.924536415379556),
+            EPSG_4326: (60.22790426985482, 24.924536415379556),
             "keywords": set(),
         },
         220: {
@@ -498,7 +502,7 @@ class EnkoraImporter(Importer):
             "street-address": "Loisteputki 4 C (2. krs)",
             "city": "Helsinki",
             "zip-code": "00750",
-            "epsg:4326": (60.28009905444841, 25.01913033251879),
+            EPSG_4326: (60.28009905444841, 25.01913033251879),
             "keywords": set(),
         },
         243: {
@@ -509,7 +513,7 @@ class EnkoraImporter(Importer):
         244: {
             "enkora-name": "Tanssikoulu Footlight, Lauttasaari",
             "tprek-id": None,
-            "epsg:4326": (60.151487631902505, 24.880141113484108),
+            EPSG_4326: (60.151487631902505, 24.880141113484108),
             "keywords": {SPORT_DANCING},
         },
         245: {
@@ -625,7 +629,7 @@ class EnkoraImporter(Importer):
             "street-address": "Fabianinkatu 21",
             "city": "Helsinki",
             "zip-code": "00130",
-            "epsg:4326": (60.16631379895938, 24.94999595581348),
+            EPSG_4326: (60.16631379895938, 24.94999595581348),
             "keywords": set(),
         },
         325: {
@@ -636,7 +640,7 @@ class EnkoraImporter(Importer):
             "street-address": "Itämerenkatu 21",
             "city": "Helsinki",
             "zip-code": "00180",
-            "epsg:4326": (60.16377733194139, 24.91081911419979),
+            EPSG_4326: (60.16377733194139, 24.91081911419979),
             "keywords": {SPORT_GYM},
         },
         327: {
@@ -645,7 +649,7 @@ class EnkoraImporter(Importer):
             "street-address": "Unikkotie 8",
             "city": "Helsinki",
             "zip-code": "00720",
-            "epsg:4326": (60.24545426653339, 24.99044444303867),
+            EPSG_4326: (60.24545426653339, 24.99044444303867),
             "keywords": set(),
         },
         330: {
@@ -654,7 +658,7 @@ class EnkoraImporter(Importer):
             "street-address": "Savikiekontie 4",
             "city": "Helsinki",
             "zip-code": "00940",
-            "epsg:4326": (60.238055556, 25.052222222),
+            EPSG_4326: (60.238055556, 25.052222222),
             "keywords": {SPORT_ICE_HOCKEY},
         },
     }
@@ -1009,7 +1013,9 @@ class EnkoraImporter(Importer):
             course_count += 1
             logger.debug(f"{course_count}) Enkora course ID {course_id}")
             if self.options["single"]:
-                course_id = "enkora:{}".format(course["reservation_event_group_id"])
+                course_id = ENKORA_ID_TEMPLATE.format(
+                    course["reservation_event_group_id"]
+                )
                 if course_id != self.options["single"]:
                     # Single course was requested and this isn't it.
                     continue
@@ -1158,7 +1164,9 @@ class EnkoraImporter(Importer):
             course_count += 1
             logger.debug(f"{course_count}) Enkora course ID {course_id}")
             if self.options["single"]:
-                course_id = "enkora:{}".format(course["reservation_event_group_id"])
+                course_id = ENKORA_ID_TEMPLATE.format(
+                    course["reservation_event_group_id"]
+                )
                 if course_id != self.options["single"]:
                     # Single course was requested and this isn't it.
                     continue
@@ -1360,8 +1368,8 @@ class EnkoraImporter(Importer):
                     )
                 )
             elif "street-address" in mapping:
-                longitude = mapping["epsg:4326"][1]
-                latitude = mapping["epsg:4326"][0]
+                longitude = mapping[EPSG_4326][1]
+                latitude = mapping[EPSG_4326][0]
                 tprek = Inline(
                     "Non-Tprek place: {}, {}, {}. Coordinates: {}N, {}E".format(
                         mapping["street-address"],
@@ -2022,7 +2030,7 @@ class EnkoraImporter(Importer):
             location["id"] = tprek_id
         elif "street-address" in location_mapping:
             # For any non-TPR Place we must use Enkora-places.
-            place_id = "enkora:{}".format(course["location_id"])
+            place_id = ENKORA_ID_TEMPLATE.format(course["location_id"])
             enkora_place = Place.objects.get(pk=place_id)
 
             location["id"] = enkora_place.id
@@ -2043,8 +2051,8 @@ class EnkoraImporter(Importer):
         # For any non-TPR Place, we'll create an own place.
         place_id = f"enkora:{enkora_place_id}"
 
-        longitude = info_in["epsg:4326"][1]
-        latitude = info_in["epsg:4326"][0]
+        longitude = info_in[EPSG_4326][1]
+        latitude = info_in[EPSG_4326][0]
         position = Point(
             longitude, latitude, srid=settings.WGS84_SRID
         )  # GPS coordinate system
@@ -2436,7 +2444,7 @@ class Kurssidata(Enkora):
         response = self._request(self.endpoint_url, payload, retries=3)
         json = response.json()
         if json["errors"]:
-            raise RuntimeError("Response has errors: {}".format(json["errors"]))
+            raise RuntimeError(RESPONSE_ERRORS_TEMPLATE.format(json["errors"]))
 
         reservation_event_groups = []
         reservation_events = []
@@ -2486,7 +2494,7 @@ class Kurssidata(Enkora):
         response = self._request(self.endpoint_url, payload)
         json = response.json()
         if json["errors"]:
-            raise RuntimeError("Response has errors: {}".format(json["errors"]))
+            raise RuntimeError(RESPONSE_ERRORS_TEMPLATE.format(json["errors"]))
 
         return self._course_data_response_generator(
             json["result"], reservation_event_groups, reservation_events
@@ -2516,9 +2524,7 @@ class Kurssidata(Enkora):
 
         json_response = self._request_json(self.endpoint_url, payload)
         if json_response["errors"]:
-            raise RuntimeError(
-                "Response has errors: {}".format(json_response["errors"])
-            )
+            raise RuntimeError(RESPONSE_ERRORS_TEMPLATE.format(json_response["errors"]))
 
         return self._course_data_response_generator(
             json_response["result"], reservation_event_groups, reservation_events
@@ -2565,7 +2571,7 @@ class Kurssidata(Enkora):
         response = self._request(self.endpoint_url, payload, retries=3)
         json = response.json()
         if json["errors"]:
-            raise RuntimeError("Response has errors: {}".format(json["errors"]))
+            raise RuntimeError(RESPONSE_ERRORS_TEMPLATE.format(json["errors"]))
 
         return self._course_data_response_generator(
             json["result"], reservation_event_groups, reservation_events
@@ -2750,7 +2756,7 @@ class Kurssidata(Enkora):
         response = self._request(self.list_endpoint_url, payload)
         json = response.json()
         if json["errors"]:
-            raise RuntimeError("Response has errors: {}".format(json["errors"]))
+            raise RuntimeError(RESPONSE_ERRORS_TEMPLATE.format(json["errors"]))
 
         course_ids = set()
         for course_id in json["result"]:
