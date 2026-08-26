@@ -37,6 +37,9 @@ from .yso import KEYWORDS_TO_ADD_TO_AUDIENCE
 
 logger = logging.getLogger(__name__)
 
+CATEGORY_ID_HEADER = "Category ID"
+NAME_NOT_AVAILABLE = "(name not available)"
+
 
 EVENTS_URL_TEMPLATE = urljoin(
     settings.ELIS_EVENT_API_URL,
@@ -1270,9 +1273,9 @@ class KulkeImporter(Importer):
             ).values_list("id", "name")
         }
         doc.add_table(
-            header=("Category ID", "Name"),
+            header=(CATEGORY_ID_HEADER, "Name"),
             data=[
-                (c, id_to_name.get(make_kulke_id(c), "(name not available)"))
+                (c, id_to_name.get(make_kulke_id(c), NAME_NOT_AVAILABLE))
                 for c in CATEGORIES_TO_IGNORE
             ],
         )
@@ -1298,9 +1301,9 @@ class KulkeImporter(Importer):
             ).values_list("id", "name")
         }
         doc.add_table(
-            header=("Category ID", "Name"),
+            header=(CATEGORY_ID_HEADER, "Name"),
             data=[
-                (c, id_to_name.get(make_kulke_id(c), "(name not available)"))
+                (c, id_to_name.get(make_kulke_id(c), NAME_NOT_AVAILABLE))
                 for c in COURSE_CATEGORIES
             ],
         )
@@ -1370,9 +1373,9 @@ class KulkeImporter(Importer):
         }
 
         for kulke_id, yso_ids in MANUAL_CATEGORIES.items():
-            kulke_name = id_to_name.get(make_kulke_id(kulke_id), "(name not available)")
+            kulke_name = id_to_name.get(make_kulke_id(kulke_id), NAME_NOT_AVAILABLE)
             yso_categories = [
-                f"{c} - " + id_to_name.get(f"yso:{c}", "(name not available)")
+                f"{c} - " + id_to_name.get(f"yso:{c}", NAME_NOT_AVAILABLE)
                 for c in yso_ids
             ]
 
@@ -1381,7 +1384,7 @@ class KulkeImporter(Importer):
             )
 
         doc.add_table(
-            header=("Category ID", "Category Name", "YSO Keywords", "Method"),
+            header=(CATEGORY_ID_HEADER, "Category Name", "YSO Keywords", "Method"),
             data=sorted(keyword_mapping_data, key=lambda x: x[0]),
         )
 
@@ -1397,7 +1400,7 @@ class KulkeImporter(Importer):
         doc.add_table(
             header=("YSO Keyword ID", "Keyword Name"),
             data=[
-                (kw.strip("yso:"), id_to_name.get(kw, "(name not available)"))
+                (kw.strip("yso:"), id_to_name.get(kw, NAME_NOT_AVAILABLE))
                 for kw in KEYWORDS_TO_ADD_TO_AUDIENCE
             ],
         )

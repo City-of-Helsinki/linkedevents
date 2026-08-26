@@ -618,13 +618,14 @@ LINKED_REGISTRATIONS_UI_URL = env("LINKED_REGISTRATIONS_UI_URL")
 
 # Used in kulke importer
 ELIS_EVENT_API_URL = env("ELIS_EVENT_API_URL")
+LANGUAGE_SEARCH_ENGINE = "multilingual_haystack.backends.LanguageSearchEngine"
 
 
 def haystack_connection_for_lang(language_code):
     if language_code == "fi":
         return {
             "default-fi": {
-                "ENGINE": "multilingual_haystack.backends.LanguageSearchEngine",
+                "ENGINE": LANGUAGE_SEARCH_ENGINE,
                 "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",  # noqa: E501
                 "URL": env("ELASTICSEARCH_URL"),
                 "INDEX_NAME": "linkedevents-fi",
@@ -644,7 +645,7 @@ def haystack_connection_for_lang(language_code):
     else:
         return {
             f"default-{language_code}": {
-                "ENGINE": "multilingual_haystack.backends.LanguageSearchEngine",
+                "ENGINE": LANGUAGE_SEARCH_ENGINE,
                 "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",  # noqa: E501
                 "URL": env("ELASTICSEARCH_URL"),
                 "INDEX_NAME": f"linkedevents-{language_code}",
@@ -655,7 +656,7 @@ def haystack_connection_for_lang(language_code):
 def dummy_haystack_connection_for_lang(language_code):
     return {
         f"default-{language_code}": {
-            "ENGINE": "multilingual_haystack.backends.LanguageSearchEngine",
+            "ENGINE": LANGUAGE_SEARCH_ENGINE,
             "BASE_ENGINE": "haystack.backends.simple_backend.SimpleEngine",
         }
     }

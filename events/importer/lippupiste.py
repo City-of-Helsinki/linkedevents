@@ -20,57 +20,64 @@ from .utils import clean_text, clean_url
 
 logger = logging.getLogger(__name__)
 
+YSO_DANCE = "yso:p1278"
+YSO_THEATRE = "yso:p2625"
+YSO_FESTIVAL = "yso:p1304"
+YSO_MUSIC = "yso:p1808"
+YSO_SPORT = "yso:p965"
+YSO_ENTERTAINMENT = "yso:p5"
+
 YSO_KEYWORD_MAPS = {
-    "baletti": ("yso:p1278", "yso:p10218"),
-    "dance": ("yso:p1278",),
-    "draama": ("yso:p2625",),
+    "baletti": (YSO_DANCE, "yso:p10218"),
+    "dance": (YSO_DANCE,),
+    "draama": (YSO_THEATRE,),
     "elokuva": ("yso:p1235",),
-    "elokuvafestivaali": ("yso:p1304", "yso:p1235"),
+    "elokuvafestivaali": (YSO_FESTIVAL, "yso:p1235"),
     "elämänhallinta": ("yso:p4357",),
-    "farssi, satiiri": ("yso:p2625",),
-    "hard rock": ("yso:p1808", "yso:p1882", "yso:p29778"),
-    "hard rock -festivaali": ("yso:p1304", "yso:p1808", "yso:p1882", "yso:p29778"),
-    "iskelmä- ja tanssimusiikki": ("yso:p1808", "yso:p1857", "yso:p181"),
-    "jalkapallo": ("yso:p965", "yso:p6409"),
-    "jazz & blues": ("yso:p1808", "yso:p4484", "yso:p4482"),
-    "jazz & blues -festivaali": ("yso:p1304", "yso:p1808", "yso:p4484", "yso:p4482"),
-    "jääkiekko": ("yso:p965", "yso:p12697"),
-    "kabaree": ("yso:p1808", "yso:p181", "yso:p7158"),
-    "kansanmusiikki": ("yso:p1808", "yso:p2841"),
-    "kesäteatteri": ("yso:p2625", "yso:p17654"),
-    "klassinen musiikki": ("yso:p1808", "yso:p18434"),
-    "klassisen musiikin festivaali": ("yso:p1304", "yso:p1808", "yso:p18434"),
-    "klubit": ("yso:p1808", "yso:p20421"),
-    "komedia": ("yso:p2625", "yso:p13876"),
-    "koripallo": ("yso:p965", "yso:p8781"),
-    "lastennäytelmä": ("yso:p2625", "yso:p16164"),
+    "farssi, satiiri": (YSO_THEATRE,),
+    "hard rock": (YSO_MUSIC, "yso:p1882", "yso:p29778"),
+    "hard rock -festivaali": (YSO_FESTIVAL, YSO_MUSIC, "yso:p1882", "yso:p29778"),
+    "iskelmä- ja tanssimusiikki": (YSO_MUSIC, "yso:p1857", "yso:p181"),
+    "jalkapallo": (YSO_SPORT, "yso:p6409"),
+    "jazz & blues": (YSO_MUSIC, "yso:p4484", "yso:p4482"),
+    "jazz & blues -festivaali": (YSO_FESTIVAL, YSO_MUSIC, "yso:p4484", "yso:p4482"),
+    "jääkiekko": (YSO_SPORT, "yso:p12697"),
+    "kabaree": (YSO_MUSIC, "yso:p181", "yso:p7158"),
+    "kansanmusiikki": (YSO_MUSIC, "yso:p2841"),
+    "kesäteatteri": (YSO_THEATRE, "yso:p17654"),
+    "klassinen musiikki": (YSO_MUSIC, "yso:p18434"),
+    "klassisen musiikin festivaali": (YSO_FESTIVAL, YSO_MUSIC, "yso:p18434"),
+    "klubit": (YSO_MUSIC, "yso:p20421"),
+    "komedia": (YSO_THEATRE, "yso:p13876"),
+    "koripallo": (YSO_SPORT, "yso:p8781"),
+    "lastennäytelmä": (YSO_THEATRE, "yso:p16164"),
     "musikaali, musiikkiteatteri": (
-        "yso:p1808",
+        YSO_MUSIC,
         "yso:p11693",
         "yso:p6422",
-        "yso:p2625",
+        YSO_THEATRE,
     ),
-    "muu urheilu": ("yso:p965",),
-    "nyrkkeily": ("yso:p965", "yso:p9034"),
+    "muu urheilu": (YSO_SPORT,),
+    "nyrkkeily": (YSO_SPORT, "yso:p9034"),
     "näyttelyt, messut": ("yso:p5121", "yso:p4892"),
-    "ooppera, operetti": ("yso:p1808", "yso:p13810"),
+    "ooppera, operetti": (YSO_MUSIC, "yso:p13810"),
     "perhetapahtuma": ("yso:p4363",),
-    "ravintolaviihde": ("yso:p5", "yso:p1634"),
-    "rock & pop": ("yso:p1808", "yso:p3064"),
-    "rock & pop -festivaali": ("yso:p1304", "yso:p1808", "yso:p3064"),
-    "salibandy": ("yso:p965", "yso:p16555"),
-    "show": ("yso:p5", "yso:p7157"),
+    "ravintolaviihde": (YSO_ENTERTAINMENT, "yso:p1634"),
+    "rock & pop": (YSO_MUSIC, "yso:p3064"),
+    "rock & pop -festivaali": (YSO_FESTIVAL, YSO_MUSIC, "yso:p3064"),
+    "salibandy": (YSO_SPORT, "yso:p16555"),
+    "show": (YSO_ENTERTAINMENT, "yso:p7157"),
     "sirkus": ("yso:p5007",),
-    "sotilasmusiikki": ("yso:p1808", "yso:p11574"),
-    "stand up": ("yso:p5", "yso:p9244"),
-    "tanssi": ("yso:p1278",),
-    "tanssifestivaali": ("yso:p1304", "yso:p1278"),
+    "sotilasmusiikki": (YSO_MUSIC, "yso:p11574"),
+    "stand up": (YSO_ENTERTAINMENT, "yso:p9244"),
+    "tanssi": (YSO_DANCE,),
+    "tanssifestivaali": (YSO_FESTIVAL, YSO_DANCE),
     "tapahtumapaketit - kasino": ("yso:p22939",),
-    "tapahtumapaketit - konsertit": ("yso:p1808", "yso:p11185"),
+    "tapahtumapaketit - konsertit": (YSO_MUSIC, "yso:p11185"),
     "tapahtumapaketit - kulttuuri": ("yso:p360",),
-    "tapahtumapaketit - viihde": ("yso:p5",),
-    "teatterifestivaali": ("yso:p1304", "yso:p2625"),
-    "viihdekonsertti": ("yso:p1808", "yso:p5", "yso:p11185"),
+    "tapahtumapaketit - viihde": (YSO_ENTERTAINMENT,),
+    "teatterifestivaali": (YSO_FESTIVAL, YSO_THEATRE),
+    "viihdekonsertti": (YSO_MUSIC, YSO_ENTERTAINMENT, "yso:p11185"),
 }
 
 HKT_TPREK_PLACE_MAP = {
@@ -102,6 +109,7 @@ LIPPUPISTE_EVENT_API_URL = getattr(settings, "LIPPUPISTE_EVENT_API_URL", None)
 LOCAL_TZ = ZoneInfo("Europe/Helsinki")
 
 HTML_BREAK_LINE_REGEX = re.compile(r"<br\s*/?>", re.IGNORECASE)
+STREET_NUMBER_WITH_OPTIONAL_SUFFIX_REGEX = re.compile(r"(\d)\s?[a-z](-[a-z])?$")
 
 
 def mark_deleted(obj):
@@ -187,7 +195,7 @@ class LippupisteImporter(Importer):
             # get rid of letters after street number
             if place_data["street_address_fi"]:
                 place_data["street_address_fi__lower"] = re.sub(
-                    r"([0-9])\s?[a-z](-[a-z])?$",
+                    STREET_NUMBER_WITH_OPTIONAL_SUFFIX_REGEX,
                     r"\1",
                     place_data["street_address_fi"].lower(),
                 )
@@ -196,7 +204,7 @@ class LippupisteImporter(Importer):
 
             if place_data["street_address_sv"]:
                 place_data["street_address_sv__lower"] = re.sub(
-                    r"([0-9])\s?[a-z](-[a-z])?$",
+                    STREET_NUMBER_WITH_OPTIONAL_SUFFIX_REGEX,
                     r"\1",
                     place_data["street_address_sv"].lower(),
                 )
@@ -301,7 +309,9 @@ class LippupisteImporter(Importer):
         source_provider_name = source_event["EventPromoterName"].lower()
         # get rid of letters after street number
         source_address = re.sub(
-            r"([0-9])\s?[a-z](-[a-z])?$", r"\1", source_event["EventStreet"].lower()
+            STREET_NUMBER_WITH_OPTIONAL_SUFFIX_REGEX,
+            r"\1",
+            source_event["EventStreet"].lower(),
         )
         source_postal_code = source_event["EventZip"]
 
