@@ -87,7 +87,7 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
             Image: "image",
             Event: "sub_events",
         }
-        if current_model in preloaded_fields.keys():
+        if current_model in preloaded_fields:
             return self.context.get(preloaded_fields[current_model])
         else:
             return super().get_queryset()
