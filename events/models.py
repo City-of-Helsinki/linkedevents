@@ -583,7 +583,7 @@ class Keyword(BaseModel, ImageMixin, ReplacedByMixin, TranslatableSerializableMi
 
         super().save(*args, **kwargs)
 
-        if not old_replaced_by == self.get_replacement():
+        if old_replaced_by != self.get_replacement():
             # Remap keyword sets
             qs = KeywordSet.objects.filter(keywords__id__exact=self.id)
             for kw_set in qs:
@@ -835,7 +835,7 @@ class Place(
         super().save(*args, **kwargs)
 
         # needed to remap events to replaced location
-        if not old_replaced_by == self.replaced_by:
+        if old_replaced_by != self.replaced_by:
             Event.objects.filter(location=self).update(location=self.replaced_by)
             # Update doesn't call save so we update event numbers manually.
             # Not all of the below are necessarily present.
