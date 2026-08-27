@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.29.5](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.4...linkedevents-v3.29.5) (2026-08-27)
+
+
+### Bug Fixes
+
+* Address Sonar python:S1172 unused parameters ([54b255d](https://github.com/City-of-Helsinki/linkedevents/commit/54b255dc05e7966823ad052f39797a47ccb0076f))
+* Address Sonar S1186 empty method issues ([23416da](https://github.com/City-of-Helsinki/linkedevents/commit/23416da1f3c948b2a319d734c3f132a50f379806))
+* Address Sonar S1192 duplicate literal issues ([e3ad141](https://github.com/City-of-Helsinki/linkedevents/commit/e3ad141c1ad3a9b6a28215f2bbc2ffe6ba45fb39))
+* Address Sonar S5797 dead price-description branch ([ba1b5a8](https://github.com/City-of-Helsinki/linkedevents/commit/ba1b5a8895fccf7268fe101d0c0a1f474082fcff))
+* Address Sonar S8512 redundant assignment issues ([d8c01e3](https://github.com/City-of-Helsinki/linkedevents/commit/d8c01e33cdc1ef3ad403b60a34740d850c969734))
+* Avoid N+1 queries in payment required notifications ([fea803f](https://github.com/City-of-Helsinki/linkedevents/commit/fea803fa3470fe9008c8b83b8663ca3ee180ff8f))
+* Ignore local VS Code and Copilot skills files ([a382052](https://github.com/City-of-Helsinki/linkedevents/commit/a382052a6810308b291690556844f02bbc533f1e))
+* Improve exception logging clarity for Sonar maintainability ([991d420](https://github.com/City-of-Helsinki/linkedevents/commit/991d42070741f5d921179f773d0cb5ef44d565b8))
+* Reduce Sonar python:S3776 quick-win command complexity ([1a6afb8](https://github.com/City-of-Helsinki/linkedevents/commit/1a6afb8354903d0f02f5b135a70de2f762b65e8d))
+* Reference Organization directly in event model foreign keys ([cd46818](https://github.com/City-of-Helsinki/linkedevents/commit/cd46818939eaf1e12d006f5bf35e79c36a3e65af))
+* Rename Enkora origin constants to satisfy Sonar S1845 ([a756101](https://github.com/City-of-Helsinki/linkedevents/commit/a756101d2012f700b26368c425beac32fe41ee0d))
+* Resolve Sonar docker:S6570 quoted variable issue ([8ec475a](https://github.com/City-of-Helsinki/linkedevents/commit/8ec475a9d62a438e3603be05bc8535234abcfc23))
+* Resolve Sonar python:S1066 conditional merges ([626adf9](https://github.com/City-of-Helsinki/linkedevents/commit/626adf96366cec47076e4d35217ee7c81abda680))
+* Resolve Sonar python:S112 generic exception issue ([3f28a15](https://github.com/City-of-Helsinki/linkedevents/commit/3f28a15a80e61e0b69b01598786b37957844a8d5))
+* Resolve Sonar python:S3457 string formatting issue ([7da179f](https://github.com/City-of-Helsinki/linkedevents/commit/7da179fee52a860283bcd6180199463d03ebefd7))
+* Resolve Sonar python:S5799 implicit concatenation issue ([f7d207d](https://github.com/City-of-Helsinki/linkedevents/commit/f7d207dbaf19c6fd224055066e302bd1d7052b0b))
+* Resolve Sonar python:S6035 regex character class issue ([6d749d0](https://github.com/City-of-Helsinki/linkedevents/commit/6d749d00d3616207c9d73655c4a79238a63e22f3))
+* Resolve Sonar python:S8517 min max selection issue ([3d90909](https://github.com/City-of-Helsinki/linkedevents/commit/3d9090920a602bb88cc61babd5d2aad276bc6602))
+
+
+### Performance Improvements
+
+* Prefer generator expressions in any/all checks ([eb071c3](https://github.com/City-of-Helsinki/linkedevents/commit/eb071c30a506671a22db649d9db3e4fb46635caa))
+* Replace map-lambda collection builds with comprehensions ([2952e64](https://github.com/City-of-Helsinki/linkedevents/commit/2952e643ddcb7bd0658c54852e2b09b622213d42))
+
 ## [3.29.4](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.3...linkedevents-v3.29.4) (2026-08-20)
 
 
