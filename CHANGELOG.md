@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.29.6](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.5...linkedevents-v3.29.6) (2026-09-04)
+
+
+### Dependencies
+
+* Bump djangorestframework from 3.17.1 to 3.17.2 ([67477bf](https://github.com/City-of-Helsinki/linkedevents/commit/67477bfdc2f9dfbb66aec46e73f07aaa5e61c8d5))
+* Bump icalendar from 7.1.2 to 7.1.3 ([9a9d4f9](https://github.com/City-of-Helsinki/linkedevents/commit/9a9d4f9ff08aab8ad224618995eb4f3f810c0fcd))
+
 ## [3.29.5](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.4...linkedevents-v3.29.5) (2026-08-27)
 
 
