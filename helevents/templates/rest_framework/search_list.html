@@ -1,5 +1,13 @@
 <div class="panel panel-default">
     <div class="panel-body">
+        <div class="alert alert-warning" role="alert">
+            <h2>Deprecated!</h2>
+            <p>This endpoint will be removed in a future release.</p>
+            <p>For event searches, use <code>/event/?full_text=...</code> instead. You may also specify
+                <code>full_text_language</code>; it defaults to <code>fi</code>. For place searches, use
+                <code>/place/?text=...</code>.</p>
+        </div>
+
         <h2 id="using-search-endpoint">Using the search endpoint</h2>
         <p>This is the supposedly intelligent Elasticsearch Finnish full-text search for both events and places.
             The results are sorted by relevance score shown in the <code>score</code> field. The search parameter
