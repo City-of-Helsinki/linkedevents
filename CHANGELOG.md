@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.30.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.6...linkedevents-v3.30.0) (2026-09-07)
+
+
+### Features
+
+* Mark search endpoint as deprecated ([4734ce2](https://github.com/City-of-Helsinki/linkedevents/commit/4734ce24c84fedee6e7c207410566d8c09e09384))
+
 ## [3.29.6](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.5...linkedevents-v3.29.6) (2026-09-04)
 
 
