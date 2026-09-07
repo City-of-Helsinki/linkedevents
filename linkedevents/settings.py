@@ -953,7 +953,10 @@ SPECTACULAR_SETTINGS = {
     },
     "TAGS": [
         {"name": "event", "description": "Search and edit events"},
-        {"name": "search", "description": "Fulltext search through events and places"},
+        {
+            "name": "search (deprecated)",
+            "description": "Fulltext search through events and places",
+        },
         {"name": "image", "description": "Get and upload images"},
         {"name": "keyword", "description": "Search and edit keywords"},
         {"name": "keyword_set", "description": "Search and edit keyword sets"},

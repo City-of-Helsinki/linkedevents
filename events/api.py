@@ -3367,6 +3367,7 @@ class SearchViewSet(
     @extend_schema(
         summary="Search through events and places",
         description=render_to_string("swagger/search_list_description.html"),
+        tags=["search (deprecated)"],
         auth=[],
         parameters=[
             OpenApiParameter(
