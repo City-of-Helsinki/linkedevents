@@ -2116,8 +2116,8 @@ class TestEnkoraImporter:
             '[{"model": "events.datasource", "pk": "tprek", "fields": {"name": "Toimipisterekisteri", "api_key": "", '
             '"owner": null, "user_editable_resources": false, "user_editable_organizations": false, "edit_past_events'
             '": false, "create_past_events": false, "private": false}}]',
-            '[{"model": "django_orghierarchy.organization", "pk": "ahjo:u021600", "fields": {"data_source": "ahjo", "'
-            'origin_id": "u021600", "created_time": "2023-05-31T12:51:28.663Z", "last_modified_time": "2023-05-31T12:'
+            '[{"model": "django_orghierarchy.organization", "pk": "ahjo:u48040020", "fields": {"data_source": "ahjo", "'
+            'origin_id": "u48040020", "created_time": "2023-05-31T12:51:28.663Z", "last_modified_time": "2023-05-31T12:'
             '51:28.666Z", "internal_type": "normal", "classification": null, "name": "Tietotekniikka- ja viestintäosa'
             'sto", "founding_date": null, "dissolution_date": null, "parent": null, "created_by": null, "last_modifie'
             'd_by": null, "replaced_by": null, "lft": 1, "rght": 2, "tree_id": 2, "level": 0, "admin_users": [], "reg'
@@ -2141,7 +2141,7 @@ class TestEnkoraImporter:
             'rce": "tprek", "name": "Latokartanon liikuntapuisto", "name_fi": "Latokartanon liikuntapuisto", "name_sv'
             '": "Ladugårdens idrottspark", "name_en": "Latokartano sports park", "name_zh_hans": null, "name_ru": nul'
             'l, "name_ar": null, "origin_id": "45650", "created_time": "2023-05-31T12:57:19.190Z", "last_modified_tim'
-            'e": "2023-05-31T12:57:19.190Z", "created_by": null, "last_modified_by": null, "publisher": "ahjo:u021600'
+            'e": "2023-05-31T12:57:19.190Z", "created_by": null, "last_modified_by": null, "publisher": "ahjo:u48040020'
             '", "info_url": null, "info_url_fi": null, "info_url_sv": null, "info_url_en": null, "info_url_zh_hans": '
             'null, "info_url_ru": null, "info_url_ar": null, "description": "Latokartanon liikuntapuistossa on jalkap'
             "allo-, koripallo-, lentopallo- ja tenniskentät sekä paikka yleisurheilulle. Lisäksi Latokartanossa on Da"
