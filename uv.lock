@@ -584,18 +584,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-parler"
-version = "2.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8c/2b/2423d31620efe8ab0d0390e60afab4f9cc2e62d4bf39fe0e05df0eef1b93/django-parler-2.3.tar.gz", hash = "sha256:2c8f5012ceb5e49af93b16ea3fe4d0c83d70b91b2d0f470c05d7d742b6f3083d", size = 69167, upload-time = "2021-11-18T09:32:28.959Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/38/11f1a7e3d56f3a6b74cf99e307f2554b741cadebc9b1c45b05e2ec1f35a2/django_parler-2.3-py3-none-any.whl", hash = "sha256:8f6c8061e4b5690f1ee2d8e5760940ef06bf78a5bfa033d11178377559c749cf", size = 83288, upload-time = "2021-11-18T09:32:27.193Z" },
-]
-
-[[package]]
 name = "django-redis"
 version = "7.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1077,7 +1065,6 @@ dependencies = [
     { name = "django-mptt" },
     { name = "django-munigeo" },
     { name = "django-orghierarchy" },
-    { name = "django-parler" },
     { name = "django-redis" },
     { name = "django-resilient-logger" },
     { name = "django-rest-knox" },
@@ -1164,7 +1151,6 @@ requires-dist = [
     { name = "django-mptt" },
     { name = "django-munigeo", url = "https://github.com/City-of-Helsinki/django-munigeo/archive/RATY-306/1.0-docs.tar.gz" },
     { name = "django-orghierarchy" },
-    { name = "django-parler", specifier = "==2.3" },
     { name = "django-redis" },
     { name = "django-resilient-logger" },
     { name = "django-rest-knox" },
