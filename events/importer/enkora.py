@@ -126,7 +126,7 @@ class EnkoraImporter(Importer):
         "sv": "Helsingfors stads idrottsservicen",
         "en": "City of Helsinki Sports Services",
     }
-    PUBLISHER_ORIGIN_ID = "ahjo:u021600"
+    PUBLISHER_ORIGIN_ID = "ahjo:u48040020"
     DATASOURCE_ORIGIN_ID = "kuva-liikunta"
 
     service_map = {
