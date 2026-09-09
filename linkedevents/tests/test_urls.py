@@ -31,7 +31,7 @@ def test_openapi_schema(client):
     schema = yaml.load(response.content, Loader=yaml.SafeLoader)
     validate_schema(schema)
     # Number of the API endpoints that are supposed to be covered by the schema.
-    assert len(schema["paths"]) == 38
+    assert len(schema["paths"]) == 37
 
 
 def test_swagger_ui(client):

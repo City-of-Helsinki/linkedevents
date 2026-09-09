@@ -7,6 +7,7 @@ from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView
 
 from .api import CustomSpectacularSwaggerView, LinkedEventsAPIRouter
+from .views import RemovedSearchView
 
 api_router = LinkedEventsAPIRouter()
 
@@ -56,6 +57,11 @@ urlpatterns = [
     # Redirect root to versioned API documentation
     path("", RedirectView.as_view(url="/v1/", permanent=False)),
     # API router must come after specific doc paths to avoid conflicts
+    re_path(
+        r"^(?:v0\.1|v1)/search/?$",
+        RemovedSearchView.as_view(),
+        name="removed-search",
+    ),
     re_path(r"^(?P<version>(v0.1|v1))/", include(api_router.urls)),
 ]
 

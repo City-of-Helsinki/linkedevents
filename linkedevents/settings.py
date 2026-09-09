@@ -73,7 +73,6 @@ env = environ.Env(
     DATABASE_PASSWORD=(str, ""),
     DEBUG=(bool, False),
     DEFAULT_FROM_EMAIL=(str, "noreply-linkedevents@hel.fi"),
-    ELASTICSEARCH_URL=(str, None),
     ELIS_EVENT_API_URL=(
         str,
         "http://elis.helsinki1.hki.local/event-api/",
@@ -283,12 +282,6 @@ LOGGING = {
             "handlers": ["console"],
             "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
         },
-        # Special configuration for elasticsearch, as INFO level prints
-        # out every single call to elasticsearch
-        "elasticsearch": {
-            "handlers": ["console"],
-            "level": "WARNING",
-        },
     },
 }
 
@@ -314,7 +307,6 @@ INSTALLED_APPS = [
     "knox",
     "mptt",
     "reversion",
-    "haystack",
     "django_cleanup",
     "django_filters",
     "django_jinja",
@@ -618,66 +610,6 @@ LINKED_REGISTRATIONS_UI_URL = env("LINKED_REGISTRATIONS_UI_URL")
 
 # Used in kulke importer
 ELIS_EVENT_API_URL = env("ELIS_EVENT_API_URL")
-LANGUAGE_SEARCH_ENGINE = "multilingual_haystack.backends.LanguageSearchEngine"
-
-
-def haystack_connection_for_lang(language_code):
-    if language_code == "fi":
-        return {
-            "default-fi": {
-                "ENGINE": LANGUAGE_SEARCH_ENGINE,
-                "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",  # noqa: E501
-                "URL": env("ELASTICSEARCH_URL"),
-                "INDEX_NAME": "linkedevents-fi",
-                "SETTINGS": {
-                    "analysis": {
-                        "analyzer": {
-                            "default": {
-                                "tokenizer": "finnish",
-                                "filter": ["lowercase", "raudikkoFilter"],
-                            }
-                        },
-                        "filter": {"raudikkoFilter": {"type": "raudikko"}},
-                    }
-                },
-            },
-        }
-    else:
-        return {
-            f"default-{language_code}": {
-                "ENGINE": LANGUAGE_SEARCH_ENGINE,
-                "BASE_ENGINE": "events.custom_elasticsearch_search_backend.CustomEsSearchEngine",  # noqa: E501
-                "URL": env("ELASTICSEARCH_URL"),
-                "INDEX_NAME": f"linkedevents-{language_code}",
-            }
-        }
-
-
-def dummy_haystack_connection_for_lang(language_code):
-    return {
-        f"default-{language_code}": {
-            "ENGINE": LANGUAGE_SEARCH_ENGINE,
-            "BASE_ENGINE": "haystack.backends.simple_backend.SimpleEngine",
-        }
-    }
-
-
-HAYSTACK_SIGNAL_PROCESSOR = "events.search_index.haystack.ScopedRealtimeSignalProcessor"
-
-HAYSTACK_CONNECTIONS = {
-    "default": {
-        "ENGINE": "multilingual_haystack.backends.MultilingualSearchEngine",
-    }
-}
-
-for language in [lang[0] for lang in LANGUAGES]:
-    if env("ELASTICSEARCH_URL"):
-        connection = haystack_connection_for_lang(language)
-    else:
-        connection = dummy_haystack_connection_for_lang(language)
-    HAYSTACK_CONNECTIONS.update(connection)
-
-
 BLEACH_ALLOWED_TAGS = frozenset(list(bleach.ALLOWED_TAGS) + ["p", "div", "br"])
 
 THUMBNAIL_PROCESSORS = (
