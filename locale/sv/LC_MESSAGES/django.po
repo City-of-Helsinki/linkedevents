@@ -1366,12 +1366,12 @@ msgstr ""
 
 #: registrations/notifications.py:9
 #, python-format
-msgid "Welcome %(username)s"
-msgstr "Välkommen %(username)s"
+msgid "Hello %(username)s"
+msgstr "Hej %(username)s"
 
 #: registrations/notifications.py:10
-msgid "Welcome"
-msgstr "Välkommen"
+msgid "Hello"
+msgstr "Hej"
 
 #: registrations/notifications.py:12
 msgid "Thank you for signing up for the waiting list"
