@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.30.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.30.0...linkedevents-v3.30.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* Use new publisher for Enkora courses ([f321ca8](https://github.com/City-of-Helsinki/linkedevents/commit/f321ca8fb69bd99d5eaadc160b32f92128f601f4))
+
 ## [3.30.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.29.6...linkedevents-v3.30.0) (2026-09-07)
 
 
