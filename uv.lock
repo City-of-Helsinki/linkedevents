@@ -532,21 +532,40 @@ wheels = [
 [[package]]
 name = "django-munigeo"
 version = "0.3.12"
-source = { registry = "https://pypi.org/simple" }
+source = { url = "https://github.com/City-of-Helsinki/django-munigeo/archive/RATY-306/1.0-docs.tar.gz" }
 dependencies = [
     { name = "django" },
     { name = "django-mptt" },
-    { name = "django-parler" },
-    { name = "django-parler-rest" },
+    { name = "djangorestframework" },
     { name = "pyyaml" },
     { name = "requests" },
     { name = "requests-cache" },
     { name = "six" },
+    { name = "unicodecsv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/37/9164d36d84dd2e74152890506d939d5620c96cbea40d4c8ee769031f0394/django_munigeo-0.3.12.tar.gz", hash = "sha256:81ed8a17c462deb1dc0a9e081bcb8672756aac3764d96e0fa45830edb06a051d", size = 29405, upload-time = "2025-02-27T12:07:31.812Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/fb/e2dc3afe656adca95e89200737ab466355fca91632703823e9d4b8c8588f/django_munigeo-0.3.12-py3-none-any.whl", hash = "sha256:7d94dcd976b4f2fc1a0ade1313b0a563328be428a0cfcdf5e66b7532908dc91f", size = 37256, upload-time = "2025-02-27T12:07:29.001Z" },
+sdist = { hash = "sha256:e4a4e91be78eda163818053aabbeab205aa76f8769157d04a43d5d3cd3707739" }
+
+[package.metadata]
+requires-dist = [
+    { name = "coverage", extras = ["toml"], marker = "extra == 'test'" },
+    { name = "coverage-enable-subprocess", marker = "extra == 'test'" },
+    { name = "django", specifier = ">=4.2" },
+    { name = "django-mptt" },
+    { name = "django-munigeo", extras = ["test"], marker = "extra == 'all'" },
+    { name = "djangorestframework" },
+    { name = "factory-boy", marker = "extra == 'test'" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'test'" },
+    { name = "pytest", marker = "extra == 'test'" },
+    { name = "pytest-django", marker = "extra == 'test'" },
+    { name = "pytest-mock", marker = "extra == 'test'" },
+    { name = "pytest-randomly", marker = "extra == 'test'" },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "requests-cache" },
+    { name = "six" },
+    { name = "unicodecsv" },
 ]
+provides-extras = ["test", "all"]
 
 [[package]]
 name = "django-orghierarchy"
@@ -562,32 +581,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f0/dd/0616e5145cdab1dac5083c7b06e42bff602440910960163e4cdcb59aed63/django_orghierarchy-0.7.0.tar.gz", hash = "sha256:8cdaa2c2f6493ce95181f59d3cbb7ba6ad78c07919cb0f0290d98e179d92a8e5", size = 35402, upload-time = "2026-06-25T12:16:56.348Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e4/3a/2bad907aeb3f94bdfa7cc0ad74e99922c940f453eadab4a320f5a33db426/django_orghierarchy-0.7.0-py3-none-any.whl", hash = "sha256:27950555c7e1bf67c021b5941f6b3c561bf48bbed9b40c71011ab15db1ad2a9f", size = 29500, upload-time = "2026-06-25T12:16:55.211Z" },
-]
-
-[[package]]
-name = "django-parler"
-version = "2.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8c/2b/2423d31620efe8ab0d0390e60afab4f9cc2e62d4bf39fe0e05df0eef1b93/django-parler-2.3.tar.gz", hash = "sha256:2c8f5012ceb5e49af93b16ea3fe4d0c83d70b91b2d0f470c05d7d742b6f3083d", size = 69167, upload-time = "2021-11-18T09:32:28.959Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/38/11f1a7e3d56f3a6b74cf99e307f2554b741cadebc9b1c45b05e2ec1f35a2/django_parler-2.3-py3-none-any.whl", hash = "sha256:8f6c8061e4b5690f1ee2d8e5760940ef06bf78a5bfa033d11178377559c749cf", size = 83288, upload-time = "2021-11-18T09:32:27.193Z" },
-]
-
-[[package]]
-name = "django-parler-rest"
-version = "2.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-    { name = "django-parler" },
-    { name = "djangorestframework" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0b/76/9e6f7b0f370805fbb4dedfac7ff870afcef892c2d32ab1ef3192f85172f7/django-parler-rest-2.2.tar.gz", hash = "sha256:58d0d7155964214dfbdb72783eff6a200c5e786e2d4f3cd74ea463d56cb10e9c", size = 11117, upload-time = "2022-05-04T14:05:31.972Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/92/64/e4656794c743d0009425183b9cedfa79206c648902e6a41a758116784b8f/django_parler_rest-2.2-py2.py3-none-any.whl", hash = "sha256:3cba9a47ec64771394e99ca49f9bef6f7dd76c1e39634fd634d2c1050fb9630a", size = 11636, upload-time = "2022-05-04T14:05:30.51Z" },
 ]
 
 [[package]]
@@ -1072,7 +1065,6 @@ dependencies = [
     { name = "django-mptt" },
     { name = "django-munigeo" },
     { name = "django-orghierarchy" },
-    { name = "django-parler" },
     { name = "django-redis" },
     { name = "django-resilient-logger" },
     { name = "django-rest-knox" },
@@ -1157,9 +1149,8 @@ requires-dist = [
     { name = "django-mailer" },
     { name = "django-modeltranslation" },
     { name = "django-mptt" },
-    { name = "django-munigeo" },
+    { name = "django-munigeo", url = "https://github.com/City-of-Helsinki/django-munigeo/archive/RATY-306/1.0-docs.tar.gz" },
     { name = "django-orghierarchy" },
-    { name = "django-parler", specifier = "==2.3" },
     { name = "django-redis" },
     { name = "django-resilient-logger" },
     { name = "django-rest-knox" },
@@ -1958,6 +1949,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/ba/19/1b9b0e29f30c6d35c
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ce/e4/dccd7f47c4b64213ac01ef921a1337ee6e30e8c6466046018326977efd95/tzdata-2026.2-py2.py3-none-any.whl", hash = "sha256:bbe9af844f658da81a5f95019480da3a89415801f6cc966806612cc7169bffe7", size = 349321, upload-time = "2026-04-24T15:22:05.876Z" },
 ]
+
+[[package]]
+name = "unicodecsv"
+version = "0.14.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6f/a4/691ab63b17505a26096608cc309960b5a6bdf39e4ba1a793d5f9b1a53270/unicodecsv-0.14.1.tar.gz", hash = "sha256:018c08037d48649a0412063ff4eda26eaa81eff1546dbffa51fa5293276ff7fc", size = 10267, upload-time = "2015-09-22T22:00:19.516Z" }
 
 [[package]]
 name = "uritemplate"

@@ -1,9 +1,7 @@
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
-from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.utils import OpenApiTypes, extend_schema_field, inline_serializer
 from isodate import Duration, duration_isoformat, parse_duration
-from parler import appsettings as parler_appsettings
 from rest_framework import serializers
 from rest_framework.exceptions import ParseError
 from rest_framework.reverse import reverse
@@ -169,25 +167,6 @@ class OrganizationUserField(serializers.SlugRelatedField):
 @extend_schema_field(OpenApiTypes.STR)
 class StringSlugRelatedField(serializers.SlugRelatedField):
     pass
-
-
-class TranslationsFieldExtension(OpenApiSerializerFieldExtension):
-    target_class = "parler_rest.fields.TranslatedFieldsField"
-
-    def map_serializer_field(self, auto_schema, direction):
-        translation_serializer = self.target.serializer_class
-        translation_component = auto_schema.resolve_serializer(
-            translation_serializer, direction
-        )
-
-        return {
-            "type": "object",
-            "properties": {
-                parler_appsettings.PARLER_LANGUAGES["default"][
-                    "code"
-                ]: translation_component.ref,
-            },
-        }
 
 
 class ProxyURLField(serializers.URLField):
