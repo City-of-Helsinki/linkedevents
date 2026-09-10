@@ -19,7 +19,7 @@ from django.db.models.functions import Greatest
 from django.http import Http404, HttpResponsePermanentRedirect
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
-from django.utils import timezone, translation
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.timezone import localtime
 from django.utils.translation import gettext_lazy as _
@@ -32,12 +32,10 @@ from drf_spectacular.utils import (
     extend_schema,
     inline_serializer,
 )
-from haystack.query import AutoQuery
 from munigeo.api import GeoModelAPIView, build_bbox_filter, srid_to_srs
 from munigeo.models import AdministrativeDivision
 from rest_framework import (
     filters,
-    generics,
     mixins,
     permissions,
     serializers,
@@ -62,16 +60,12 @@ from audit_log.mixins import AuditLogApiViewMixin
 from events import utils
 from events.api_pagination import LargeResultsSetPagination
 from events.auth import ApiKeyUser
-from events.custom_elasticsearch_search_backend import (
-    CustomEsSearchQuerySet as SearchQuerySet,
-)
 from events.extensions import apply_select_and_prefetch, get_extensions_from_request
 from events.filters import (
     EventFilter,
     EventOrderingFilter,
     OrganizationFilter,
     PlaceFilter,
-    filter_division,
 )
 from events.models import (
     DataSource,
@@ -95,7 +89,6 @@ from events.permissions import (
     UserIsAdminInAnyOrganization,
 )
 from events.renderers import DOCXRenderer
-from events.search_index.haystack import HaystackSearchIndexService
 from events.search_index.postgres import EventSearchIndexService
 from events.search_index.signals import suppress_search_index_updates
 from events.serializers import (
@@ -111,8 +104,6 @@ from events.serializers import (
     OrganizationDetailSerializer,
     OrganizationListSerializer,
     PlaceSerializer,
-    SearchSerializer,
-    SearchSerializerV0_1,
 )
 from events.translation import EventTranslationOptions, PlaceTranslationOptions
 from linkedevents.registry import register_view
@@ -2763,15 +2754,6 @@ class EventViewSet(
             with suppress_search_index_updates():
                 super().perform_create(serializer)
             EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
-            # Haystack only indexes public events, so omit newly created drafts
-            # instead of trying to remove documents that cannot exist yet.
-            HaystackSearchIndexService.bulk_update_search_indexes(
-                [
-                    event
-                    for event in serializer.instance
-                    if event.publication_status == PublicationStatus.PUBLIC
-                ]
-            )
         else:
             super().perform_create(serializer)
 
@@ -2781,30 +2763,9 @@ class EventViewSet(
             and len(serializer.validated_data) > 1
             and settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED
         ):
-            # Capture this before saving: after the update, a public event changed
-            # to draft is indistinguishable from an event that was already a draft.
-            previously_public_event_ids = set(
-                serializer.instance.filter(
-                    publication_status=PublicationStatus.PUBLIC,
-                    deleted=False,
-                ).values_list("pk", flat=True)
-            )
             with suppress_search_index_updates():
                 super().perform_update(serializer)
             EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
-            # Index active public events and remove only documents that may have
-            # existed before the update; already-draft events need no Haystack call.
-            HaystackSearchIndexService.bulk_update_search_indexes(
-                [
-                    event
-                    for event in serializer.instance
-                    if (
-                        event.publication_status == PublicationStatus.PUBLIC
-                        and not event.deleted
-                    )
-                    or event.pk in previously_public_event_ids
-                ]
-            )
         else:
             super().perform_update(serializer)
 
@@ -3345,177 +3306,6 @@ class EventViewSet(
 
 
 register_view(EventViewSet, "event")
-
-
-DATE_DECAY_SCALE = "30d"
-
-
-class SearchViewSet(
-    JSONAPIViewMixin,
-    GeoModelAPIView,
-    viewsets.ViewSetMixin,
-    AuditLogApiViewMixin,
-    generics.ListAPIView,
-):
-    queryset = Event.objects.none()  # For automated Swagger schema generation.
-
-    def get_serializer_class(self):
-        if self.request.version == "v0.1":
-            return SearchSerializerV0_1
-        return SearchSerializer
-
-    @extend_schema(
-        summary="Search through events and places",
-        description=render_to_string("swagger/search_list_description.html"),
-        tags=["search (deprecated)"],
-        auth=[],
-        parameters=[
-            OpenApiParameter(
-                name="type",
-                type=OpenApiTypes.STR,
-                description=(
-                    "Comma-separated list of resource types to search for. Currently allowed "  # noqa: E501
-                    "values are <code>event</code> and <code>place</code>. <code>type=event</code> "  # noqa: E501
-                    "must be specified for event date filtering and relevancy sorting."
-                ),
-            ),
-            OpenApiParameter(
-                name="q",
-                type=OpenApiTypes.STR,
-                description=(
-                    "Search for events and places matching this string. Mutually exclusive with "  # noqa: E501
-                    "<code>input</code> typeahead search."
-                ),
-            ),
-            OpenApiParameter(
-                name="input",
-                type=OpenApiTypes.STR,
-                description=(
-                    "Return autocompletition suggestions for this string. Mutually exclusive with "  # noqa: E501
-                    "<code>q</code> full-text search."
-                ),
-            ),
-            OpenApiParameter(
-                name="start",
-                type=OpenApiTypes.DATETIME,
-                description=(
-                    "Search for events beginning or ending after this time. Dates can be "  # noqa: E501
-                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "  # noqa: E501
-                    "<code>today</code> and <code>now</code>."
-                ),
-            ),
-            OpenApiParameter(
-                name="end",
-                type=OpenApiTypes.DATETIME,
-                description=(
-                    "Search for events beginning or ending before this time. Dates can be "  # noqa: E501
-                    "specified using ISO 8601 (for example, '2024-01-12') and additionally "  # noqa: E501
-                    "<code>today</code> and <code>now</code>."
-                ),
-            ),
-        ],
-        responses={
-            200: OpenApiResponse(
-                EventSerializer(many=True),
-                description="List of resources.",
-            ),
-        },
-    )
-    def list(self, request, *args, **kwargs):
-        languages = get_fixed_lang_codes()
-        default_language = languages[0] if languages else None
-
-        # If the incoming language is not specified, go with the default.
-        self.lang_code = request.query_params.get("language", default_language)
-        if self.lang_code not in languages:
-            raise ParseError(
-                f"Invalid language supplied. Supported languages: {','.join(languages)}"
-            )
-
-        params = request.query_params
-
-        input_val = params.get("input", "").strip()
-        q_val = params.get("q", "").strip()
-        if not input_val and not q_val:
-            raise ParseError(
-                "Supply search terms with 'q=' or autocomplete entry with 'input='"
-            )
-        if input_val and q_val:
-            raise ParseError("Supply either 'q' or 'input', not both")
-
-        old_language = translation.get_language()[:2]
-        translation.activate(self.lang_code)
-
-        queryset = SearchQuerySet()
-        if input_val:
-            queryset = queryset.autocomplete(autosuggest=input_val)
-        else:
-            queryset = queryset.filter(text=AutoQuery(q_val))
-
-        models = None
-        types = params.get("type", "").split(",")
-        if types:
-            models = set()
-            for t in types:
-                if t == "event":
-                    models.add(Event)
-                elif t == "place":
-                    models.add(Place)
-
-        if self.request.version == "v0.1" and len(models) == 0:
-            models.add(Event)
-
-        if len(models) == 1 and Event in models:
-            division = params.get("division", None)
-            if division:
-                queryset = filter_division(
-                    queryset, "location__divisions", division.split(",")
-                )
-
-            start = params.get("start", None)
-            if start:
-                dt = utils.parse_time(start)[0]
-                queryset = queryset.filter(Q(end_time__gt=dt) | Q(start_time__gte=dt))
-
-            end = params.get("end", None)
-            if end:
-                dt = utils.parse_end_time(end)[0]
-                queryset = queryset.filter(Q(end_time__lt=dt) | Q(start_time__lte=dt))
-
-            if not start and not end and hasattr(queryset.query, "add_decay_function"):
-                # If no time-based filters are set, make the relevancy score
-                # decay the further in the future the event is.
-                now = timezone.now()
-                queryset = queryset.filter(end_time__gt=now).decay(
-                    {"gauss": {"end_time": {"origin": now, "scale": DATE_DECAY_SCALE}}}
-                )
-
-        if len(models) == 1 and Place in models:
-            division = params.get("division", None)
-            if division:
-                queryset = filter_division(queryset, "divisions", division.split(","))
-
-        if len(models) > 0:
-            queryset = queryset.models(*list(models))
-
-        self.object_list = queryset.load_all()
-
-        page = self.paginate_queryset(self.object_list)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            resp = self.get_paginated_response(serializer.data)
-            translation.activate(old_language)
-            return resp
-
-        serializer = self.get_serializer(self.object_list, many=True)
-        resp = Response(serializer.data)
-
-        translation.activate(old_language)
-
-        return resp
-
-
-register_view(SearchViewSet, "search", base_name="search")
 
 
 @extend_schema(exclude=True)
