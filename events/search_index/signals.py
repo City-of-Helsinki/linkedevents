@@ -62,7 +62,10 @@ def place_post_save(sender: type[Place], instance: Place, **kwargs: dict) -> Non
 )
 def keyword_post_save(sender: type[Keyword], instance: Keyword, **kwargs: dict) -> None:
     if event_search_index_updates_active():
-        for event in instance.events.all():
+        events = instance.events.select_related("location").prefetch_related(
+            "keywords", "audience"
+        )
+        for event in events:
             event.update_search_index()
 
 

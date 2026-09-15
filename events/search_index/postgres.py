@@ -6,7 +6,7 @@ from django.contrib.postgres.search import SearchVector
 from django.db.models import Q
 from django.utils import timezone
 
-from events.models import Event, EventSearchIndex
+from events.models import Event, EventSearchIndex, Keyword
 from events.search_index.utils import batch_qs, extract_word_bases, get_field_attr
 from linkedevents.utils import get_fixed_lang_codes
 
@@ -21,7 +21,14 @@ class EventSearchIndexService:
     """
 
     @classmethod
-    def get_words(cls, event: Event, lang: str, weight: str = "A") -> list:
+    def get_words(
+        cls,
+        event: Event,
+        lang: str,
+        weight: str = "A",
+        keywords: list[Keyword] | None = None,
+        audience: list[Keyword] | None = None,
+    ) -> list:
         words = []
         for column in Event.get_words_fields(lang, weight):
             row_content = get_field_attr(event, column)
@@ -29,11 +36,13 @@ class EventSearchIndexService:
                 extract_word_bases(row_content, words, lang)
 
         if weight == "B":
-            for keyword in event.keywords.values_list(f"name_{lang}", flat=True):
-                extract_word_bases(keyword, words, lang)
+            if keywords is None:
+                keywords = list(event.keywords.all())
+            if audience is None:
+                audience = list(event.audience.all())
 
-            for keyword in event.audience.values_list(f"name_{lang}", flat=True):
-                extract_word_bases(keyword, words, lang)
+            for keyword in [*keywords, *audience]:
+                extract_word_bases(getattr(keyword, f"name_{lang}", None), words, lang)
 
         return words
 
@@ -43,11 +52,15 @@ class EventSearchIndexService:
         Get the words and their weights for a given event.
         """
         weighted_words = {}
+        keywords = list(event.keywords.all())
+        audience = list(event.audience.all())
         for lang in languages:
             weighted_words.update(
                 {
                     f"words_{lang}_weight_a": list(cls.get_words(event, lang, "A")),
-                    f"words_{lang}_weight_b": list(cls.get_words(event, lang, "B")),
+                    f"words_{lang}_weight_b": list(
+                        cls.get_words(event, lang, "B", keywords, audience)
+                    ),
                     f"words_{lang}_weight_c": list(cls.get_words(event, lang, "C")),
                     f"words_{lang}_weight_d": list(cls.get_words(event, lang, "D")),
                 }

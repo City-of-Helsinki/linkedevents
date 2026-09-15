@@ -16,7 +16,7 @@ from .sync import ModelSyncher
 logger = logging.getLogger(__name__)
 
 yso = rdflib.Namespace("http://www.yso.fi/onto/yso/")
-URL = "https://finto.fi/rest/v1/yso/data"
+URL = "https://api.finto.fi/rest/v1/yso/data"
 
 YSO_DEPRECATED_MAPS = {
     # lapset (kooste) -> lapset (ikään liittyvä rooli), missing YSO replacement
@@ -44,6 +44,9 @@ KEYWORDS_TO_ADD_TO_AUDIENCE = [
     "p7179",
     "p16596",
 ]
+
+global counter
+counter = 0
 
 
 def get_yso_id(subject):
@@ -179,7 +182,7 @@ class YsoImporter(Importer):
     def load_graph_into_memory(self, url):
         logger.debug(f"Fetching {url}")
         resp = requests.get(url, timeout=self.default_timeout)
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"Failed to fetch {url}: {vars(resp)}"
         resp.encoding = "UTF-8"
         graph = rdflib.Graph()
         logger.debug("Parsing RDF")
@@ -334,6 +337,12 @@ class YsoImporter(Importer):
         if keyword.publisher_id != self.organization.id:
             keyword.publisher = self.organization
             keyword._changed = True
+        global counter
+        counter += 1
+        if counter < 10000:
+            keyword._changed = True
+        if counter % 100 == 0:
+            print("counter", counter)
         if keyword._changed:
             keyword.save()
 

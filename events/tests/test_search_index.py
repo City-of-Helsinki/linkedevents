@@ -5,8 +5,10 @@ from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
+from pytest_django.asserts import assertNumQueries
 
 from events.models import Event, EventSearchIndex
+from events.search_index.postgres import EventSearchIndexService
 from events.search_index.utils import analyze_word, convert_numbers, extract_word_bases
 from events.tests.factories import EventFactory, PlaceFactory
 
@@ -121,6 +123,19 @@ def test_rebuild_search_index_event_last_modified_time_null(event, place, keywor
     assert EventSearchIndex.objects.all().count() == 1
     event_full_text = EventSearchIndex.objects.first()
     assert event_full_text.event_last_modified_time is None
+
+
+@pytest.mark.django_db
+def test_get_weighted_words_uses_prefetched_relations(event, keyword):
+    event.keywords.add(keyword)
+    event = (
+        Event.objects.select_related("location")
+        .prefetch_related("keywords", "audience")
+        .get(pk=event.pk)
+    )
+
+    with assertNumQueries(0):
+        EventSearchIndexService.get_weighted_words(event)
 
 
 @pytest.mark.skipif(
