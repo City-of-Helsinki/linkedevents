@@ -30,6 +30,7 @@ from events.models import (
     Place,
 )
 from events.translation_utils import expand_model_fields
+from linkedevents.utils import get_outbound_request_headers
 
 from .base import Importer, recur_dict, register_importer
 from .utils import clean_url, unicodetext
@@ -396,7 +397,11 @@ class KulkeImporter(Importer):
             self.event_only_license = None
 
     def fetch_kulke_categories(self) -> dict[str, str | int]:
-        response = requests.get(CATEGORY_URL, timeout=self.default_timeout)
+        response = requests.get(
+            CATEGORY_URL,
+            headers=get_outbound_request_headers(),
+            timeout=self.default_timeout,
+        )
         response.raise_for_status()
         root = etree.fromstring(response.content)
         categories = {}
@@ -1024,6 +1029,7 @@ class KulkeImporter(Importer):
                 EVENTS_URL_TEMPLATE.format(
                     begin_date=begin_date, offset=offset, language=language
                 ),
+                headers=get_outbound_request_headers(),
                 timeout=self.default_timeout,
             )
             response.raise_for_status()

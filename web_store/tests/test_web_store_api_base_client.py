@@ -5,10 +5,12 @@ import requests_mock
 from requests.exceptions import RequestException
 from rest_framework import status
 
+from linkedevents import __version__
 from web_store.clients import WebStoreAPIBaseClient
 from web_store.exceptions import WebStoreImproperlyConfiguredError
 
 DEFAULT_API_URL = "https://test_api/v1/"
+TEST_USER_AGENT = f"Test/{__version__}"
 DEFAULT_HEADERS = {
     "Authorization": "secret",
 }
@@ -129,6 +131,19 @@ def test_make_successful_request_with_headers(http_method, headers):
         assert headers.items() <= req_history.headers.items()
 
     assert isinstance(resp_json, dict)
+
+
+def test_make_successful_request_includes_configured_user_agent(settings):
+    settings.OUTBOUND_USER_AGENT = TEST_USER_AGENT
+    client = WebStoreAPIBaseClient()
+
+    with requests_mock.Mocker() as req_mock:
+        req_mock.get(DEFAULT_API_URL, json={})
+
+        client._make_request(DEFAULT_API_URL, "get")
+
+        req_history = req_mock.request_history[0]
+        assert req_history.headers["User-Agent"] == TEST_USER_AGENT
 
 
 @pytest.mark.parametrize(

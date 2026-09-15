@@ -222,6 +222,7 @@ env = environ.Env(
     CSP_SCRIPT_SRC=(list, [SELF]),
     CSP_REPORT_ONLY=(bool, False),
     CSP_REPORT_URI=(list, []),
+    OUTBOUND_USER_AGENT=(str, ""),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -1003,6 +1004,8 @@ ISO_WEEKDAYS = (
     (6, "Saturday"),
     (7, "Sunday"),
 )
+
+OUTBOUND_USER_AGENT = env("OUTBOUND_USER_AGENT").replace("{version}", __version__)
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

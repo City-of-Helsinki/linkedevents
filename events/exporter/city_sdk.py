@@ -14,6 +14,7 @@ from icalendar import Event as CalendarEvent
 
 from events.exporter.base import Exporter, register_exporter
 from events.models import Event, ExportInfo, Keyword, Place
+from linkedevents.utils import get_outbound_request_headers
 
 BASE_API_URL = settings.CITYSDK_API_SETTINGS["CITYSDK_URL"]
 EVENTS_URL = BASE_API_URL + "events/"
@@ -88,7 +89,9 @@ def generate_icalendar_element(event):
 class CitySDKExporter(Exporter):
     name = "CitySDK"
     session_cookies = None
-    response_headers = {"content-type": "application/json"}
+    response_headers = get_outbound_request_headers(
+        {"content-type": "application/json"}
+    )
 
     def setup(self):
         self.authenticate()
@@ -100,7 +103,8 @@ class CitySDKExporter(Exporter):
         username = settings.CITYSDK_API_SETTINGS["USERNAME"]
         password = settings.CITYSDK_API_SETTINGS["PASSWORD"]
         session_response = requests.get(
-            f"{BASE_API_URL}auth?username={username}&password={password}"
+            f"{BASE_API_URL}auth?username={username}&password={password}",
+            headers=get_outbound_request_headers(),
         )
         if session_response.status_code == 200:
             self.session_cookies = session_response.cookies
