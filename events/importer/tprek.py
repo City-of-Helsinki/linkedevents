@@ -9,6 +9,7 @@ from django_orghierarchy.models import Organization
 
 from events.importer.utils import replace_location
 from events.models import DataSource, Place
+from linkedevents.utils import get_outbound_request_headers
 
 from .base import Importer, register_importer
 from .sync import ModelSyncher
@@ -51,7 +52,11 @@ class TprekImporter(Importer):
         if res_id is not None:
             url = f"{url}{res_id}/"
         logger.info(f"Fetching URL {url}")
-        resp = requests.get(url, timeout=self.default_timeout)
+        resp = requests.get(
+            url,
+            headers=get_outbound_request_headers(),
+            timeout=self.default_timeout,
+        )
         assert resp.status_code == 200
         return resp.json()
 

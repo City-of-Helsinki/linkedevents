@@ -38,3 +38,12 @@ def validate_serializer_field_for_duplicates(values, field, error_detail_callbac
         raise serializers.ValidationError(errors)
 
     return values
+
+
+def get_outbound_request_headers(
+    additional_headers: dict[str, str] | None = None,
+) -> dict[str, str]:
+    outbound_headers = {**(additional_headers or {})}
+    if settings.OUTBOUND_USER_AGENT:
+        outbound_headers["User-Agent"] = settings.OUTBOUND_USER_AGENT
+    return outbound_headers

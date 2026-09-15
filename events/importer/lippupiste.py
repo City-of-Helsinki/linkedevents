@@ -13,6 +13,7 @@ from django.utils.html import strip_tags
 from django_orghierarchy.models import Organization
 
 from events.models import DataSource, Event, Keyword, License, Place
+from linkedevents.utils import get_outbound_request_headers
 
 from .base import Importer, recur_dict, register_importer
 from .sync import ModelSyncher
@@ -269,10 +270,12 @@ class LippupisteImporter(Importer):
             ),
             params={"ClientID": settings.LIPPUPISTE_EVENT_API_CLIENT_ID},
             timeout=self.default_timeout,
-            headers={
-                "Content-Type": "application/json",
-                "CALENDARKey": settings.LIPPUPISTE_EVENT_API_CALENDAR_KEY,
-            },
+            headers=get_outbound_request_headers(
+                {
+                    "Content-Type": "application/json",
+                    "CALENDARKey": settings.LIPPUPISTE_EVENT_API_CALENDAR_KEY,
+                }
+            ),
         ).json()["Events"]
 
     def _get_keywords_from_source_category(self, source_category):

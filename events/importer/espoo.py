@@ -19,6 +19,7 @@ from urllib3 import Retry
 
 from events.models import DataSource, Event, Image, Keyword, Language, Place
 from events.translation import EventTranslationOptions
+from linkedevents.utils import get_outbound_request_headers
 
 from ..serializers import generate_id
 from ..utils import clean_text_fields
@@ -86,6 +87,7 @@ def _get_data(url: str, params: dict | None = None) -> dict:
     )
     parsed_url = urlparse(url)
     session.mount(f"{parsed_url.scheme}://", HTTPAdapter(max_retries=retries))
+    session.headers.update(get_outbound_request_headers())
     try:
         response = session.get(url, timeout=settings.ESPOO_TIMEOUT, params=params)
     except RetryError:

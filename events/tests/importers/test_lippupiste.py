@@ -7,6 +7,7 @@ from django.conf import settings
 from events.importer.lippupiste import LippupisteImporter
 from events.models import Event
 from events.tests.factories import DataSourceFactory, KeywordFactory
+from linkedevents import __version__
 
 
 @pytest.fixture
@@ -48,14 +49,18 @@ def response_with_two_events_same_super_event(response_with_one_event):
 
 @pytest.mark.django_db
 def test_lippupiste_event_parse(
-    requests_mock, drama_keyword, importer, response_with_one_event
+    requests_mock, drama_keyword, importer, response_with_one_event, settings
 ):
+    settings.OUTBOUND_USER_AGENT = f"Test/{__version__}"
     requests_mock.get(settings.LIPPUPISTE_EVENT_API_URL, json=response_with_one_event)
     importer.import_events()
 
     events = Event.objects.all()
     assert events.count() == 1
     assert drama_keyword in events[0].keywords.all()
+    assert (
+        requests_mock.request_history[0].headers["User-Agent"] == f"Test/{__version__}"
+    )
 
 
 @pytest.mark.django_db

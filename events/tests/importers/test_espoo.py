@@ -32,6 +32,7 @@ from events.tests.factories import (
     OrganizationFactory,
     PlaceFactory,
 )
+from linkedevents import __version__
 
 
 class BaseDataFactory(factory.DictFactory):
@@ -85,6 +86,18 @@ def test_get_data(requests_mock):
     mock = requests_mock.get(url, json=data)
     assert data == _get_data(url)
     assert mock.call_count == 1
+
+
+def test_get_data_sends_user_agent(requests_mock, settings):
+    settings.OUTBOUND_USER_AGENT = f"Test/{__version__}"
+    url = "http://localhost"
+    requests_mock.get(url, json={"hello": "world"})
+
+    _get_data(url)
+
+    assert (
+        requests_mock.request_history[0].headers["User-Agent"] == f"Test/{__version__}"
+    )
 
 
 def test_get_max_retries(sleep, settings):

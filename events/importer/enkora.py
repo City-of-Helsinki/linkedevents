@@ -17,6 +17,7 @@ from django_orghierarchy.models import Organization
 
 from events.importer.sync import ModelSyncher
 from events.models import DataSource, Event, Keyword, Place
+from linkedevents.utils import get_outbound_request_headers
 
 from .base import Importer, recur_dict, register_importer
 
@@ -2366,9 +2367,7 @@ class Enkora:
         requests_log.propagate = True
 
     def _setup_client(self) -> object:
-        headers = {
-            "Accept": "application/json",
-        }
+        headers = get_outbound_request_headers({"Accept": "application/json"})
 
         s = requests.Session()
         s.headers.update(headers)

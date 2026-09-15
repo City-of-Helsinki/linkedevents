@@ -3,6 +3,7 @@ from typing import Any
 import requests
 from django.conf import settings
 
+from linkedevents.utils import get_outbound_request_headers
 from web_store.exceptions import WebStoreImproperlyConfiguredError
 
 
@@ -35,17 +36,14 @@ class WebStoreAPIBaseClient:
         params: dict | None = None,
         headers: dict | None = None,
     ) -> dict[str, int | dict]:
-        request_kwargs = {"timeout": self.TIMEOUT}
-
-        if not (params or headers):
-            return request_kwargs
+        request_kwargs = {
+            "timeout": self.TIMEOUT,
+            "headers": get_outbound_request_headers(headers),
+        }
 
         if params:
             params_key = "params" if method == "get" else "json"
             request_kwargs[params_key] = params
-
-        if headers:
-            request_kwargs["headers"] = headers
 
         return request_kwargs
 

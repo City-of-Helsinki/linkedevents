@@ -11,6 +11,7 @@ import requests_cache
 from django_orghierarchy.models import Organization
 
 from events.models import DataSource, Event, Keyword
+from linkedevents.utils import get_outbound_request_headers
 
 from .base import Importer, recur_dict, register_importer
 from .sync import ModelSyncher
@@ -43,7 +44,11 @@ class MikkeliNytImporter(Importer):
     def items_from_url(self, url):
         logger.info(url)
 
-        resp = requests.get(url, timeout=self.default_timeout)
+        resp = requests.get(
+            url,
+            headers=get_outbound_request_headers(),
+            timeout=self.default_timeout,
+        )
         if resp.status_code == 200:
             return resp.json()["data"]
 

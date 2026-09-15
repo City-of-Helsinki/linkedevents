@@ -9,6 +9,7 @@ from rdflib import RDF
 from rdflib.namespace import DCTERMS, OWL, RDFS, SKOS
 
 from events.models import BaseModel, DataSource, Keyword, KeywordLabel, Language
+from linkedevents.utils import get_outbound_request_headers
 
 from .base import Importer, register_importer
 from .sync import ModelSyncher
@@ -178,7 +179,11 @@ class YsoImporter(Importer):
 
     def load_graph_into_memory(self, url):
         logger.debug(f"Fetching {url}")
-        resp = requests.get(url, timeout=self.default_timeout)
+        resp = requests.get(
+            url,
+            headers=get_outbound_request_headers(),
+            timeout=self.default_timeout,
+        )
         assert resp.status_code == 200
         resp.encoding = "UTF-8"
         graph = rdflib.Graph()
