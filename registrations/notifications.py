@@ -6,8 +6,8 @@ from django.utils.translation import gettext_lazy as _
 from events.models import Event
 from registrations.utils import get_signup_edit_url, get_ui_locales
 
-CONFIRMATION_HEADING_WITH_USERNAME = _("Welcome %(username)s")
-CONFIRMATION_HEADING_WITHOUT_USERNAME = _("Welcome")
+CONFIRMATION_HEADING_WITH_USERNAME = _("Hello %(username)s")
+CONFIRMATION_HEADING_WITHOUT_USERNAME = _("Hello")
 CONFIRMATION_TO_WAITING_LIST_HEADING = _(
     "Thank you for signing up for the waiting list"
 )
