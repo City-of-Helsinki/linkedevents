@@ -1621,24 +1621,3 @@ class EventSerializerV0_1(EventSerializer):  # noqa: N801
         ret = super().to_representation(obj)
         _format_images_v0_1(ret)
         return ret
-
-
-class SearchSerializer(serializers.Serializer):
-    def to_representation(self, search_result):
-        model = search_result.model
-        version = self.context["request"].version
-        ser_class = _get_serializer_for_model(model, version=version)
-        assert ser_class is not None, f"Serializer for {model} not found"
-        data = ser_class(search_result.object, context=self.context).data
-        data["resource_type"] = model._meta.model_name
-        data["score"] = search_result.score
-        return data
-
-
-class SearchSerializerV0_1(SearchSerializer):  # noqa: N801
-    def to_representation(self, search_result):
-        ret = super().to_representation(search_result)
-        if "resource_type" in ret:
-            ret["object_type"] = ret["resource_type"]
-            del ret["resource_type"]
-        return ret

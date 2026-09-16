@@ -393,16 +393,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-haystack"
-version = "3.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-    { name = "packaging" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/08/00/2fee5c12b650bbc643f0b65ead96b6f7533f5fa76573449f814d820dda6f/django_haystack-3.4.0.tar.gz", hash = "sha256:1226a7c9ce13e1e7ead8ac83f6e87bfef4996f146ed24971fde7896115b1c530", size = 454662, upload-time = "2026-06-04T19:12:33.644Z" }
-
-[[package]]
 name = "django-helsinki-health-endpoints"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -779,19 +769,6 @@ wheels = [
 ]
 
 [[package]]
-name = "elasticsearch"
-version = "7.17.13"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "certifi" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0b/27/5b7e801213c16452d13eaddeae40810da5cd6152103f94e582e1d14d8c65/elasticsearch-7.17.13.tar.gz", hash = "sha256:ba1b87322045fc37831009c7c49ef0e2777165a2ad3390df4d9e2b7a09d90c86", size = 248490, upload-time = "2026-01-12T18:12:30.656Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/06/be118b997069ff6643b5dafb13e60442bf65ec6530f3ef714d6455b11ae5/elasticsearch-7.17.13-py2.py3-none-any.whl", hash = "sha256:dac73df9a9070b9c96be45d99f4316badc525f8b17f418e9c86da2bb5855c892", size = 386157, upload-time = "2026-01-12T18:12:25.496Z" },
-]
-
-[[package]]
 name = "elasticsearch8"
 version = "8.19.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1060,7 +1037,6 @@ dependencies = [
     { name = "django-csp" },
     { name = "django-environ" },
     { name = "django-filter" },
-    { name = "django-haystack" },
     { name = "django-helsinki-health-endpoints" },
     { name = "django-helusers" },
     { name = "django-image-cropping" },
@@ -1084,7 +1060,6 @@ dependencies = [
     { name = "drf-oidc-auth" },
     { name = "drf-spectacular" },
     { name = "easy-thumbnails" },
-    { name = "elasticsearch" },
     { name = "helsinki-profile-gdpr-api" },
     { name = "httmock" },
     { name = "icalendar" },
@@ -1147,7 +1122,6 @@ requires-dist = [
     { name = "django-csp" },
     { name = "django-environ" },
     { name = "django-filter" },
-    { name = "django-haystack" },
     { name = "django-helsinki-health-endpoints" },
     { name = "django-helusers" },
     { name = "django-image-cropping" },
@@ -1171,7 +1145,6 @@ requires-dist = [
     { name = "drf-oidc-auth" },
     { name = "drf-spectacular" },
     { name = "easy-thumbnails" },
-    { name = "elasticsearch", specifier = "<8" },
     { name = "helsinki-profile-gdpr-api" },
     { name = "httmock" },
     { name = "icalendar" },
