@@ -2762,7 +2762,9 @@ class EventViewSet(
         if len(event_data_list) > 1 and settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED:
             with suppress_search_index_updates():
                 super().perform_create(serializer)
-            EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
+            EventSearchIndexService.bulk_update_search_indexes(
+                [event.pk for event in serializer.instance]
+            )
             # Haystack only indexes public events, so omit newly created drafts
             # instead of trying to remove documents that cannot exist yet.
             HaystackSearchIndexService.bulk_update_search_indexes(
@@ -2791,7 +2793,9 @@ class EventViewSet(
             )
             with suppress_search_index_updates():
                 super().perform_update(serializer)
-            EventSearchIndexService.bulk_update_search_indexes(serializer.instance)
+            EventSearchIndexService.bulk_update_search_indexes(
+                [event.pk for event in serializer.instance]
+            )
             # Index active public events and remove only documents that may have
             # existed before the update; already-draft events need no Haystack call.
             HaystackSearchIndexService.bulk_update_search_indexes(
