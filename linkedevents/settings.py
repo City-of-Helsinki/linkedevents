@@ -403,6 +403,7 @@ if env("SENTRY_DSN"):
         traces_sampler=sentry_traces_sampler,
         profile_session_sample_rate=env("SENTRY_PROFILE_SESSION_SAMPLE_RATE"),
         profile_lifecycle="trace",
+        ignore_errors=[KeyboardInterrupt, SystemExit],
     )
 
 MIDDLEWARE = [
