@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.31.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.30.1...linkedevents-v3.31.0) (2026-09-19)
+
+
+### Features
+
+* Allow setting User-Agent for outbound HTTP requests ([963ce38](https://github.com/City-of-Helsinki/linkedevents/commit/963ce38122c69d43eac8841156dbe9ae61878a13))
+
 ## [3.30.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.30.0...linkedevents-v3.30.1) (2026-09-10)
 
 
