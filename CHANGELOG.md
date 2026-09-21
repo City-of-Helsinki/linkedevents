@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.31.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.30.1...linkedevents-v3.31.0) (2026-09-21)
+
+
+### Features
+
+* Allow setting User-Agent for outbound HTTP requests ([963ce38](https://github.com/City-of-Helsinki/linkedevents/commit/963ce38122c69d43eac8841156dbe9ae61878a13))
+
+
+### Bug Fixes
+
+* Registration notification subject changes for en and sv ([764e071](https://github.com/City-of-Helsinki/linkedevents/commit/764e071340753586616ab1c52b6330a7d981a483))
+* Registrations notification subject Tervetuloa -&gt; Hei ([105292f](https://github.com/City-of-Helsinki/linkedevents/commit/105292f58ffd9d1b779a25f83806035661f64142))
+
 ## [3.30.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.30.0...linkedevents-v3.30.1) (2026-09-10)
 
 
