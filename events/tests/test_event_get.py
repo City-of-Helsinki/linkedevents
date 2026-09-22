@@ -16,6 +16,7 @@ from pytest_django.asserts import assertNumQueries
 from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
+from events.api import EventViewSet
 from events.models import Event, Language, License, PublicationStatus
 from events.tests.conftest import APIClient
 from events.tests.factories import (
@@ -2099,6 +2100,25 @@ def test_get_event_with_offer_and_offer_price_groups(api_client, event):
     assert_offer_price_group_fields_exist(
         response.data["offers"][0]["offer_price_groups"][0]
     )
+
+
+@pytest.mark.django_db
+def test_event_queryset_prefetches_offer_price_group_price_groups(event):
+    offer = OfferFactory(event=event)
+    offer_price_groups = OfferPriceGroupFactory.create_batch(2, offer=offer)
+    expected_price_group_ids = [
+        offer_price_group.price_group_id for offer_price_group in offer_price_groups
+    ]
+
+    event_from_queryset = EventViewSet.queryset.get(pk=event.pk)
+    offer_from_queryset = event_from_queryset.offers.all()[0]
+    offer_price_groups_from_queryset = offer_from_queryset.offer_price_groups.all()
+
+    with assertNumQueries(0):
+        assert [
+            offer_price_group.price_group.pk
+            for offer_price_group in offer_price_groups_from_queryset
+        ] == expected_price_group_ids
 
 
 @pytest.mark.django_db
