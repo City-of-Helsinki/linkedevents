@@ -1047,7 +1047,7 @@ wheels = [
 
 [[package]]
 name = "linkedevents"
-version = "3.31.0"
+version = "3.31.1"
 source = { virtual = "." }
 dependencies = [
     { name = "attrs" },
