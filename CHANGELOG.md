@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.31.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.31.0...linkedevents-v3.31.1) (2026-09-22)
+
+
+### Dependencies
+
+* Bump soupsieve from 2.8.4 to 2.9 ([f03b6b4](https://github.com/City-of-Helsinki/linkedevents/commit/f03b6b4dd6b5f052d98e98165c3e4b32f68ff427))
+
 ## [3.31.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.30.1...linkedevents-v3.31.0) (2026-09-21)
 
 
