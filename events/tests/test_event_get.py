@@ -21,6 +21,8 @@ from events.tests.conftest import APIClient
 from events.tests.factories import (
     EventFactory,
     ImageFactory,
+    KeywordFactory,
+    KeywordLabelFactory,
     LicenseFactory,
     OfferFactory,
 )
@@ -2021,6 +2023,40 @@ def test_images_with_include_uses_prefetch_optimization(
         f"Query count increased by {query_increase} when tripling events from 3 to 9. "
         f"This suggests prefetch_related is not working. "
         f"Without prefetch, we'd expect ~6 additional queries (one per new image for license access). "
+        f"Baseline: {baseline_queries} queries, New: {new_queries} queries"
+    )
+
+
+@pytest.mark.django_db
+def test_audience_with_include_uses_keyword_prefetch_optimization(
+    api_client, data_source, organization, languages
+):
+    for _ in range(3):
+        event = EventFactory(data_source=data_source, publisher=organization)
+        keyword = KeywordFactory(data_source=data_source, publisher=organization)
+        keyword.alt_labels.add(KeywordLabelFactory(language=languages[0]))
+        event.audience.add(keyword)
+
+    baseline_queries, response = count_queries_and_get_response(
+        query_string="include=audience"
+    )
+    assert response.data["meta"]["count"] == 3
+
+    for _ in range(6):
+        event = EventFactory(data_source=data_source, publisher=organization)
+        keyword = KeywordFactory(data_source=data_source, publisher=organization)
+        keyword.alt_labels.add(KeywordLabelFactory(language=languages[0]))
+        event.audience.add(keyword)
+
+    new_queries, response = count_queries_and_get_response(
+        query_string="include=audience"
+    )
+
+    assert response.data["meta"]["count"] == 9
+    query_increase = new_queries - baseline_queries
+    assert query_increase <= 2, (
+        f"Query count increased by {query_increase} when tripling events from 3 to 9. "
+        f"This suggests audience keyword prefetching is not working. "
         f"Baseline: {baseline_queries} queries, New: {new_queries} queries"
     )
 

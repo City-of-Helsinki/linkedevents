@@ -2394,11 +2394,15 @@ class EventViewSet(
                 Prefetch("location", Place.objects.all().only("id"))
             )
 
-        if "keywords" in includes:
+        if "audience" in includes:
             queryset = queryset.prefetch_related(
                 "audience__alt_labels",
                 "audience__data_source",
                 "audience__publisher",
+            )
+
+        if "keywords" in includes:
+            queryset = queryset.prefetch_related(
                 "keywords__alt_labels",
                 "keywords__data_source",
                 "keywords__publisher",
