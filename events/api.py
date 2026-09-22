@@ -2718,16 +2718,19 @@ class EventViewSet(
         locations = Place.objects.none()
         images = Image.objects.none()
         sub_events = Event.objects.none()
+        super_events = Event.objects.none()
         keyword_ids = []
         location_ids = []
         image_ids = []
         subevent_ids = []
+        superevent_ids = []
         for event in events:
             keyword_ids.extend(self._retrieve_ids("keywords", event))
             keyword_ids.extend(self._retrieve_ids("audience", event))
             location_ids.extend(self._retrieve_ids("location", event))
             image_ids.extend(self._retrieve_ids("images", event, id_data_type=int))
             subevent_ids.extend(self._retrieve_ids("sub_events", event))
+            superevent_ids.extend(self._retrieve_ids("super_event", event))
         if location_ids:
             locations = Place.objects.filter(id__in=location_ids)
         if keyword_ids:
@@ -2735,13 +2738,24 @@ class EventViewSet(
         if image_ids:
             images = Image.objects.filter(id__in=image_ids)
         if subevent_ids:
-            sub_events = Event.objects.filter(id__in=subevent_ids)
+            sub_events = Event.objects.filter(id__in=subevent_ids, deleted=False)
+        if superevent_ids:
+            super_events = Event.objects.filter(
+                id__in=superevent_ids,
+            ).filter(
+                Q(super_event_type=Event.SuperEventType.RECURRING)
+                | Q(super_event_type=Event.SuperEventType.UMBRELLA)
+            )
 
         return {
             "keywords": keywords,
             "location": locations,
             "image": images,
             "sub_events": sub_events,
+            "related_objects": {
+                "sub_events": {str(event.pk): event for event in sub_events},
+                "super_event": {str(event.pk): event for event in super_events},
+            },
         }
 
     def perform_create(self, serializer):

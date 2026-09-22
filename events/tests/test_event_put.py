@@ -1,18 +1,23 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import pytest
 from dateutil.parser import parse as dateutil_parse
 from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
 from django.core.management import call_command
+from django.db import connection
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from haystack import connections
 from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
+from rest_framework.test import APIRequestFactory
 
 from events.auth import ApiKeyUser
 from events.models import Event, EventSearchIndex, Image, Keyword, Offer, Place
@@ -24,8 +29,10 @@ from registrations.enums import VatPercentage
 from registrations.models import OfferPriceGroup, PriceGroup
 from registrations.tests.factories import OfferPriceGroupFactory, PriceGroupFactory
 
-from ..api import ImageSerializer
+from ..api import EventViewSet, ImageSerializer
+from ..serializers import EventSerializer
 from .factories import KeywordFactory, OfferFactory
+from .utils import create_super_event
 from .utils import versioned_reverse as reverse
 
 # === util methods ===
@@ -36,6 +43,90 @@ def update_with_put(api_client, event_id, event_data, credentials=None):
         api_client.credentials(**credentials)
     response = api_client.put(event_id, event_data, format="json")
     return response
+
+
+@pytest.mark.django_db
+def test__super_event_lookup_uses_bulk_context_cache(event):
+    super_event = create_super_event([event], event.data_source)
+    request_data = [
+        {
+            "super_event": {
+                "@id": f"https://testserver/v1/event/{super_event.pk}/",
+            }
+        }
+    ]
+    view = EventViewSet()
+
+    with CaptureQueriesContext(connection) as queries:
+        context = view.cache_related_fields_to_context(
+            SimpleNamespace(data=request_data)
+        )
+
+    assert len(queries) == 1
+    assert context["related_objects"]["super_event"] == {
+        str(super_event.pk): super_event,
+    }
+
+    request = APIRequestFactory().get("/")
+    request.user = AnonymousUser()
+    serializer = EventSerializer(
+        context={
+            "request": request,
+            **context,
+        }
+    )
+    field = serializer.fields["super_event"]
+
+    with patch.object(field, "get_queryset", side_effect=AssertionError):
+        result = field.get_object(
+            "event-detail",
+            (),
+            {field.lookup_url_kwarg: str(super_event.pk)},
+        )
+
+    assert result.pk == super_event.pk
+
+
+@pytest.mark.django_db
+def test__sub_events_lookup_uses_bulk_context_cache(event, event2):
+    request_data = [
+        {
+            "sub_events": [
+                {"@id": f"https://testserver/v1/event/{event.pk}/"},
+                {"@id": f"https://testserver/v1/event/{event2.pk}/"},
+            ]
+        },
+    ]
+    view = EventViewSet()
+
+    context = view.cache_related_fields_to_context(SimpleNamespace(data=request_data))
+    request = APIRequestFactory().get("/")
+    request.user = AnonymousUser()
+    serializer = EventSerializer(
+        context={
+            "request": request,
+            **context,
+        }
+    )
+    field = serializer.fields["sub_events"]
+    child = field.child_relation
+
+    with CaptureQueriesContext(connection) as queries:
+        results = [
+            child.get_object(
+                "event-detail",
+                (),
+                {child.lookup_url_kwarg: str(event.pk)},
+            ),
+            child.get_object(
+                "event-detail",
+                (),
+                {child.lookup_url_kwarg: str(event2.pk)},
+            ),
+        ]
+
+    assert len(queries) == 0
+    assert results == [event, event2]
 
 
 # === tests ===
