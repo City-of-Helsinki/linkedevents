@@ -844,17 +844,16 @@ class RegistrationUserAccessSerializer(RegistrationUserAccessCreateSerializer):
 
 
 class PriceGroupRelatedField(serializers.PrimaryKeyRelatedField):
-    def to_representation(self, value):
-        price_group = PriceGroup.objects.only(
-            "pk", "description_fi", "description_sv", "description_en"
-        ).get(pk=value.pk)
+    def use_pk_only_optimization(self):
+        return False
 
+    def to_representation(self, value):
         return {
-            "id": price_group.pk,
+            "id": value.pk,
             "description": {
-                lang: getattr(price_group, f"description_{lang}")
+                lang: getattr(value, f"description_{lang}")
                 for lang in ("fi", "sv", "en")
-                if getattr(price_group, f"description_{lang}", None) is not None
+                if getattr(value, f"description_{lang}", None) is not None
             },
         }
 
