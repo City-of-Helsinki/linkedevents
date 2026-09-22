@@ -1,6 +1,7 @@
 import importlib
 import urllib.parse
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from rest_framework import relations, serializers
 
@@ -74,6 +75,23 @@ class JSONLDRelatedField(relations.HyperlinkedRelatedField):
 
     def is_expanded(self):
         return getattr(self, "expanded", False)
+
+    def get_object(self, view_name, view_args, view_kwargs):
+        related_objects = self.context.get("related_objects", {})
+        field_name = (
+            self.parent.field_name
+            if isinstance(self.parent, relations.ManyRelatedField)
+            else self.field_name
+        )
+        cached_objects = related_objects.get(field_name)
+        if cached_objects is not None:
+            lookup_value = urllib.parse.unquote(view_kwargs[self.lookup_url_kwarg])
+            try:
+                return cached_objects[str(lookup_value)]
+            except KeyError:
+                raise ObjectDoesNotExist
+
+        return super().get_object(view_name, view_args, view_kwargs)
 
     def get_queryset(self):
         #  For certain related fields we preload the queryset to avoid *.objects.all() query which can easily overload  # noqa: E501
