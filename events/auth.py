@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.gis.db import models
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization
 from helusers.oidc import ApiTokenAuthentication as HelApiTokenAuthentication
@@ -71,10 +72,18 @@ class ApiKeyUser(get_user_model(), UserModelPermissionMixin):
     def get_default_organization(self):
         return self.data_source.owner
 
-    def is_admin_of(self, publisher):
+    @cached_property
+    def admin_organization_ids(self):
         if not self.data_source.owner_id:
-            return False
-        return publisher in self.data_source.owner.get_descendants(include_self=True)
+            return set()
+        return set(
+            self.data_source.owner.get_descendants(include_self=True).values_list(
+                "id", flat=True
+            )
+        )
+
+    def is_admin_of(self, publisher):
+        return publisher is not None and publisher.id in self.admin_organization_ids
 
     def is_registration_admin_of(self, publisher):
         return (

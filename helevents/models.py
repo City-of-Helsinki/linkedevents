@@ -321,10 +321,20 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
 
         return admin_org or registration_admin_org or financial_admin_org or regular_org
 
+    @cached_property
+    def admin_organization_ids(self):
+        return set(
+            self.get_admin_organizations_and_descendants().values_list("id", flat=True)
+        )
+
+    @cached_property
+    def regular_organization_ids(self):
+        return set(self.organization_memberships.values_list("id", flat=True))
+
     def is_admin_of(self, publisher):
         if publisher is None:
             return False
-        return publisher in self.get_admin_organizations_and_descendants()
+        return publisher.id in self.admin_organization_ids
 
     def is_registration_admin_of(self, publisher):
         if publisher is None:
@@ -339,7 +349,7 @@ class User(AbstractUser, UserModelPermissionMixin, SerializableMixin):
     def is_regular_user_of(self, publisher):
         if publisher is None:
             return False
-        return self.organization_memberships.filter(id=publisher.id).exists()
+        return publisher.id in self.regular_organization_ids
 
     def is_registration_user_access_user_of(self, registration_user_accesses):
         """Check if current user can be found in registration user accesses"""
