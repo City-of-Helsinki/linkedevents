@@ -565,6 +565,23 @@ class KeywordSetViewSet(
     ]
     permit_regular_user_edit = True
 
+    def get_queryset(self):
+        queryset = self.queryset
+        includes = {
+            value.strip()
+            for value in self.request.query_params.get("include", "").split(",")
+            if value
+        }
+        if "keywords" in includes:
+            keyword_queryset = Keyword.objects.select_related(
+                "data_source", "publisher"
+            ).prefetch_related("alt_labels")
+        else:
+            keyword_queryset = Keyword.objects.only("id")
+        return queryset.prefetch_related(
+            Prefetch("keywords", queryset=keyword_queryset)
+        )
+
     @extend_schema(
         summary="Create a new keyword set",
         responses={
@@ -690,9 +707,7 @@ class KeywordSetViewSet(
             ]
             qexpression = reduce(or_, qlist)
         if qexpression:
-            qset = KeywordSet.objects.filter(qexpression)
-        else:
-            qset = KeywordSet.objects.all()
+            queryset = queryset.filter(qexpression)
 
         val = self.request.query_params.get("sort", None)
         if val:
@@ -703,8 +718,8 @@ class KeywordSetViewSet(
                 raise ParseError(
                     f"It is possible to sort with the following params only: {allowed_fields}"  # noqa: E501
                 )
-            qset = qset.order_by(*vals)
-        return qset
+            queryset = queryset.order_by(*vals)
+        return queryset
 
 
 register_view(KeywordSetViewSet, "keyword_set")
