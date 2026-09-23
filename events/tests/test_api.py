@@ -5,7 +5,9 @@ from unittest.mock import MagicMock
 import freezegun
 import pytest
 from django.contrib.auth import get_user_model
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django_orghierarchy.models import Organization
 from resilient_logger.models import ResilientLogEntry
@@ -145,6 +147,30 @@ class TestOrganizationListSerializer(TestCase):
         )
         self.assertTrue(has_regular_users)
 
+    def test_has_regular_users_uses_prefetched_values(self):
+        class PrefetchedUsers:
+            def all(self):
+                return [object()]
+
+            def count(self):
+                raise AssertionError("count() should not be called")
+
+        organization = MagicMock(regular_users=PrefetchedUsers())
+
+        self.assertTrue(OrganizationListSerializer.get_has_regular_users(organization))
+
+    def test_related_fields_use_prefetched_attributes(self):
+        serializer = OrganizationListSerializer()
+
+        self.assertEqual(
+            serializer.fields["sub_organizations"].source,
+            "prefetched_sub_organizations",
+        )
+        self.assertEqual(
+            serializer.fields["affiliated_organizations"].source,
+            "prefetched_affiliated_organizations",
+        )
+
 
 class TestOrganizationAPI(APITestCase):
     def setUp(self):
@@ -211,6 +237,30 @@ class TestOrganizationAPI(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["data"]), 0)
+
+    def test_organization_list_does_not_query_per_organization(self):
+        url = reverse("organization-list")
+
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as queries:
+            response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        baseline_query_count = len(queries)
+
+        for index in range(3):
+            Organization.objects.create(
+                name=f"extra_org_{index}",
+                origin_id=f"extra_org_{index}",
+                data_source=self.org.data_source,
+            )
+
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as queries:
+            response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertLessEqual(
+            len(queries),
+            baseline_query_count,
+            "Organization list query count increased with more organizations",
+        )
 
     def test_organization_id_is_audit_logged_on_get_detail(self):
         url = reverse("organization-detail", kwargs={"pk": self.org.pk})
