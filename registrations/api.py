@@ -592,7 +592,18 @@ class SignUpViewSet(
     viewsets.ModelViewSet,
 ):
     serializer_class = SignUpSerializer
-    queryset = SignUp.objects.all()
+    queryset = SignUp.objects.select_related(
+        "created_by",
+        "last_modified_by",
+        "contact_person",
+        "protected_data",
+        "price_group",
+        "payment",
+        "payment__created_by",
+        "payment__last_modified_by",
+        "payment_refund",
+        "payment_cancellation",
+    )
     filter_backends = [
         ActionDependingBackend,
         filters.OrderingFilter,
