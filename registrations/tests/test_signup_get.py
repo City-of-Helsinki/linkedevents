@@ -4,6 +4,8 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 from django.conf import settings
+from django.db import connections
+from django.test.utils import CaptureQueriesContext
 from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
@@ -504,6 +506,26 @@ def test_superuser_or_created_admin_or_registration_admin_can_get_signup_list(
     get_list_and_assert_signups(
         api_client, f"registration={registration.id}", [signup, signup2]
     )
+
+
+@pytest.mark.django_db
+def test_signup_list_queries_do_not_increase_per_signup(api_client, registration):
+    user = create_user_by_role("registration_admin", registration.publisher)
+    api_client.force_authenticate(user)
+
+    first_signup = SignUpFactory(registration=registration)
+    with CaptureQueriesContext(connections["default"]) as one_signup_queries:
+        response = get_list(api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_200_OK
+
+    second_signup = SignUpFactory(registration=registration)
+    with CaptureQueriesContext(connections["default"]) as two_signup_queries:
+        response = get_list(api_client, f"registration={registration.id}")
+    assert response.status_code == status.HTTP_200_OK
+    signup_ids = {signup["id"] for signup in response.data["data"]}
+    assert {first_signup.id, second_signup.id} <= signup_ids
+
+    assert len(two_signup_queries) - len(one_signup_queries) == 0
 
 
 @pytest.mark.parametrize("user_role", ["admin", "financial_admin"])
