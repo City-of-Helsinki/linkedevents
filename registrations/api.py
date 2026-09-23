@@ -177,15 +177,24 @@ class RegistrationViewSet(
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if self.request.method == "GET" and settings.WEB_STORE_INTEGRATION_ENABLED:
-            queryset = queryset.prefetch_related(
-                Prefetch(
-                    "registration_price_groups",
-                    queryset=RegistrationPriceGroup.objects.select_related(
-                        "price_group"
-                    ),
+        if self.request.method == "GET":
+            includes = self.get_serializer_context().get("include", [])
+            if "event" in includes and "keywords" in includes:
+                queryset = queryset.prefetch_related(
+                    "event__keywords__alt_labels",
+                    "event__keywords__data_source",
+                    "event__keywords__publisher",
                 )
-            )
+
+            if settings.WEB_STORE_INTEGRATION_ENABLED:
+                queryset = queryset.prefetch_related(
+                    Prefetch(
+                        "registration_price_groups",
+                        queryset=RegistrationPriceGroup.objects.select_related(
+                            "price_group"
+                        ),
+                    )
+                )
         return queryset
 
     filter_backends = [
