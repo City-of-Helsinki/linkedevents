@@ -24,11 +24,15 @@ class RegistrationSignUpsExportXLSX:
             .only(
                 "first_name",
                 "last_name",
-                "protected_data",
+                "registration_id",
+                "protected_data__date_of_birth",
                 "phone_number",
                 "attendee_status",
-                "contact_person",
+                "contact_person__email",
+                "contact_person__phone_number",
                 "signup_group",
+                "signup_group__contact_person__email",
+                "signup_group__contact_person__phone_number",
             )
         )
 

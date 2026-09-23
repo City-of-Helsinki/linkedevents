@@ -1,8 +1,14 @@
 import pytest
+from pytest_django.asserts import assertNumQueries
 
 from registrations.exports import RegistrationSignUpsExportXLSX
 from registrations.models import SignUp
-from registrations.tests.factories import SignUpContactPersonFactory, SignUpFactory
+from registrations.tests.factories import (
+    SignUpContactPersonFactory,
+    SignUpFactory,
+    SignUpGroupFactory,
+    SignUpProtectedDataFactory,
+)
 
 
 @pytest.fixture
@@ -61,3 +67,34 @@ def test_attendee_name_format(signup_registration):
     table_data = exporter._get_signups_table_data()
 
     assert table_data[0][0] == "Doe John"
+
+
+@pytest.mark.django_db
+def test_signups_table_data_does_not_query_deferred_fields(registration):
+    signup_group = SignUpGroupFactory(registration=registration)
+    grouped_signup = SignUpFactory(
+        registration=registration,
+        signup_group=signup_group,
+    )
+    SignUpContactPersonFactory(
+        signup_group=signup_group,
+        email="group@example.com",
+        phone_number="123456789",
+    )
+    SignUpProtectedDataFactory(
+        registration=registration,
+        signup=grouped_signup,
+    )
+
+    signup = SignUpFactory(registration=registration)
+    SignUpContactPersonFactory(
+        signup=signup,
+        email="signup@example.com",
+        phone_number="987654321",
+    )
+    SignUpProtectedDataFactory(registration=registration, signup=signup)
+
+    exporter = RegistrationSignUpsExportXLSX(registration)
+
+    with assertNumQueries(1):
+        exporter._get_signups_table_data()
