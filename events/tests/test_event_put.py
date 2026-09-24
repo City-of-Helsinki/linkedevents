@@ -10,13 +10,11 @@ from django.conf import settings
 from django.core.management import call_command
 from django.test import override_settings
 from django.utils import timezone
-from haystack import connections
 from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
 from events.auth import ApiKeyUser
 from events.models import Event, EventSearchIndex, Image, Keyword, Offer, Place
-from events.search_index.haystack import HaystackSearchIndexService
 from events.search_index.postgres import EventSearchIndexService
 from events.tests.test_event_post import create_with_post
 from events.tests.utils import assert_event_data_is_equal
@@ -342,105 +340,18 @@ def test__bulk_update_multiple_events_batches_search_index_updates(
             "bulk_update_search_indexes",
             wraps=EventSearchIndexService.bulk_update_search_indexes,
         ) as postgres_bulk_update,
-        patch.object(
-            HaystackSearchIndexService,
-            "bulk_update_search_indexes",
-            wraps=HaystackSearchIndexService.bulk_update_search_indexes,
-        ) as haystack_bulk_update,
     ):
         response = api_client.put(reverse("event-list"), updated_events, format="json")
 
     assert response.status_code == status.HTTP_200_OK, response.content
     update_search_index.assert_not_called()
     postgres_bulk_update.assert_called_once()
-    haystack_bulk_update.assert_called_once()
     assert len(postgres_bulk_update.call_args.args[0]) == 2
-    assert len(haystack_bulk_update.call_args.args[0]) == 2
     assert EventSearchIndex.objects.filter(search_vector_fi__isnull=False).count() == 2
     assert all(
         "updated" in str(index.search_vector_fi)
         for index in EventSearchIndex.objects.all()
     )
-
-
-@pytest.mark.django_db
-@override_settings(EVENT_SEARCH_INDEX_SIGNALS_ENABLED=True)
-def test__bulk_update_public_event_to_draft_removes_haystack_document(
-    api_client, minimal_event_dict, user
-):
-    api_client.force_authenticate(user=user)
-    first_event = deepcopy(minimal_event_dict)
-    second_event = deepcopy(minimal_event_dict)
-    second_event["start_time"] = (
-        dateutil_parse(second_event["start_time"]) + timedelta(hours=1)
-    ).isoformat()
-
-    response = api_client.post(
-        reverse("event-list"), [first_event, second_event], format="json"
-    )
-    assert response.status_code == status.HTTP_201_CREATED, response.content
-
-    updated_event = deepcopy(response.data)
-    updated_event[0]["publication_status"] = "draft"
-    event_ids = [event["id"] for event in response.data]
-    searchable_event_ids = set(event_ids)
-    backend = connections["default"].get_backend()
-
-    with (
-        patch.object(
-            backend,
-            "update",
-            side_effect=lambda _index, public_events: searchable_event_ids.update(
-                public_events.values_list("pk", flat=True)
-            ),
-        ) as update,
-        patch.object(
-            backend,
-            "remove",
-            side_effect=lambda removed_event: searchable_event_ids.discard(
-                removed_event.pk
-            ),
-        ) as remove,
-    ):
-        response = api_client.put(reverse("event-list"), updated_event, format="json")
-
-    assert response.status_code == status.HTTP_200_OK, response.content
-    update.assert_called_once()
-    remove.assert_called_once()
-    assert remove.call_args.args[0].pk == event_ids[0]
-    assert event_ids[0] not in searchable_event_ids
-    assert event_ids[1] in searchable_event_ids
-
-
-@pytest.mark.django_db
-@override_settings(EVENT_SEARCH_INDEX_SIGNALS_ENABLED=True)
-def test__bulk_update_already_draft_events_skips_haystack_removal(
-    api_client, minimal_event_dict, user
-):
-    api_client.force_authenticate(user=user)
-    first_event = deepcopy(minimal_event_dict)
-    second_event = deepcopy(minimal_event_dict)
-    first_event["publication_status"] = "draft"
-    second_event["publication_status"] = "draft"
-    second_event["start_time"] = (
-        dateutil_parse(second_event["start_time"]) + timedelta(hours=1)
-    ).isoformat()
-
-    response = api_client.post(
-        reverse("event-list"), [first_event, second_event], format="json"
-    )
-    assert response.status_code == status.HTTP_201_CREATED, response.content
-
-    updated_events = deepcopy(response.data)
-    for event in updated_events:
-        event["name"]["fi"] = f"{event['name']['fi']} updated"
-    backend = connections["default"].get_backend()
-
-    with patch.object(backend, "remove") as remove:
-        response = api_client.put(reverse("event-list"), updated_events, format="json")
-
-    assert response.status_code == status.HTTP_200_OK, response.content
-    remove.assert_not_called()
 
 
 @pytest.mark.django_db
