@@ -1159,12 +1159,12 @@ class OrganizationViewSet(
             Prefetch(
                 "children",
                 queryset=Organization.objects.filter(internal_type="normal"),  # noqa E501
-                to_attr="sub_organizations",
+                to_attr="prefetched_sub_organizations",
             ),
             Prefetch(
                 "children",
                 queryset=Organization.objects.filter(internal_type="affiliated"),  # noqa E501
-                to_attr="affiliated_organizations",
+                to_attr="prefetched_affiliated_organizations",
             ),
         )
         child_id = self.request.query_params.get("child", None)

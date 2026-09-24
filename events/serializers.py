@@ -513,6 +513,7 @@ class OrganizationListSerializer(OrganizationBaseSerializer):
         many=True,
         required=False,
         read_only=True,
+        source="prefetched_sub_organizations",
         help_text="The organizations that belong to this organization.",
     )
     affiliated_organizations = serializers.HyperlinkedRelatedField(
@@ -520,6 +521,7 @@ class OrganizationListSerializer(OrganizationBaseSerializer):
         many=True,
         required=False,
         read_only=True,
+        source="prefetched_affiliated_organizations",
         help_text=(
             "The organizations that are affiliated partners to this organization, "
             "but not proper suborganizations."
@@ -585,7 +587,7 @@ class OrganizationListSerializer(OrganizationBaseSerializer):
     @staticmethod
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_has_regular_users(obj):
-        return obj.regular_users.count() > 0
+        return len(obj.regular_users.all()) > 0
 
 
 class PlaceSerializer(EditableLinkedEventsObjectSerializer, GeoModelSerializer):
