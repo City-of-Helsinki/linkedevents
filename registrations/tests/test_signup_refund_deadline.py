@@ -112,6 +112,42 @@ def test_refund_deadline_threshold_and_setting(
 
 
 @pytest.mark.django_db
+def test_refund_allowed_at_deadline_when_event_start_utc_date_is_previous_day(
+    api_client,
+):
+    with freeze_time("2025-11-02 00:30:00+02:00"):
+        now = localtime()
+        event_start = now + timedelta(days=7)
+        event = EventFactory(
+            start_time=event_start, end_time=event_start + timedelta(hours=3)
+        )
+        registration = RegistrationFactory(event=event)
+        RegistrationWebStoreProductMappingFactory(registration=registration)
+        user = create_user_by_role("registration_admin", registration.publisher)
+        api_client.force_authenticate(user)
+
+        signup = SignUpFactory(registration=registration)
+        SignUpPaymentFactory(signup=signup, external_order_id=DEFAULT_ORDER_ID)
+
+        with (
+            override_settings(WEB_STORE_REFUND_DEADLINE_DAYS=7),
+            requests_mock.Mocker() as req_mock,
+        ):
+            req_mock.get(
+                f"{settings.WEB_STORE_API_BASE_URL}payment/admin/{DEFAULT_ORDER_ID}",
+                json=DEFAULT_GET_PAYMENT_DATA,
+            )
+            req_mock.post(
+                f"{settings.WEB_STORE_API_BASE_URL}order/refund/instant",
+                json={"refunds": [{"refundId": "test-refund-id"}]},
+            )
+
+            response = delete_signup(api_client, signup.pk)
+
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+@pytest.mark.django_db
 def test_refund_allowed_when_event_has_no_start_time(api_client):
     event = EventFactory(start_time=None, has_start_time=False)
     registration = RegistrationFactory(event=event)
