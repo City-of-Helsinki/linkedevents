@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.32.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.31.1...linkedevents-v3.32.0) (2026-09-26)
+
+
+### Features
+
+* Change uwsgi harakiri to 60 and timeout to 75 ([0a34b99](https://github.com/City-of-Helsinki/linkedevents/commit/0a34b994f7ac3d508ac9d5f2b0b3c9588b1990b9))
+* Wrap event update to inside a transaction ([8869487](https://github.com/City-of-Helsinki/linkedevents/commit/8869487af5bb7145fff623ce5c85e599c9a1b1dd))
+
 ## [3.31.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.31.0...linkedevents-v3.31.1) (2026-09-22)
 
 
