@@ -1,6 +1,11 @@
 import pytest
+from django.db import DEFAULT_DB_ALIAS, connections
+from django.test.utils import CaptureQueriesContext
+from django_orghierarchy.models import Organization
 from rest_framework import status
 
+from events.serializers import EventSerializer
+from events.tests.factories import EventFactory
 from events.tests.utils import get, versioned_reverse
 from helevents.tests.factories import UserFactory
 
@@ -64,6 +69,71 @@ def test_get_event_personal_information_fields(
             assert response.data[key] == value
         else:
             assert key not in response.data
+
+
+@pytest.mark.django_db
+def test_get_event_personal_information_fields_not_visible_to_sibling_admin(
+    api_client, event, organization, user
+):
+    admin_organization = Organization.objects.create(
+        name="admin organization",
+        origin_id="admin-organization",
+        data_source=organization.data_source,
+        parent=organization,
+    )
+    sibling_organization = Organization.objects.create(
+        name="sibling organization",
+        origin_id="sibling-organization",
+        data_source=organization.data_source,
+        parent=organization,
+    )
+    organization.admin_users.remove(user)
+    admin_organization.admin_users.add(user)
+    event.publisher = sibling_organization
+    event.user_name = "Johnny Smith"
+    event.user_phone_number = "+358501234567"
+    event.user_email = "johnny@example.com"
+    event.user_organization = "Example org."
+    event.user_consent = True
+    event.save()
+
+    api_client.force_authenticate(user=user)
+    detail_url = versioned_reverse(
+        "event-detail", version="v1", kwargs={"pk": event.pk}
+    )
+    response = get(api_client, detail_url)
+
+    assert response.status_code == status.HTTP_200_OK
+    for field in EventSerializer.personal_information_fields:
+        assert field not in response.data
+
+
+@pytest.mark.django_db
+def test_get_event_sub_events_does_not_query_per_event(
+    api_client, event, organization, user
+):
+    api_client.force_authenticate(user=user)
+    detail_url = versioned_reverse(
+        "event-detail", version="v1", kwargs={"pk": event.pk}
+    )
+    detail_url += "?include=sub_events"
+
+    EventFactory(super_event=event, publisher=organization)
+
+    response = get(api_client, detail_url)
+    assert response.status_code == status.HTTP_200_OK
+
+    with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as queries:
+        response = get(api_client, detail_url)
+    assert response.status_code == status.HTTP_200_OK
+    one_sub_event_query_count = len(queries)
+
+    EventFactory.create_batch(2, super_event=event, publisher=organization)
+
+    with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as queries:
+        response = get(api_client, detail_url)
+    assert response.status_code == status.HTTP_200_OK
+    assert len(queries) == one_sub_event_query_count
 
 
 @pytest.mark.parametrize("external_user_field_input", [True, False])
