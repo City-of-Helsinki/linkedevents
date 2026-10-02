@@ -31,9 +31,9 @@ class DataAnalyticsAdministrativeDivisionSerializer(DivisionSerializer):
             "id",
             "modified_at",
             "type",
+            "name",
             "ocd_id",
             "municipality",
-            "translations",
         )
 
 
