@@ -1631,7 +1631,7 @@ def _get_queryset_from_cache(params, param, cache_name, operator, queryset):
         return queryset
 
     cache_values = cache.get(cache_name)
-    if not cache_values:
+    if cache_values is None:
         logger.error(f"Missed cache {cache_name}")
         return queryset
 
@@ -1648,7 +1648,8 @@ def _get_queryset_from_cache_many(params, param, cache_name, operator, queryset)
         return queryset
 
     cache_values = cache.get_many(cache_name)
-    if not cache_values:
+    missing_keys = set(cache_name) - cache_values.keys()
+    if missing_keys:
         logger.error(f"Missed cache {cache_name}")
         return queryset
 
@@ -1782,7 +1783,8 @@ def _filter_event_queryset(queryset, params, srs=None):  # noqa: C901
     if val and parse_bool(val, "all_ongoing"):
         cache_name = ["internet_ids", "local_ids"]
         cache_values = cache.get_many(cache_name)
-        if cache_values:
+        missing_keys = set(cache_name) - cache_values.keys()
+        if not missing_keys:
             ids = {k for i in cache_values.values() for k, v in i.items()}
             queryset = queryset.filter(id__in=ids)
         else:
