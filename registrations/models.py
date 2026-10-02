@@ -1160,7 +1160,7 @@ class SignUpMixin:
         event = self.registration.event
         if event.start_time:
             now = localtime()
-            deadline_date = event.start_time.date() - timedelta(
+            deadline_date = localtime(event.start_time).date() - timedelta(
                 days=settings.WEB_STORE_REFUND_DEADLINE_DAYS
             )
             current_date = now.date()
