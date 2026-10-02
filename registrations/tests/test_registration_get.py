@@ -6,14 +6,16 @@ from unittest.mock import PropertyMock, patch
 import freezegun
 import pytest
 from django.conf import settings
+from django.db import connections
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.utils.timezone import make_aware
 from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 
 from events.models import Event
 from events.tests.conftest import APIClient
-from events.tests.factories import EventFactory
+from events.tests.factories import EventFactory, KeywordFactory
 from events.tests.test_event_get import get_list_and_assert_events
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
@@ -355,6 +357,28 @@ def test_get_registration_with_event_and_keywords_included(
     response_keyword = response.data["event"]["keywords"][0]
     assert response_keyword["id"] == keyword.id
     assert list(response_keyword["name"].values())[0] == keyword.name
+
+
+@pytest.mark.django_db
+def test_get_registration_with_event_keywords_does_not_query_per_keyword(
+    user_api_client, event, keyword, registration
+):
+    event.keywords.add(keyword)
+    event.save()
+    query = "include=event,keywords"
+
+    get_detail_and_assert_registration(user_api_client, registration.id, query)
+    with CaptureQueriesContext(connections["default"]) as queries:
+        get_detail_and_assert_registration(user_api_client, registration.id, query)
+    one_keyword_query_count = len(queries)
+
+    event.keywords.add(KeywordFactory(), KeywordFactory())
+    event.save()
+
+    with CaptureQueriesContext(connections["default"]) as queries:
+        get_detail_and_assert_registration(user_api_client, registration.id, query)
+
+    assert len(queries) == one_keyword_query_count
 
 
 @pytest.mark.django_db

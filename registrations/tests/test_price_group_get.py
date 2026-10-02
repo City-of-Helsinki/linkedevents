@@ -3,6 +3,7 @@ from collections import Counter
 
 import pytest
 from django.utils import translation
+from pytest_django.asserts import assertNumQueries
 from resilient_logger.models import ResilientLogEntry
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -10,6 +11,7 @@ from rest_framework.test import APIClient
 from events.tests.utils import assert_fields_exist
 from events.tests.utils import versioned_reverse as reverse
 from registrations.models import PriceGroup
+from registrations.serializers import PriceGroupRelatedField
 from registrations.tests.factories import PriceGroupFactory
 from registrations.tests.utils import create_user_by_role
 
@@ -46,6 +48,24 @@ def assert_get_list(api_client: APIClient, query: str | None = None):
     assert response.status_code == status.HTTP_200_OK
 
     return response
+
+
+@pytest.mark.django_db
+def test_price_group_related_field_serializes_without_query():
+    price_group = PriceGroupFactory()
+    field = PriceGroupRelatedField(queryset=PriceGroup.objects.all())
+
+    with assertNumQueries(0):
+        representation = field.to_representation(price_group)
+
+    assert representation == {
+        "id": price_group.pk,
+        "description": {
+            "fi": price_group.description_fi,
+            "sv": price_group.description_sv,
+            "en": price_group.description_en,
+        },
+    }
 
 
 def assert_price_group_fields_exist(data):

@@ -122,6 +122,7 @@ from linkedevents.schema_utils import (
 )
 from linkedevents.utils import get_fixed_lang_codes
 from registrations.exceptions import WebStoreAPIError
+from registrations.models import OfferPriceGroup
 from registrations.serializers import (
     WebStoreAccountSerializer,
     WebStoreMerchantSerializer,
@@ -2318,7 +2319,10 @@ class EventViewSet(
             "external_links",
             "keywords",
             "in_language",
-            "offers__offer_price_groups",
+            Prefetch(
+                "offers__offer_price_groups",
+                queryset=OfferPriceGroup.objects.select_related("price_group"),
+            ),
             "registration",
             "videos",
         )

@@ -4,7 +4,7 @@ import bleach
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
-from django.db.models import ProtectedError
+from django.db.models import Prefetch, ProtectedError
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.utils import translation
@@ -55,6 +55,7 @@ from registrations.filters import (
 from registrations.models import (
     PriceGroup,
     Registration,
+    RegistrationPriceGroup,
     RegistrationUserAccess,
     SeatReservationCode,
     SignUp,
@@ -173,6 +174,28 @@ class RegistrationViewSet(
 ):
     serializer_class = RegistrationSerializer
     queryset = Registration.objects.all()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.method == "GET":
+            includes = self.get_serializer_context().get("include", [])
+            if "event" in includes and "keywords" in includes:
+                queryset = queryset.prefetch_related(
+                    "event__keywords__alt_labels",
+                    "event__keywords__data_source",
+                    "event__keywords__publisher",
+                )
+
+            if settings.WEB_STORE_INTEGRATION_ENABLED:
+                queryset = queryset.prefetch_related(
+                    Prefetch(
+                        "registration_price_groups",
+                        queryset=RegistrationPriceGroup.objects.select_related(
+                            "price_group"
+                        ),
+                    )
+                )
+        return queryset
 
     filter_backends = [
         filters.OrderingFilter,
