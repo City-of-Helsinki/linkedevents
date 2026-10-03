@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.32.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.31.1...linkedevents-v3.32.0) (2026-10-03)
+
+
+### Features
+
+* Change uwsgi harakiri to 60 and timeout to 75 ([0a34b99](https://github.com/City-of-Helsinki/linkedevents/commit/0a34b994f7ac3d508ac9d5f2b0b3c9588b1990b9))
+* Wrap event update to inside a transaction ([8869487](https://github.com/City-of-Helsinki/linkedevents/commit/8869487af5bb7145fff623ce5c85e599c9a1b1dd))
+
+
+### Performance Improvements
+
+* Avoid deferred fields in signups export ([46a97a5](https://github.com/City-of-Helsinki/linkedevents/commit/46a97a5a7d9ec3a8184efd32a848c8c8e7ccca7d))
+* Optimize organization related field queries ([540c3af](https://github.com/City-of-Helsinki/linkedevents/commit/540c3af19fa5536fba68a01f04101bbc453c644c))
+* Optimize SignUp queryset to reduce N+1 queries ([773408c](https://github.com/City-of-Helsinki/linkedevents/commit/773408cb852b53887615b8e902f5bbf1e4f21325))
+* Prevent N+1 queries for expanded audience keywords ([f3402ba](https://github.com/City-of-Helsinki/linkedevents/commit/f3402baa2c45c04298d1cbf6b819fa8f9516b503))
+
+
+### Dependencies
+
+* Bump oauthlib from 3.3.1 to 4.0.0 ([6c01a63](https://github.com/City-of-Helsinki/linkedevents/commit/6c01a63e594b5267f2167e2fb199e8c1bc1138b2))
+* Bump pyjwt from 2.13.0 to 2.15.0 ([d1098fd](https://github.com/City-of-Helsinki/linkedevents/commit/d1098fd6ebf19f1d235891d59a9e62e9f39c3bc2))
+* Bump urllib3 from 2.7.0 to 2.8.0 ([0addb15](https://github.com/City-of-Helsinki/linkedevents/commit/0addb1503672913d3f11af000aa953294e1f85f6))
+
 ## [3.31.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.31.0...linkedevents-v3.31.1) (2026-09-22)
 
 
