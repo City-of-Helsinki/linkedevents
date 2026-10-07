@@ -1,5 +1,7 @@
 import logging
+from uuid import UUID
 
+from logger_extra.logger_context import get_logger_context, logger_context
 from resilient_logger.sources import ResilientLogSource
 
 from audit_log.enums import Operation, Role, Status
@@ -96,11 +98,16 @@ def _get_target(request):
 def commit_to_audit_log(request, response):
     status = _get_response_status(response)
 
-    ResilientLogSource.create_structured(
-        level=logging.NOTSET,
-        message=status,
-        actor=_get_actor_data(request),
-        operation=_get_operation_name(request),
-        target=_get_target(request),
-        extra={"status": status},
+    request_id = get_logger_context().get("request_id")
+    context_overrides = (
+        {"request_id": str(request_id)} if isinstance(request_id, UUID) else {}
     )
+    with logger_context(context_overrides):
+        ResilientLogSource.create_structured(
+            level=logging.NOTSET,
+            message=status,
+            actor=_get_actor_data(request),
+            operation=_get_operation_name(request),
+            target=_get_target(request),
+            extra={"status": status},
+        )

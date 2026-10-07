@@ -2,10 +2,12 @@ import logging
 from collections import Counter
 from datetime import UTC, datetime
 from unittest.mock import Mock
+from uuid import UUID
 
 import pytest
 from django.contrib.auth.models import AnonymousUser
 from freezegun import freeze_time
+from logger_extra.logger_context import logger_context
 from resilient_logger.models import ResilientLogEntry
 from resilient_logger.sources.resilient_log_source_entry import ResilientLogSourceEntry
 
@@ -78,6 +80,21 @@ def test_commit_to_audit_log_response_status(status_code, audit_status):
     assert log_entry.context["status"] == audit_status
     assert log_entry.message == audit_status
     _assert_basic_log_entry_data(log_entry)
+
+
+@pytest.mark.django_db
+def test_commit_to_audit_log_serializes_uuid_request_id():
+    user = UserFactory()
+    request = _create_default_request_mock(user)
+    request._audit_logged_object_ids = set()
+    response = Mock(status_code=200)
+    request_id = UUID("12345678-1234-5678-1234-567812345678")
+
+    with logger_context({"request_id": request_id}):
+        commit_to_audit_log(request, response)
+
+    log_entry = ResilientLogEntry.objects.get()
+    assert log_entry.context["request_id"] == str(request_id)
 
 
 @freeze_time("2023-10-17 13:30:00+02:00")
