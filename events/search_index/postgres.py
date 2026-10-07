@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Collection
 
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
@@ -77,20 +78,22 @@ class EventSearchIndexService:
             logger.info(f"Updated search index for event: {event.id}")
 
     @classmethod
-    def bulk_update_search_indexes(cls, events: list[Event] | None = None) -> int:
+    def bulk_update_search_indexes(
+        cls, event_ids: Collection[str] | None = None
+    ) -> int:
         """
-        Bulk update the search index for events.
+        Bulk update the search index for event IDs.
         Create a new EventSearchIndex object for each event
         and saves it to the database.
         Use bulk_create to improve performance.
 
-        If events are provided, only those events are updated and their search
+        If event IDs are provided, only those events are updated and their search
         vectors are refreshed. Otherwise, the configured rebuild scope is used
         and all search vectors are refreshed.
         """
         num_updated = 0
         logger.info("Updating search indexes...")
-        if events is None:
+        if event_ids is None:
             # Only include events that are less than the rebuild time limit
             # or those without end_time.
             event_qs = Event.objects.filter(
@@ -103,7 +106,6 @@ class EventSearchIndexService:
                 | Q(end_time=None)
             )
         else:
-            event_ids = [event.pk for event in events]
             if not event_ids:
                 return 0
             event_qs = Event.objects.filter(pk__in=event_ids)
@@ -153,7 +155,7 @@ class EventSearchIndexService:
                 ],
             )
 
-        if events is None:
+        if event_ids is None:
             cls._update_index_search_vectors()
         else:
             cls._update_index_search_vectors(event_ids)
@@ -161,7 +163,9 @@ class EventSearchIndexService:
         return num_updated
 
     @classmethod
-    def _update_index_search_vectors(cls, event_ids: list[int] | None = None) -> None:
+    def _update_index_search_vectors(
+        cls, event_ids: Collection[str] | None = None
+    ) -> None:
         """
         Update search vectors for the supplied event IDs, or all index rows.
         """
