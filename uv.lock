@@ -3,16 +3,16 @@ revision = 3
 requires-python = "==3.12.*"
 
 [options]
-exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer = "2026-10-04T11:19:14.578706Z"
 exclude-newer-span = "P3D"
 
 [options.exclude-newer-package]
+django-munigeo = false
+helsinki-profile-gdpr-api = false
 django-helsinki-health-endpoints = false
 django-helusers = false
-django-munigeo = false
-django-orghierarchy = false
 django-resilient-logger = false
-helsinki-profile-gdpr-api = false
+django-orghierarchy = false
 
 [[package]]
 name = "asgiref"
@@ -607,15 +607,15 @@ wheels = [
 
 [[package]]
 name = "django-resilient-logger"
-version = "2.3.0"
+version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "elasticsearch8" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/72/23015ce1edbf1c409f14c5fda5e59d60287c23bf0c9645ead832afeb3c81/django_resilient_logger-2.3.0.tar.gz", hash = "sha256:4ed7790574964971c0d6300a1dca81f9ec16e5566340047788fb022fc588b13c", size = 24260, upload-time = "2026-05-27T07:24:01.745Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c0/a9/ae8034664263373d813a4bef626574129771989754b7377c00014c579c10/django_resilient_logger-3.1.0.tar.gz", hash = "sha256:e770d4e58c7db7cda9f6268624069f41ae31bb0487a76cb555584b1246b93044", size = 31477, upload-time = "2026-10-01T11:45:26.532Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/37/a7984d971692f759c0f46dd2078d1e1f464814b6d79c691f18d72753d0e8/django_resilient_logger-2.3.0-py2.py3-none-any.whl", hash = "sha256:542d2a83f4e8ecc92555bcac1e5d9a10d257e5ba99338e4553e16fe167c6f91e", size = 23692, upload-time = "2026-05-27T07:24:00.109Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/ca/9c0cbb63293f5a5006b946bad7c3ba09ed48f091176861712248939061c6/django_resilient_logger-3.1.0-py2.py3-none-any.whl", hash = "sha256:46369fbea1dee66b3a05f29b44a56c7c689654f97feb3b57a1e0a53491c86595", size = 29356, upload-time = "2026-10-01T11:45:25.192Z" },
 ]
 
 [[package]]
