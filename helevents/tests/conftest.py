@@ -1,7 +1,7 @@
 import datetime
 
+import jwt
 from helusers.settings import api_token_auth_settings
-from jose import jwt
 
 from events.tests.keys import rsa_key
 from linkedevents.tests.conftest import *  # noqa
@@ -38,7 +38,7 @@ def get_api_token_for_user_with_scopes(
     if amr:
         jwt_data["amr"] = amr
     encoded_jwt = jwt.encode(
-        jwt_data, key=rsa_key.private_key_pem, algorithm=rsa_key.jose_algorithm
+        jwt_data, key=rsa_key.private_key_pem, algorithm=rsa_key.jwt_algorithm
     )
 
     requests_mock.get(config_url, json=configuration)
