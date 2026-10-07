@@ -1,6 +1,5 @@
 import os
 
-from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import override
@@ -55,13 +54,6 @@ class Command(BaseCommand):
             dest="force",
             help="Allow deleting any number of entities if necessary",
         )
-        parser.add_argument(
-            "--disable-indexing",
-            action="store_true",
-            dest="disable_indexing",
-            help="Disable updating the search index to speed up the import.",
-        )
-
         for imp in self.importer_types:
             parser.add_argument(
                 f"--{imp}", dest=imp, action="store_true", help=f"import {imp}"
@@ -74,13 +66,6 @@ class Command(BaseCommand):
                 f"Importer {module} not found. Valid importers: {self.imp_list}"
             )
         imp_class = self.importers[module]
-
-        if options["disable_indexing"]:
-            haystack_app = apps.get_app_config("haystack")
-            haystack_app.signal_processor.teardown()
-            self.stdout.write(
-                self.style.SUCCESS("Disabling haystack's RealtimeSignalProcessor")
-            )
 
         if hasattr(settings, "PROJECT_ROOT"):
             root_dir = settings.PROJECT_ROOT
@@ -97,8 +82,6 @@ class Command(BaseCommand):
             }
         )
 
-        # Activate the default language for the duration of the import
-        # to make sure translated fields are populated correctly.
         with override(settings.LANGUAGES[0][0]):
             for imp_type in self.importer_types:
                 name = f"import_{imp_type}"
