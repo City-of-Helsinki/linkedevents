@@ -3,7 +3,6 @@ name = "linkedevents"
 requires-python = ">=3.12, <3.13"
 version = "3.31.1"
 dependencies = [
-    "attrs",
     "beautifulsoup4",
     "bleach",
     "django-admin-autocomplete-filter",
