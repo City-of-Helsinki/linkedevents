@@ -81,7 +81,6 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-django",
-    "pytest-factoryboy",
     "pytest-freezer",
     "pyjwt[crypto]",
     "requests-mock",
