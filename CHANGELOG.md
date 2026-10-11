@@ -1,5 +1,43 @@
 # Changelog
 
+## [3.32.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.31.1...linkedevents-v3.32.0) (2026-10-11)
+
+
+### Features
+
+* Change uwsgi harakiri to 60 and timeout to 75 ([0a34b99](https://github.com/City-of-Helsinki/linkedevents/commit/0a34b994f7ac3d508ac9d5f2b0b3c9588b1990b9))
+* Wrap event update to inside a transaction ([8869487](https://github.com/City-of-Helsinki/linkedevents/commit/8869487af5bb7145fff623ce5c85e599c9a1b1dd))
+
+
+### Bug Fixes
+
+* Handle empty event caches without logging errors ([49d69e3](https://github.com/City-of-Helsinki/linkedevents/commit/49d69e305229330f331fae0c6cae9dadf7ebba0d))
+* Use local event date for refund deadlines ([74714ff](https://github.com/City-of-Helsinki/linkedevents/commit/74714ff31c71556434ea0d899bbea877f7e341d4))
+
+
+### Performance Improvements
+
+* Avoid deferred fields in signups export ([46a97a5](https://github.com/City-of-Helsinki/linkedevents/commit/46a97a5a7d9ec3a8184efd32a848c8c8e7ccca7d))
+* Avoid N+1 queries for offer price groups ([969e6c2](https://github.com/City-of-Helsinki/linkedevents/commit/969e6c23070dd26115a1d9ab0ebe9866af6afbd8))
+* Avoid N+1 relation lookups in bulk updates ([092d75e](https://github.com/City-of-Helsinki/linkedevents/commit/092d75eb697b818702cdc7b0ccc71743b2dc3550))
+* Avoid repeated organization queries during event serialization ([6abba21](https://github.com/City-of-Helsinki/linkedevents/commit/6abba2116183693ea24deb525a8e4e22d743e0b4))
+* Optimize KeywordSetViewSet queries to prevent N+1 issues ([a2f5b06](https://github.com/City-of-Helsinki/linkedevents/commit/a2f5b06cb75e696f62dbfa708165e45623d65e95))
+* Optimize organization related field queries ([540c3af](https://github.com/City-of-Helsinki/linkedevents/commit/540c3af19fa5536fba68a01f04101bbc453c644c))
+* Optimize registration event keyword queries ([976e9e3](https://github.com/City-of-Helsinki/linkedevents/commit/976e9e312ed7133939a60047fe942a359b3c7cc9))
+* Optimize SignUp queryset to reduce N+1 queries ([773408c](https://github.com/City-of-Helsinki/linkedevents/commit/773408cb852b53887615b8e902f5bbf1e4f21325))
+* Prevent N+1 queries for expanded audience keywords ([f3402ba](https://github.com/City-of-Helsinki/linkedevents/commit/f3402baa2c45c04298d1cbf6b819fa8f9516b503))
+
+
+### Dependencies
+
+* Bump oauthlib from 3.3.1 to 4.0.0 ([6c01a63](https://github.com/City-of-Helsinki/linkedevents/commit/6c01a63e594b5267f2167e2fb199e8c1bc1138b2))
+* Bump pyjwt from 2.13.0 to 2.15.0 ([d1098fd](https://github.com/City-of-Helsinki/linkedevents/commit/d1098fd6ebf19f1d235891d59a9e62e9f39c3bc2))
+* Bump social-auth-core from 4.9.1 to 5.0.0 ([4c825ec](https://github.com/City-of-Helsinki/linkedevents/commit/4c825ec98b435a5dcda2ce8ebc5148ec0b4b5073))
+* Bump urllib3 from 2.7.0 to 2.8.0 ([0addb15](https://github.com/City-of-Helsinki/linkedevents/commit/0addb1503672913d3f11af000aa953294e1f85f6))
+* Bump werkzeug from 3.1.8 to 3.1.9 ([6bf7f1a](https://github.com/City-of-Helsinki/linkedevents/commit/6bf7f1af8ac814f3f6c8343ce8ee68445043feaf))
+* Upgrade django-helusers and replace python-jose with PyJWT ([dea7379](https://github.com/City-of-Helsinki/linkedevents/commit/dea7379b4ac135847f8cc869bb343e4438d72834))
+* Upgrade resilient logger and normalize audit request IDs ([d7f2040](https://github.com/City-of-Helsinki/linkedevents/commit/d7f2040699fe46ce81dcb059ba7e01287150b753))
+
 ## [3.31.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.31.0...linkedevents-v3.31.1) (2026-09-22)
 
 
