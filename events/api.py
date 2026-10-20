@@ -2720,7 +2720,11 @@ class EventViewSet(
         try:
             ids = [
                 id_data_type(
-                    urllib.parse.unquote(i[id_field].rstrip("/").split("/").pop())
+                    urllib.parse.unquote(
+                        urllib.parse.urlsplit(i[id_field])
+                        .path.rstrip("/")
+                        .split("/")[-1]
+                    )
                 )
                 for i in event_list
                 if i and isinstance(i, dict) and i.get(id_field, None)  # noqa E127

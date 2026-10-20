@@ -839,6 +839,30 @@ def test_create_super_event_with_subevents(api_client, minimal_event_dict, user)
 
 
 @pytest.mark.django_db
+def test_create_sub_event_with_super_event_url_query_parameters(
+    api_client, minimal_event_dict, user
+):
+    # Regression test for LINK-2641
+    # Query params like ?format=json would make _retrieve_ids collect invalid id
+
+    api_client.force_authenticate(user)
+    super_event_dict = deepcopy(minimal_event_dict)
+    super_event_dict["super_event_type"] = Event.SuperEventType.RECURRING
+    response = api_client.post(reverse("event-list"), super_event_dict, format="json")
+    assert response.status_code == status.HTTP_201_CREATED, response.content
+    super_event_id = response.data["id"]
+    super_event_url = response.data["@id"]
+
+    sub_event_dict = deepcopy(minimal_event_dict)
+    sub_event_dict["super_event"] = {"@id": f"{super_event_url}?format=json"}
+    response = api_client.post(reverse("event-list"), [sub_event_dict], format="json")
+
+    assert response.status_code == status.HTTP_201_CREATED, response.content
+    assert len(response.data) == 1
+    assert Event.objects.get(pk=response.data[0]["id"]).super_event_id == super_event_id
+
+
+@pytest.mark.django_db
 def test__create_event_with_image_not_exists(
     api_client, data_source, organization, minimal_event_dict, user
 ):
