@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.32.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.32.0...linkedevents-v3.32.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* Ignore query params in _retrieve_ids ([0be46de](https://github.com/City-of-Helsinki/linkedevents/commit/0be46de1434639ce81fb4e7a59e4dd0010268795))
+
+
+### Dependencies
+
+* Bump social-auth-core from 5.0.0 to 5.0.2 ([fb0405c](https://github.com/City-of-Helsinki/linkedevents/commit/fb0405cbd6843fab97316010ed6ba7e7ab90e78e))
+
 ## [3.32.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.31.1...linkedevents-v3.32.0) (2026-10-13)
 
 
