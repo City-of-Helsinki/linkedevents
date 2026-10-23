@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.32.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.32.1...linkedevents-v3.32.2) (2026-10-23)
+
+
+### Bug Fixes
+
+* Bump uv version to 0.13.5 ([898467c](https://github.com/City-of-Helsinki/linkedevents/commit/898467c6da5c44b3587a0dfc477bcc443646aae5))
+
+
+### Dependencies
+
+* Bump certifi from 2026.5.20 to 2026.10.19 ([3cd4997](https://github.com/City-of-Helsinki/linkedevents/commit/3cd4997718fe9ab8877dce3ecdb084f437c948a3))
+* Bump pillow from 12.3.0 to 13.0.0 ([60b97ff](https://github.com/City-of-Helsinki/linkedevents/commit/60b97ff745cfcf2b7caa91e7c6ac8e629ee90629))
+
 ## [3.32.1](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.32.0...linkedevents-v3.32.1) (2026-10-21)
 
 
