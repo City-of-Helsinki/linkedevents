@@ -225,16 +225,14 @@ def test_get_place_with_upcoming_events(api_client, place, place2, event, past_e
 @pytest.mark.django_db
 def test_list_place_query_counts(api_client, place, place2, place3, settings):
     """
-    Expect 7 queries when listing places
+    Expect 5 queries when listing places
     1) COUNT
     2) SELECT places
     3) SELECT related publishers
     4) SELECT related division, join type and municipality
-    5) SELECT related division municipality translations
-    6) SELECT related division translations
-    7) SELECT system data source
+    5) SELECT system data source
     """
     settings.AUDIT_LOG_ENABLED = False
 
-    with assertNumQueries(7):
+    with assertNumQueries(5):
         get_list(api_client, data={"show_all_places": True})
