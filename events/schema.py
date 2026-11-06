@@ -644,7 +644,6 @@ class OrganizationListSerializerExtension(
     def map_serializer(self, auto_schema, direction):
         result = super().map_serializer(auto_schema, direction)
 
-        result["required"].remove("origin_id")
         result["required"].remove("replaced_by")
         result["required"].remove("sub_organizations")
         result["required"].remove("affiliated_organizations")
@@ -688,8 +687,6 @@ class OrganizationClassSerializerExtension(OpenApiSerializerExtension):
             "Source of the organization data, typically API provider specific identifier. "  # noqa: E501
             "Will also be used to specify standardized namespaces as they are brought into use."  # noqa: E501
         )
-
-        result["required"].remove("origin_id")
 
         return result
 
