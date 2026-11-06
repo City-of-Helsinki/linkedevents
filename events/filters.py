@@ -19,7 +19,6 @@ from django.db.models import (
     F,
     OuterRef,
     Q,
-    QuerySet,
     When,
 )
 from django.db.models import DateTimeField as ModelDateTimeField
@@ -156,39 +155,32 @@ def filter_division(queryset, name: str, value: Iterable[str]):
             # we assume human name
             names.append(item.title())
 
-    if isinstance(queryset, QuerySet):
-        q = Q()
-        if ocd_ids:
-            q |= Q(ocd_id__in=ocd_ids)
-        if names:
-            q |= Q(translations__name__in=names)
+    q = Q()
+    if ocd_ids:
+        q |= Q(ocd_id__in=ocd_ids)
+    if names:
+        q |= Q(translations__name__in=names)
 
-        if not q:
-            return queryset.none()
+    if not q:
+        return queryset.none()
 
-        # Prefetching the divisions makes life a lot easier for the query planner:
-        # The Through table between Place and AdministrativeDivision has 400000
-        # rows in production, joining through it is a performance killer.
-        divisions = list(
-            AdministrativeDivision.objects.filter(q).values_list("id", flat=True)
-        )
+    # Prefetching the divisions makes life a lot easier for the query planner:
+    # The Through table between Place and AdministrativeDivision has 400000
+    # rows in production, joining through it is a performance killer.
+    divisions = list(
+        AdministrativeDivision.objects.filter(q).values_list("id", flat=True)
+    )
 
-        if queryset.model is Place:
-            outer_ref = "id"
-        else:
-            outer_ref = "location_id"
-
-        # Subquery against the through table
-        place_division_qs = Place.divisions.through.objects.filter(
-            place_id=OuterRef(outer_ref), administrativedivision_id__in=divisions
-        )
-        return queryset.filter(Exists(place_division_qs))
+    if queryset.model is Place:
+        outer_ref = "id"
     else:
-        # Haystack SearchQuerySet
-        if ocd_ids:
-            return queryset.filter(**{name + "__ocd_id__in": ocd_ids})
-        else:
-            return queryset.filter(**{name + "__name__in": names})
+        outer_ref = "location_id"
+
+    # Subquery against the through table
+    place_division_qs = Place.divisions.through.objects.filter(
+        place_id=OuterRef(outer_ref), administrativedivision_id__in=divisions
+    )
+    return queryset.filter(Exists(place_division_qs))
 
 
 def parse_duration_string(duration) -> timedelta:
