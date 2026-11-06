@@ -2,6 +2,7 @@ import logging
 
 import rdflib
 import requests
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.translation import override
 from django_orghierarchy.models import Organization
@@ -9,6 +10,8 @@ from rdflib import RDF
 from rdflib.namespace import DCTERMS, OWL, RDFS, SKOS
 
 from events.models import BaseModel, DataSource, Keyword, KeywordLabel, Language
+from events.search_index.postgres import EventSearchIndexService
+from events.search_index.signals import suppress_search_index_updates
 from linkedevents.utils import get_outbound_request_headers
 
 from .base import Importer, register_importer
@@ -175,7 +178,18 @@ class YsoImporter(Importer):
     def import_keywords(self):
         logger.info("Importing YSO keywords")
         graph = self.load_graph_into_memory(URL)
-        self.save_keywords(graph)
+        self._affected_event_ids = set()
+
+        if settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED:
+            try:
+                with suppress_search_index_updates():
+                    self.save_keywords(graph)
+            finally:
+                EventSearchIndexService.bulk_update_search_indexes(
+                    self._affected_event_ids
+                )
+        else:
+            self.save_keywords(graph)
 
     def load_graph_into_memory(self, url):
         logger.debug(f"Fetching {url}")
@@ -221,6 +235,7 @@ class YsoImporter(Importer):
             try:
                 old_keyword = Keyword.objects.get(id=old_id)
                 new_keyword = Keyword.objects.get(id=new_id)
+                self._collect_keyword_events(old_keyword)
                 old_keyword.replace(new_keyword)
             except ObjectDoesNotExist:
                 continue
@@ -236,7 +251,7 @@ class YsoImporter(Importer):
         syncher = ModelSyncher(
             queryset,
             lambda keyword: keyword.id,
-            delete_func=lambda obj: deprecate_and_replace(graph, obj),
+            delete_func=lambda obj: self._deprecate_and_replace(graph, obj),
             check_deleted_func=lambda obj: obj.deprecated,
         )
         for subject in graph.subjects(RDF.type, SKOS.Concept):
@@ -340,6 +355,7 @@ class YsoImporter(Importer):
             keyword.publisher = self.organization
             keyword._changed = True
         if keyword._changed:
+            self._collect_keyword_events(keyword)
             keyword.save()
 
         alt_labels = keyword_labels.get(get_yso_id(subject), [])
@@ -348,3 +364,15 @@ class YsoImporter(Importer):
         if not getattr(keyword, "_found", False):
             syncher.mark(keyword)
         return keyword
+
+    def _collect_keyword_events(self, keyword):
+        if not settings.EVENT_SEARCH_INDEX_SIGNALS_ENABLED:
+            return
+        self._affected_event_ids.update(keyword.events.values_list("pk", flat=True))
+        self._affected_event_ids.update(
+            keyword.audience_events.values_list("pk", flat=True)
+        )
+
+    def _deprecate_and_replace(self, graph, keyword):
+        self._collect_keyword_events(keyword)
+        return deprecate_and_replace(graph, keyword)
