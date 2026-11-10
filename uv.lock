@@ -416,7 +416,7 @@ wheels = [
 
 [[package]]
 name = "django-helusers"
-version = "1.3.0"
+version = "1.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -426,9 +426,9 @@ dependencies = [
     { name = "pyjwt" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1b/f5/e30297196803b22dd7194d5006b9203e06af741add38b16c54ab304a043e/django_helusers-1.3.0.tar.gz", hash = "sha256:2f741d6ac588f871fe464c684a3f91caa7b1e79687dccb02385973648e8ac61d", size = 38936, upload-time = "2026-08-24T13:34:09.861Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/07/31918b494b018cc5c2ade0aac463ec59339bf38a4ad3bc7debcc684855ef/django_helusers-1.3.2.tar.gz", hash = "sha256:c1b8a329f6ef2d7548a269730a77844025f4269015e14fb25dcb8847984e384d", size = 39729, upload-time = "2026-11-05T14:34:49.564Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/7c/eb84af2c6e0485a366b6f9c495e35aa7d7a9163435016471c15b02eb6339/django_helusers-1.3.0-py3-none-any.whl", hash = "sha256:c10c63ee4287259d0c4a7d167f660799287bea19309b68a3ca6aa08f1025b999", size = 44985, upload-time = "2026-08-24T13:34:08.625Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/ec/de222557a5abb3792faca93266f985dfa4b8bc0f8e7e3ea81a398b07900d/django_helusers-1.3.2-py3-none-any.whl", hash = "sha256:6651d14c039ec2db9281ca9791a45b2d0f3520538cbc49a0bea5f31fd35aa414", size = 45080, upload-time = "2026-11-05T14:34:48.282Z" },
 ]
 
 [[package]]
