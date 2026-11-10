@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.32.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.32.2...linkedevents-v3.32.3) (2026-11-10)
+
+
+### Dependencies
+
+* Bump authlib from 1.7.2 to 1.9.1 ([71693c8](https://github.com/City-of-Helsinki/linkedevents/commit/71693c868fc18b48d9a1c5620b5989ec4631bc3d))
+* Bump django-helusers from 1.3.0 to 1.3.2 ([0026516](https://github.com/City-of-Helsinki/linkedevents/commit/002651635b54d8ba2f397c4b62a5c76de4dea947))
+* Bump djangorestframework from 3.17.2 to 3.18.2 ([8ad05f2](https://github.com/City-of-Helsinki/linkedevents/commit/8ad05f2bc38aff50db4817e62bd5c9c7e53ad2f2))
+* Bump joserfc from 1.7.1 to 1.7.6 ([86b310a](https://github.com/City-of-Helsinki/linkedevents/commit/86b310a067fcc728ed8a5769c40818179efee3cc))
+* Bump oauthlib from 4.0.0 to 4.0.1 ([8e60f05](https://github.com/City-of-Helsinki/linkedevents/commit/8e60f056146883a430c5269e207fd415ded54575))
+* Bump setuptools from 83.0.0 to 84.1.0 ([16636fb](https://github.com/City-of-Helsinki/linkedevents/commit/16636fbe8cb67d54fb30b475f4e0f2d70efcb625))
+* Bump social-auth-core from 5.0.2 to 6.2.0 ([ab61ece](https://github.com/City-of-Helsinki/linkedevents/commit/ab61ecee21b4fa3fe12c9603a629e327a68bba06))
+
+
+### Documentation
+
+* Remove manual origin_id requirement removal ([dce0921](https://github.com/City-of-Helsinki/linkedevents/commit/dce09210c0ae7399a8b885e82d2ae175f09d3dd6))
+
 ## [3.32.2](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.32.1...linkedevents-v3.32.2) (2026-10-23)
 
 
