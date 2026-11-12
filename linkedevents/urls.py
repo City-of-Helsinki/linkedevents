@@ -35,7 +35,9 @@ urlpatterns = [
         "api-docs/",
         csp_exempt()(
             csp_exempt(REPORT_ONLY=True)(
-                SpectacularRedocView.as_view(url_name="schema-unversioned"),
+                SpectacularRedocView.as_view(
+                    url_name="schema-unversioned", template_name="redoc.html"
+                ),
             )
         ),
         name="redoc-unversioned",
