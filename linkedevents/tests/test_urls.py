@@ -1,5 +1,9 @@
+import os
+from urllib.parse import urljoin
+
 import pytest
 import yaml
+from bs4 import BeautifulSoup
 from drf_spectacular.settings import patched_settings, spectacular_settings
 from drf_spectacular.validation import validate_schema
 
@@ -80,6 +84,36 @@ def test_root_redirect_follows_to_api_root(client):
 
     assert response.status_code == 200
     assert response.json()["keyword"].endswith("/v1/keyword/")
+
+
+@pytest.mark.parametrize("path_prefix", ["", "/linkedevents"])
+@pytest.mark.parametrize("version", ["v0.1", "v1"])
+def test_api_root_documentation_links(client, settings, path_prefix, version):
+    settings.TEMPLATES = [
+        {
+            **backend,
+            "DIRS": [os.path.join(settings.BASE_DIR, "helevents", "templates")],
+        }
+        if backend["BACKEND"] == "django.template.backends.django.DjangoTemplates"
+        else backend
+        for backend in settings.TEMPLATES
+    ]
+
+    response = client.get(f"/{version}/", HTTP_ACCEPT="text/html")
+
+    assert response.status_code == 200
+    content = BeautifulSoup(response.content, "html.parser")
+    root_url = f"https://api.hel.fi{path_prefix}/{version}/"
+    for label, path in [
+        ("Redoc", "api-docs/"),
+        ("Swagger UI", "api-docs/swagger-ui/"),
+        ("OpenAPI schema", "api-docs/schema/"),
+    ]:
+        link = content.find("a", string=label)
+        assert link is not None
+        assert urljoin(root_url, link["href"]) == (
+            f"https://api.hel.fi{path_prefix}/{path}"
+        )
 
 
 def test_legacy_docs_schema_redirect(client):
