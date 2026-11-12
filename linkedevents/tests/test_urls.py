@@ -1,5 +1,6 @@
 import pytest
 import yaml
+from drf_spectacular.settings import patched_settings, spectacular_settings
 from drf_spectacular.validation import validate_schema
 
 
@@ -45,6 +46,24 @@ def test_redoc(client):
     response = client.get("/api-docs/")
 
     assert response.status_code == 200
+    content = response.content.decode()
+    assert '<script type="module">' in content
+    assert (
+        f'import {{ init }} from "{spectacular_settings.REDOC_DIST}/bundles/redoc.standalone.js";'
+        in content
+    )
+    assert r'"/api\u002Ddocs/schema/"' in content
+    assert "Redoc.init(" not in content
+
+
+def test_redoc_ui_settings(client):
+    with patched_settings({"REDOC_UI_SETTINGS": {"hideDownloadButtons": True}}):
+        response = client.get("/api-docs/")
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert 'JSON.parse("' in content
+    assert r"\u0022hideDownloadButtons\u0022: true" in content
 
 
 def test_root_redirects_to_api_root(client):

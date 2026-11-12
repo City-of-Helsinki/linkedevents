@@ -952,6 +952,7 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
     },
+    "REDOC_DIST": "https://cdn.jsdelivr.net/npm/redoc@3.1.0",
     "TAGS": [
         {"name": "event", "description": "Search and edit events"},
         {

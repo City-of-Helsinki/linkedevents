@@ -1,0 +1,23 @@
+{% extends "drf_spectacular/redoc.html" %}
+
+{% block head %}
+  <title>{{ title|default:"Redoc" }}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { margin: 0; padding: 0; }
+  </style>
+{% endblock head %}
+
+{% block body %}
+  <div id="redoc-container"></div>
+  <script type="module">
+    import { init } from "{{ redoc_standalone|escapejs }}";
+
+    init(
+      "{{ schema_url|escapejs }}",
+      JSON.parse("{{ settings|default:'{}'|escapejs }}"),
+      document.getElementById("redoc-container")
+    );
+  </script>
+{% endblock body %}
