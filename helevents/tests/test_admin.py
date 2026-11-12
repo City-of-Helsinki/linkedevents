@@ -81,6 +81,31 @@ class LocalOrganizationAdminTestCaseMixin:
         return data
 
 
+class TestUserAdmin(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        user_model = get_user_model()
+        cls.admin_user = user_model.objects.create(
+            username="admin",
+            is_staff=True,
+            is_superuser=True,
+        )
+        cls.financial_admin = user_model.objects.create(username="financial-admin")
+        cls.organization = OrganizationFactory(name="Financial Admin Organization")
+        cls.organization.financial_admin_users.add(cls.financial_admin)
+
+    def test_financial_admin_organizations_are_visible_on_user_page(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(
+            f"/admin/helevents/user/{self.financial_admin.pk}/change/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "Financial admin in organizations")
+        self.assertContains(response, self.organization.name)
+
+
 class TestLocalOrganizationAdmin(LocalOrganizationAdminTestCaseMixin, TestCase):
     def test_organization_admin_is_registered(self):
         is_registered = admin.site.is_registered(Organization)
