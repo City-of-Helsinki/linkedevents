@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.33.0](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.32.3...linkedevents-v3.33.0) (2026-11-13)
+
+
+### Features
+
+* Show financial admin roles in Django user admin ([c9a0f12](https://github.com/City-of-Helsinki/linkedevents/commit/c9a0f1261d70c5af20be35eb4872cbd9b6963d6d))
+
+
+### Bug Fixes
+
+* Preserve deployment prefix in API documentation links ([7b867db](https://github.com/City-of-Helsinki/linkedevents/commit/7b867db031de09a76fbd389318f4a5193b8116bc))
+* Restore API documentation with ReDoc 3 module support ([52ab767](https://github.com/City-of-Helsinki/linkedevents/commit/52ab7672e7b1b69b4c1e9ef34a3eec887e534fa5))
+
 ## [3.32.3](https://github.com/City-of-Helsinki/linkedevents/compare/linkedevents-v3.32.2...linkedevents-v3.32.3) (2026-11-10)
 
 
