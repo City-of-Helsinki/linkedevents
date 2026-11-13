@@ -14,7 +14,6 @@ from munigeo.models import (
     AdministrativeDivisionType,
     Municipality,
 )
-from parler.utils.context import switch_language
 
 from events.api import KeywordSerializer, LanguageSerializer, PlaceSerializer
 
@@ -156,7 +155,8 @@ def make_minimal_event_dict_class(request, make_minimal_event_dict):
 @pytest.fixture
 def municipality():
     return Municipality.objects.create(
-        name="test municipality",
+        id="test_municipality",
+        name_fi="test municipality",
     )
 
 
@@ -180,10 +180,8 @@ def administrative_division(administrative_division_type, municipality):
         type=administrative_division_type,
         ocd_id="ocd-division/test:1",
         municipality=municipality,
+        name_en="test division",
     )
-    with switch_language(division, "en"):
-        division.name = "test division"
-        division.save()
     coords = ((0, 0), (0, 200), (200, 200), (200, 0), (0, 0))
     AdministrativeDivisionGeometry.objects.create(
         division=division, boundary=MultiPolygon([Polygon(coords)])
@@ -196,10 +194,8 @@ def administrative_division2(administrative_division_type):
     division = AdministrativeDivision.objects.create(
         type=administrative_division_type,
         ocd_id="ocd-division/test:2",
+        name_en="test division 2",
     )
-    with switch_language(division, "en"):
-        division.name = "test division 2"
-        division.save()
     coords = ((100, 100), (100, 300), (300, 300), (300, 100), (100, 100))
     AdministrativeDivisionGeometry.objects.create(
         division=division, boundary=MultiPolygon([Polygon(coords)])
