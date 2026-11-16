@@ -161,7 +161,7 @@ def filter_division(queryset, name: str, value: Iterable[str]):
         if ocd_ids:
             q |= Q(ocd_id__in=ocd_ids)
         if names:
-            q |= Q(translations__name__in=names)
+            q |= Q(name_fi__in=names) | Q(name_sv__in=names) | Q(name_en__in=names)
 
         if not q:
             return queryset.none()
