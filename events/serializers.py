@@ -17,8 +17,8 @@ from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 from django_orghierarchy.models import Organization, OrganizationClass
 from drf_spectacular.utils import OpenApiTypes, extend_schema_field
-from munigeo.api import DEFAULT_SRS, GeoModelSerializer
-from munigeo.api import TranslatedModelSerializer as ParlerTranslatedModelSerializer
+from munigeo.api import DEFAULT_SRS, GeoModelSerializer, TranslatedDictField
+from munigeo.api import TranslatedModelSerializer as MunigeoTranslatedModelSerializer
 from munigeo.models import AdministrativeDivision
 from rest_framework import serializers
 from rest_framework.exceptions import ErrorDetail, ParseError
@@ -116,13 +116,14 @@ class DataSourceSerializer(LinkedEventsSerializer):
         exclude = ["api_key"]
 
 
-class DivisionSerializer(ParlerTranslatedModelSerializer):
+class DivisionSerializer(MunigeoTranslatedModelSerializer):
     type = serializers.SlugRelatedField(slug_field="type", read_only=True)
-    municipality = StringSlugRelatedField(slug_field="name", read_only=True)
+    name = TranslatedDictField(base_field="name")
+    municipality = StringSlugRelatedField(slug_field="name_fi", read_only=True)
 
     class Meta:
         model = AdministrativeDivision
-        fields = ("type", "ocd_id", "municipality", "translations")
+        fields = ("type", "name", "ocd_id", "municipality")
 
 
 class EditableLinkedEventsObjectSerializer(LinkedEventsSerializer):
